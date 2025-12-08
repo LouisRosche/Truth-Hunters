@@ -949,6 +949,14 @@
       }
     };
 
+    // Background colors for difficulty badges (rgba for proper opacity)
+    const DIFFICULTY_BG_COLORS = {
+      easy: 'rgba(52, 211, 153, 0.2)',
+      medium: 'rgba(251, 191, 36, 0.2)',
+      hard: 'rgba(251, 113, 133, 0.2)',
+      mixed: 'rgba(167, 139, 250, 0.2)'
+    };
+
     // ============================================================
     // HINT SYSTEM
     // ============================================================
@@ -2855,7 +2863,7 @@
               <span className="mono" style={{
                 padding: '0.25rem 0.5rem',
                 fontSize: '0.625rem',
-                background: DIFFICULTY_CONFIG[claim.difficulty]?.color + '20',
+                background: DIFFICULTY_BG_COLORS[claim.difficulty] || 'rgba(167, 139, 250, 0.2)',
                 color: DIFFICULTY_CONFIG[claim.difficulty]?.color,
                 borderRadius: '4px',
                 textTransform: 'uppercase'
