@@ -1009,6 +1009,157 @@
     ];
 
     // ============================================================
+    // LEADERBOARD & PERSISTENCE (localStorage Backend)
+    // ============================================================
+
+    const STORAGE_KEY = 'truthHunters_leaderboard';
+
+    /**
+     * @typedef {Object} PlayerRecord
+     * @property {string} firstName
+     * @property {string} lastInitial
+     * @property {string} odisplayName - "FirstName L."
+     */
+
+    /**
+     * @typedef {Object} GameRecord
+     * @property {string} id - unique game ID
+     * @property {string} teamName
+     * @property {string} teamAvatar - emoji
+     * @property {PlayerRecord[]} players
+     * @property {number} score
+     * @property {number} accuracy - percentage 0-100
+     * @property {string} difficulty
+     * @property {number} rounds
+     * @property {number} timestamp
+     * @property {string[]} achievements - achievement IDs earned
+     */
+
+    const LeaderboardManager = {
+      /**
+       * Get all game records from localStorage
+       * @returns {GameRecord[]}
+       */
+      getAll() {
+        try {
+          const data = localStorage.getItem(STORAGE_KEY);
+          return data ? JSON.parse(data) : [];
+        } catch (e) {
+          console.warn('Failed to load leaderboard:', e);
+          return [];
+        }
+      },
+
+      /**
+       * Save a new game record
+       * @param {GameRecord} record
+       */
+      save(record) {
+        try {
+          const records = this.getAll();
+          records.push({
+            ...record,
+            id: `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: Date.now()
+          });
+          // Keep only last 100 games to prevent storage bloat
+          const trimmed = records.slice(-100);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+        } catch (e) {
+          console.warn('Failed to save to leaderboard:', e);
+        }
+      },
+
+      /**
+       * Get top teams by score
+       * @param {number} limit
+       * @returns {GameRecord[]}
+       */
+      getTopTeams(limit = 10) {
+        const records = this.getAll();
+        return records
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit);
+      },
+
+      /**
+       * Get top players by aggregated score
+       * @param {number} limit
+       * @returns {Array<{displayName: string, totalScore: number, gamesPlayed: number, avgScore: number}>}
+       */
+      getTopPlayers(limit = 10) {
+        const records = this.getAll();
+        const playerScores = {};
+
+        records.forEach(game => {
+          if (!game.players) return;
+          game.players.forEach(player => {
+            const key = `${player.firstName}_${player.lastInitial}`.toLowerCase();
+            const displayName = `${player.firstName} ${player.lastInitial}.`;
+
+            if (!playerScores[key]) {
+              playerScores[key] = {
+                displayName,
+                totalScore: 0,
+                gamesPlayed: 0,
+                bestScore: 0
+              };
+            }
+
+            // Each player on the team shares the team's score
+            playerScores[key].totalScore += game.score;
+            playerScores[key].gamesPlayed += 1;
+            playerScores[key].bestScore = Math.max(playerScores[key].bestScore, game.score);
+          });
+        });
+
+        return Object.values(playerScores)
+          .map(p => ({
+            ...p,
+            avgScore: Math.round(p.totalScore / p.gamesPlayed)
+          }))
+          .sort((a, b) => b.bestScore - a.bestScore)
+          .slice(0, limit);
+      },
+
+      /**
+       * Get recent games
+       * @param {number} limit
+       * @returns {GameRecord[]}
+       */
+      getRecent(limit = 10) {
+        const records = this.getAll();
+        return records
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, limit);
+      },
+
+      /**
+       * Clear all records (for testing)
+       */
+      clear() {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+          console.warn('Failed to clear leaderboard:', e);
+        }
+      }
+    };
+
+    /**
+     * Format player display name
+     * @param {string} firstName
+     * @param {string} lastInitial
+     * @returns {string}
+     */
+    const formatPlayerName = (firstName, lastInitial) => {
+      const cleanFirst = (firstName || '').trim();
+      const cleanLast = (lastInitial || '').trim().charAt(0).toUpperCase();
+      if (!cleanFirst) return 'Anonymous';
+      return cleanLast ? `${cleanFirst} ${cleanLast}.` : cleanFirst;
+    };
+
+    // ============================================================
     // SCORING UTILITIES
     // ============================================================
 
@@ -1167,74 +1318,84 @@
       enabled: true,
 
       init() {
-        if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
-          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+          if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+        } catch (e) {
+          console.warn('Audio not available:', e);
+          this.ctx = null;
         }
       },
 
       play(type) {
         if (!this.enabled || !this.ctx) return;
 
-        // Resume audio context if suspended (browser autoplay policy)
-        if (this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
+        try {
+          // Resume audio context if suspended (browser autoplay policy)
+          if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
 
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
 
-        const now = this.ctx.currentTime;
+          const now = this.ctx.currentTime;
 
-        switch(type) {
-          case 'correct':
-            osc.frequency.setValueAtTime(523, now); // C5
-            osc.frequency.setValueAtTime(659, now + 0.1); // E5
-            osc.frequency.setValueAtTime(784, now + 0.2); // G5
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.exponentialDecayTo(0.01, now + 0.4);
-            osc.start(now);
-            osc.stop(now + 0.4);
-            break;
+          switch(type) {
+            case 'correct':
+              osc.frequency.setValueAtTime(523, now); // C5
+              osc.frequency.setValueAtTime(659, now + 0.1); // E5
+              osc.frequency.setValueAtTime(784, now + 0.2); // G5
+              gain.gain.setValueAtTime(0.3, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+              osc.start(now);
+              osc.stop(now + 0.4);
+              break;
 
-          case 'incorrect':
-            osc.frequency.setValueAtTime(200, now);
-            osc.frequency.setValueAtTime(150, now + 0.15);
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.exponentialDecayTo(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-            break;
+            case 'incorrect':
+              osc.frequency.setValueAtTime(200, now);
+              osc.frequency.setValueAtTime(150, now + 0.15);
+              gain.gain.setValueAtTime(0.3, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+              osc.start(now);
+              osc.stop(now + 0.3);
+              break;
 
-          case 'tick':
-            osc.frequency.setValueAtTime(800, now);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialDecayTo(0.01, now + 0.05);
-            osc.start(now);
-            osc.stop(now + 0.05);
-            break;
+            case 'tick':
+              osc.frequency.setValueAtTime(800, now);
+              gain.gain.setValueAtTime(0.1, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+              osc.start(now);
+              osc.stop(now + 0.05);
+              break;
 
-          case 'achievement':
-            osc.frequency.setValueAtTime(523, now);
-            osc.frequency.setValueAtTime(659, now + 0.1);
-            osc.frequency.setValueAtTime(784, now + 0.2);
-            osc.frequency.setValueAtTime(1047, now + 0.3);
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.exponentialDecayTo(0.01, now + 0.5);
-            osc.start(now);
-            osc.stop(now + 0.5);
-            break;
+            case 'achievement':
+              osc.frequency.setValueAtTime(523, now);
+              osc.frequency.setValueAtTime(659, now + 0.1);
+              osc.frequency.setValueAtTime(784, now + 0.2);
+              osc.frequency.setValueAtTime(1047, now + 0.3);
+              gain.gain.setValueAtTime(0.3, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+              osc.start(now);
+              osc.stop(now + 0.5);
+              break;
 
-          case 'streak':
-            osc.frequency.setValueAtTime(440, now);
-            osc.frequency.setValueAtTime(554, now + 0.08);
-            osc.frequency.setValueAtTime(659, now + 0.16);
-            gain.gain.setValueAtTime(0.25, now);
-            gain.gain.exponentialDecayTo(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-            break;
+            case 'streak':
+              osc.frequency.setValueAtTime(440, now);
+              osc.frequency.setValueAtTime(554, now + 0.08);
+              osc.frequency.setValueAtTime(659, now + 0.16);
+              gain.gain.setValueAtTime(0.25, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+              osc.start(now);
+              osc.stop(now + 0.3);
+              break;
+          }
+        } catch (e) {
+          // Silently fail if audio doesn't work
+          console.warn('Sound playback failed:', e);
         }
       },
 
@@ -1243,14 +1404,6 @@
         return this.enabled;
       }
     };
-
-    // Polyfill for exponentialDecayTo (non-standard)
-    if (typeof GainNode !== 'undefined' && GainNode.prototype && !GainNode.prototype.exponentialDecayTo) {
-      // Use exponentialRampToValueAtTime instead
-      AudioParam.prototype.exponentialDecayTo = function(value, endTime) {
-        this.exponentialRampToValueAtTime(Math.max(value, 0.0001), endTime);
-      };
-    }
 
     /**
      * Get hint content for a claim
@@ -1804,7 +1957,7 @@
       );
     };
 
-    /** Setup Screen - Enhanced with difficulty, avatars, sound */
+    /** Setup Screen - Enhanced with player inputs and leaderboard */
     const SetupScreen = ({ onStart }) => {
       const [teamName, setTeamName] = useState('');
       const [rounds, setRounds] = useState(5);
@@ -1812,6 +1965,16 @@
       const [selectedAvatar, setSelectedAvatar] = useState(TEAM_AVATARS[0]);
       const [soundEnabled, setSoundEnabled] = useState(true);
       const [showHowToPlay, setShowHowToPlay] = useState(false);
+      const [showLeaderboard, setShowLeaderboard] = useState(false);
+      const [leaderboardTab, setLeaderboardTab] = useState('teams'); // 'teams' or 'players'
+
+      // Player inputs (up to 4 players per group)
+      const [players, setPlayers] = useState([
+        { firstName: '', lastInitial: '' },
+        { firstName: '', lastInitial: '' },
+        { firstName: '', lastInitial: '' },
+        { firstName: '', lastInitial: '' }
+      ]);
 
       // Initialize sound manager
       useEffect(() => {
@@ -1824,6 +1987,234 @@
         if (newState) SoundManager.play('tick');
       };
 
+      const updatePlayer = (index, field, value) => {
+        setPlayers(prev => {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], [field]: value };
+          return updated;
+        });
+      };
+
+      // Get valid players (those with at least a first name)
+      const validPlayers = players.filter(p => p.firstName.trim());
+
+      // Difficulty background colors (fixed - using rgba instead of CSS var interpolation)
+      const difficultyBgColors = {
+        easy: 'rgba(52, 211, 153, 0.15)',
+        medium: 'rgba(251, 191, 36, 0.15)',
+        hard: 'rgba(251, 113, 133, 0.15)',
+        mixed: 'rgba(167, 139, 250, 0.15)'
+      };
+
+      // Leaderboard data
+      const topTeams = useMemo(() => LeaderboardManager.getTopTeams(10), [showLeaderboard]);
+      const topPlayers = useMemo(() => LeaderboardManager.getTopPlayers(10), [showLeaderboard]);
+
+      // Leaderboard View
+      if (showLeaderboard) {
+        return (
+          <div style={{
+            maxWidth: '640px',
+            margin: '0 auto',
+            padding: '1.5rem'
+          }}>
+            <div className="animate-in" style={{ marginBottom: '1.5rem' }}>
+              <button
+                onClick={() => setShowLeaderboard(false)}
+                className="mono"
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                ← Back to Setup
+              </button>
+            </div>
+
+            <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🏆</div>
+              <h2 className="mono" style={{
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                color: 'var(--accent-amber)'
+              }}>
+                LEADERBOARD
+              </h2>
+            </div>
+
+            {/* Tab Selector */}
+            <div style={{
+              display: 'flex',
+              gap: '0.5rem',
+              marginBottom: '1rem'
+            }}>
+              <button
+                onClick={() => setLeaderboardTab('teams')}
+                className="mono"
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: leaderboardTab === 'teams' ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                  color: leaderboardTab === 'teams' ? 'var(--bg-deep)' : 'var(--text-secondary)',
+                  border: `1px solid ${leaderboardTab === 'teams' ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                🎯 Top Teams
+              </button>
+              <button
+                onClick={() => setLeaderboardTab('players')}
+                className="mono"
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: leaderboardTab === 'players' ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                  color: leaderboardTab === 'players' ? 'var(--bg-deep)' : 'var(--text-secondary)',
+                  border: `1px solid ${leaderboardTab === 'players' ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                👤 Top Players
+              </button>
+            </div>
+
+            {/* Teams Leaderboard */}
+            {leaderboardTab === 'teams' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                overflow: 'hidden'
+              }}>
+                {topTeams.length === 0 ? (
+                  <div style={{
+                    padding: '2rem',
+                    textAlign: 'center',
+                    color: 'var(--text-muted)'
+                  }}>
+                    No games played yet. Be the first!
+                  </div>
+                ) : (
+                  topTeams.map((game, index) => (
+                    <div
+                      key={game.id}
+                      style={{
+                        padding: '0.875rem 1rem',
+                        borderBottom: index < topTeams.length - 1 ? '1px solid var(--border)' : 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        background: index < 3 ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
+                      }}
+                    >
+                      <div className="mono" style={{
+                        width: '2rem',
+                        fontSize: index < 3 ? '1.25rem' : '0.875rem',
+                        color: index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--text-muted)',
+                        fontWeight: 700
+                      }}>
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>{game.teamAvatar || '🔍'}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {game.teamName}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {game.players?.map(p => formatPlayerName(p.firstName, p.lastInitial)).join(', ') || 'Anonymous'}
+                        </div>
+                      </div>
+                      <div className="mono" style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: game.score >= 0 ? 'var(--correct)' : 'var(--incorrect)'
+                      }}>
+                        {game.score >= 0 ? '+' : ''}{game.score}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Players Leaderboard */}
+            {leaderboardTab === 'players' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                overflow: 'hidden'
+              }}>
+                {topPlayers.length === 0 ? (
+                  <div style={{
+                    padding: '2rem',
+                    textAlign: 'center',
+                    color: 'var(--text-muted)'
+                  }}>
+                    No players yet. Start a game!
+                  </div>
+                ) : (
+                  topPlayers.map((player, index) => (
+                    <div
+                      key={player.displayName}
+                      style={{
+                        padding: '0.875rem 1rem',
+                        borderBottom: index < topPlayers.length - 1 ? '1px solid var(--border)' : 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        background: index < 3 ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
+                      }}
+                    >
+                      <div className="mono" style={{
+                        width: '2rem',
+                        fontSize: index < 3 ? '1.25rem' : '0.875rem',
+                        color: index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--text-muted)',
+                        fontWeight: 700
+                      }}>
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {player.displayName}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {player.gamesPlayed} game{player.gamesPlayed !== 1 ? 's' : ''} • avg: {player.avgScore}
+                        </div>
+                      </div>
+                      <div className="mono" style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: 'var(--accent-amber)'
+                      }}>
+                        Best: {player.bestScore}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Main Setup View
       return (
         <div style={{
           maxWidth: '640px',
@@ -1831,10 +2222,10 @@
           padding: '1.5rem'
         }}>
           {/* Header */}
-          <div className="animate-in" style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🔍</div>
+          <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</div>
             <h1 className="mono" style={{
-              fontSize: '1.75rem',
+              fontSize: '1.5rem',
               fontWeight: 700,
               color: 'var(--accent-cyan)',
               marginBottom: '0.25rem',
@@ -1843,7 +2234,7 @@
               TRUTH HUNTERS
             </h1>
             <p style={{
-              fontSize: '1rem',
+              fontSize: '0.9375rem',
               color: 'var(--text-secondary)',
               fontStyle: 'italic'
             }}>
@@ -1851,16 +2242,42 @@
             </p>
           </div>
 
-          {/* Mission Briefing - Collapsible */}
+          {/* Leaderboard Button */}
+          <div className="animate-in" style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '1rem'
+          }}>
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="mono"
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'rgba(251, 191, 36, 0.15)',
+                border: '1px solid var(--accent-amber)',
+                borderRadius: '6px',
+                color: 'var(--accent-amber)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              🏆 View Leaderboard
+            </button>
+          </div>
+
+          {/* How To Play - Collapsible */}
           <div
             className="animate-in"
             style={{
-              animationDelay: '0.1s',
+              animationDelay: '0.05s',
               background: 'var(--bg-card)',
               border: '1px solid var(--border)',
               borderRadius: '12px',
-              padding: '1.25rem',
-              marginBottom: '1rem'
+              padding: '1rem',
+              marginBottom: '0.75rem'
             }}
           >
             <button
@@ -1877,13 +2294,13 @@
               }}
             >
               <h2 className="mono" style={{
-                fontSize: '0.875rem',
+                fontSize: '0.8125rem',
                 color: 'var(--accent-amber)',
                 letterSpacing: '0.05em'
               }}>
                 📋 HOW TO PLAY
               </h2>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
                 {showHowToPlay ? '▲' : '▼'}
               </span>
             </button>
@@ -1893,22 +2310,22 @@
                 listStyle: 'none',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.625rem',
-                marginTop: '1rem'
+                gap: '0.5rem',
+                marginTop: '0.75rem'
               }}>
                 {[
-                  'Read claims together — some are AI-generated with errors!',
-                  'Discuss as a team — use your assigned roles',
+                  'Read claims together — some are AI-generated!',
+                  'Discuss as a team using assigned roles',
                   'Vote TRUE, FALSE, or MIXED',
-                  'Stake confidence points — the riskier the bet, the bigger the reward',
-                  'Learn from mistakes — that\'s how we grow!'
+                  'Stake confidence points',
+                  'Learn from mistakes!'
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: '0.625rem',
+                    gap: '0.5rem',
                     color: 'var(--text-secondary)',
-                    fontSize: '0.875rem'
+                    fontSize: '0.8125rem'
                   }}>
                     <span style={{ color: 'var(--accent-cyan)' }}>▸</span>
                     {item}
@@ -1918,26 +2335,26 @@
             )}
           </div>
 
-          {/* Team Setup */}
+          {/* Team Name & Mascot */}
           <div
             className="animate-in"
             style={{
-              animationDelay: '0.15s',
+              animationDelay: '0.1s',
               background: 'var(--bg-card)',
               border: '1px solid var(--border)',
               borderRadius: '12px',
-              padding: '1.25rem',
-              marginBottom: '1rem'
+              padding: '1rem',
+              marginBottom: '0.75rem'
             }}
           >
             <label className="mono" style={{
               display: 'block',
-              fontSize: '0.75rem',
+              fontSize: '0.6875rem',
               color: 'var(--text-muted)',
-              marginBottom: '0.5rem',
+              marginBottom: '0.375rem',
               letterSpacing: '0.05em'
             }}>
-              TEAM NAME
+              TEAM NAME *
             </label>
             <input
               type="text"
@@ -1949,30 +2366,30 @@
               autoComplete="off"
               style={{
                 width: '100%',
-                padding: '0.75rem 1rem',
+                padding: '0.625rem 0.875rem',
                 background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: '6px',
                 color: 'var(--text-primary)',
-                fontSize: '1rem',
+                fontSize: '0.9375rem',
                 fontFamily: 'var(--font-serif)',
-                marginBottom: '1rem'
+                marginBottom: '0.75rem'
               }}
             />
 
             <label className="mono" style={{
               display: 'block',
-              fontSize: '0.75rem',
+              fontSize: '0.6875rem',
               color: 'var(--text-muted)',
-              marginBottom: '0.5rem',
+              marginBottom: '0.375rem',
               letterSpacing: '0.05em'
             }}>
-              TEAM MASCOT
+              MASCOT
             </label>
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '0.5rem'
+              gap: '0.375rem'
             }}>
               {TEAM_AVATARS.map((avatar) => (
                 <button
@@ -1980,37 +2397,113 @@
                   onClick={() => setSelectedAvatar(avatar)}
                   title={avatar.name}
                   style={{
-                    padding: '0.75rem 0.5rem',
+                    padding: '0.5rem 0.375rem',
                     background: selectedAvatar.id === avatar.id
                       ? 'rgba(34, 211, 238, 0.15)'
                       : 'var(--bg-elevated)',
                     border: `2px solid ${selectedAvatar.id === avatar.id ? 'var(--accent-cyan)' : 'var(--border)'}`,
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.15s ease',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '0.25rem'
+                    gap: '0.125rem'
                   }}
                 >
-                  <span style={{ fontSize: '1.5rem' }}>{avatar.emoji}</span>
-                  <span className="mono" style={{
-                    fontSize: '0.625rem',
-                    color: 'var(--text-muted)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: '100%'
-                  }}>
-                    {avatar.name.split(' ')[1] || avatar.name}
-                  </span>
+                  <span style={{ fontSize: '1.25rem' }}>{avatar.emoji}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Difficulty Selection */}
+          {/* Player Inputs */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.15s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '0.75rem'
+            }}
+          >
+            <label className="mono" style={{
+              display: 'block',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.5rem',
+              letterSpacing: '0.05em'
+            }}>
+              👥 TEAM MEMBERS (for leaderboard)
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {players.map((player, index) => (
+                <div key={index} style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  alignItems: 'center'
+                }}>
+                  <span className="mono" style={{
+                    fontSize: '0.6875rem',
+                    color: 'var(--text-muted)',
+                    width: '1rem'
+                  }}>
+                    {index + 1}.
+                  </span>
+                  <input
+                    type="text"
+                    value={player.firstName}
+                    onChange={(e) => updatePlayer(index, 'firstName', e.target.value)}
+                    placeholder="First Name"
+                    maxLength={15}
+                    autoComplete="off"
+                    style={{
+                      flex: 1,
+                      padding: '0.5rem 0.625rem',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.875rem',
+                      fontFamily: 'var(--font-serif)'
+                    }}
+                  />
+                  <input
+                    type="text"
+                    value={player.lastInitial}
+                    onChange={(e) => updatePlayer(index, 'lastInitial', e.target.value.charAt(0).toUpperCase())}
+                    placeholder="L"
+                    maxLength={1}
+                    autoComplete="off"
+                    style={{
+                      width: '2.5rem',
+                      padding: '0.5rem',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.875rem',
+                      fontFamily: 'var(--font-mono)',
+                      textAlign: 'center',
+                      textTransform: 'uppercase'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{
+              marginTop: '0.5rem',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              fontStyle: 'italic'
+            }}>
+              Enter first name + last initial (e.g., "Maya T.")
+            </div>
+          </div>
+
+          {/* Difficulty */}
           <div
             className="animate-in"
             style={{
@@ -2018,58 +2511,50 @@
               background: 'var(--bg-card)',
               border: '1px solid var(--border)',
               borderRadius: '12px',
-              padding: '1.25rem',
-              marginBottom: '1rem'
+              padding: '1rem',
+              marginBottom: '0.75rem'
             }}
           >
             <label className="mono" style={{
               display: 'block',
-              fontSize: '0.75rem',
+              fontSize: '0.6875rem',
               color: 'var(--text-muted)',
-              marginBottom: '0.75rem',
+              marginBottom: '0.5rem',
               letterSpacing: '0.05em'
             }}>
               DIFFICULTY
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.375rem' }}>
               {Object.entries(DIFFICULTY_CONFIG).map(([key, config]) => (
                 <button
                   key={key}
                   onClick={() => setDifficulty(key)}
                   style={{
-                    padding: '0.875rem',
-                    background: difficulty === key
-                      ? `${config.color}15`
-                      : 'var(--bg-elevated)',
+                    padding: '0.625rem',
+                    background: difficulty === key ? difficultyBgColors[key] : 'var(--bg-elevated)',
                     border: `2px solid ${difficulty === key ? config.color : 'var(--border)'}`,
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.15s ease',
                     textAlign: 'left'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <span>{config.icon}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <span style={{ fontSize: '0.875rem' }}>{config.icon}</span>
                     <span className="mono" style={{
-                      fontSize: '0.875rem',
+                      fontSize: '0.75rem',
                       fontWeight: 600,
                       color: difficulty === key ? config.color : 'var(--text-primary)'
                     }}>
                       {config.name}
                     </span>
                   </div>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--text-muted)'
-                  }}>
-                    {config.description}
-                  </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Round Selection */}
+          {/* Rounds */}
           <div
             className="animate-in"
             style={{
@@ -2077,20 +2562,20 @@
               background: 'var(--bg-card)',
               border: '1px solid var(--border)',
               borderRadius: '12px',
-              padding: '1.25rem',
-              marginBottom: '1rem'
+              padding: '1rem',
+              marginBottom: '0.75rem'
             }}
           >
             <label className="mono" style={{
               display: 'block',
-              fontSize: '0.75rem',
+              fontSize: '0.6875rem',
               color: 'var(--text-muted)',
-              marginBottom: '0.75rem',
+              marginBottom: '0.5rem',
               letterSpacing: '0.05em'
             }}>
-              NUMBER OF ROUNDS
+              ROUNDS
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.375rem' }}>
               {[3, 5, 7, 10].map((n) => (
                 <button
                   key={n}
@@ -2098,15 +2583,14 @@
                   className="mono"
                   style={{
                     flex: 1,
-                    padding: '0.75rem 0.5rem',
+                    padding: '0.625rem 0.375rem',
                     background: rounds === n ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
                     color: rounds === n ? 'var(--bg-deep)' : 'var(--text-secondary)',
                     border: `1px solid ${rounds === n ? 'var(--accent-cyan)' : 'var(--border)'}`,
                     borderRadius: '6px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontSize: '0.875rem'
+                    fontSize: '0.8125rem'
                   }}
                 >
                   {n}
@@ -2114,54 +2598,48 @@
               ))}
             </div>
             <div style={{
-              marginTop: '0.5rem',
-              fontSize: '0.75rem',
+              marginTop: '0.375rem',
+              fontSize: '0.6875rem',
               color: 'var(--text-muted)',
               textAlign: 'center'
             }}>
-              ~{rounds * 3} minutes
+              ~{rounds * 3} min
             </div>
           </div>
 
-          {/* Sound Toggle */}
+          {/* Sound + Start */}
           <div
             className="animate-in"
             style={{
               animationDelay: '0.3s',
               display: 'flex',
-              justifyContent: 'center',
-              marginBottom: '1.5rem'
+              gap: '0.75rem',
+              marginBottom: '1rem'
             }}
           >
             <button
               onClick={handleSoundToggle}
               className="mono"
               style={{
-                padding: '0.5rem 1rem',
+                padding: '0.75rem',
                 background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: '6px',
                 color: 'var(--text-secondary)',
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
+                fontSize: '1rem',
+                cursor: 'pointer'
               }}
             >
-              {soundEnabled ? '🔊' : '🔇'} Sound {soundEnabled ? 'ON' : 'OFF'}
+              {soundEnabled ? '🔊' : '🔇'}
             </button>
-          </div>
-
-          {/* Start Button */}
-          <div className="animate-in" style={{ animationDelay: '0.35s' }}>
             <Button
               onClick={() => onStart({
                 teamName: teamName || 'Team Alpha',
                 rounds,
                 difficulty,
                 avatar: selectedAvatar,
-                soundEnabled
+                soundEnabled,
+                players: validPlayers
               })}
               fullWidth
               size="lg"
@@ -2171,20 +2649,19 @@
             </Button>
           </div>
 
-          {/* Fun fact */}
+          {/* Tip */}
           <div
             className="animate-in"
             style={{
-              animationDelay: '0.4s',
-              marginTop: '1.5rem',
-              padding: '1rem',
+              animationDelay: '0.35s',
+              padding: '0.75rem',
               background: 'var(--bg-elevated)',
-              borderRadius: '8px',
+              borderRadius: '6px',
               textAlign: 'center'
             }}
           >
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              💡 <strong>Did you know?</strong> {getRandomItem(EDUCATIONAL_TIPS).tip}
+            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+              💡 {getRandomItem(EDUCATIONAL_TIPS).tip}
             </div>
           </div>
         </div>
@@ -3310,7 +3787,8 @@
           score: 0,
           predictedScore: 0,
           results: [],
-          avatar: TEAM_AVATARS[0]
+          avatar: TEAM_AVATARS[0],
+          players: []
         }
       });
 
@@ -3322,7 +3800,7 @@
 
       // Start game with new settings object
       const startGame = useCallback((settings) => {
-        const { teamName, rounds, difficulty, avatar, soundEnabled } = settings;
+        const { teamName, rounds, difficulty, avatar, soundEnabled, players } = settings;
 
         // Select claims based on difficulty
         const selectedClaims = selectClaimsByDifficulty(difficulty, rounds);
@@ -3342,7 +3820,8 @@
             score: 0,
             predictedScore: 0,
             results: [],
-            avatar: avatar
+            avatar: avatar,
+            players: players || []
           }
         });
 
@@ -3408,14 +3887,34 @@
 
       const handlePrediction = useCallback((prediction) => {
         setShowPrediction(false);
-        setGameState(prev => ({
-          ...prev,
-          phase: 'debrief',
-          team: {
-            ...prev.team,
-            predictedScore: prediction
-          }
-        }));
+        setGameState(prev => {
+          // Calculate final score with calibration bonus
+          const calibrationBonus = Math.abs(prev.team.score - prediction) <= 2 ? 3 : 0;
+          const finalScore = prev.team.score + calibrationBonus;
+
+          // Save to leaderboard
+          LeaderboardManager.save({
+            teamName: prev.team.name,
+            teamAvatar: prev.team.avatar?.emoji || '🔍',
+            players: prev.team.players || [],
+            score: finalScore,
+            difficulty: prev.difficulty,
+            rounds: prev.totalRounds,
+            correctCount: prev.team.results.filter(r => r.correct).length,
+            calibrationBonus: calibrationBonus,
+            predictedScore: prediction,
+            actualScore: prev.team.score
+          });
+
+          return {
+            ...prev,
+            phase: 'debrief',
+            team: {
+              ...prev.team,
+              predictedScore: prediction
+            }
+          };
+        });
       }, []);
 
       const handleDismissTip = useCallback(() => {
@@ -3436,7 +3935,8 @@
             score: 0,
             predictedScore: 0,
             results: [],
-            avatar: TEAM_AVATARS[0]
+            avatar: TEAM_AVATARS[0],
+            players: []
           }
         });
         setPlayPhase('discuss');
