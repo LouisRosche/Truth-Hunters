@@ -490,10 +490,10 @@
       {
         id: 'med-007',
         text: 'When you blush, the lining of your stomach also turns red.',
-        answer: 'TRUE',
-        source: 'expert-sourced',
-        explanation: 'The same adrenaline response that dilates facial blood vessels affects the stomach lining similarly.',
-        errorPattern: 'N/A - Accurate',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'While adrenaline does affect blood flow to both the face and digestive system, claiming the stomach "turns red" like facial blushing oversimplifies the biology. This claim is widely repeated but lacks strong peer-reviewed evidence.',
+        errorPattern: 'Plausible adjacency',
         subject: 'Human Biology',
         difficulty: 'medium'
       },
@@ -1224,10 +1224,11 @@
         return { isValid: false, cleaned: '', error: 'Please choose an appropriate name' };
       }
 
-      // Only allow letters, numbers, spaces, and basic punctuation
-      const validPattern = /^[a-zA-Z0-9\s\-_.!?]+$/;
+      // Allow letters (including international), numbers, spaces, and basic punctuation
+      // \p{L} matches any Unicode letter (José, François, 李, etc.)
+      const validPattern = /^[\p{L}\p{N}\s\-_.!?]+$/u;
       if (!validPattern.test(name.trim())) {
-        return { isValid: false, cleaned: cleaned.replace(/[^a-zA-Z0-9\s\-_.!?]/g, ''), error: 'Name contains invalid characters' };
+        return { isValid: false, cleaned: cleaned.replace(/[^\p{L}\p{N}\s\-_.!?]/gu, ''), error: 'Name contains invalid characters' };
       }
 
       return { isValid: true, cleaned, error: null };
@@ -1377,6 +1378,7 @@
         });
 
         return Object.values(playerScores)
+          .filter(p => p.gamesPlayed > 0) // Guard against division by zero
           .map(p => ({
             ...p,
             avgScore: Math.round(p.totalScore / p.gamesPlayed)
@@ -2914,7 +2916,7 @@
               color: 'var(--text-muted)',
               textAlign: 'center'
             }}>
-              ~{rounds * 3} min
+              ~{Math.ceil(rounds * (DIFFICULTY_CONFIG[difficulty]?.discussTime + DIFFICULTY_CONFIG[difficulty]?.stakeTime || 180) / 60)} min
             </div>
           </div>
 
@@ -3400,6 +3402,8 @@
                   onChange={(e) => setReasoning(e.target.value)}
                   placeholder="What made you choose this?"
                   rows={2}
+                  maxLength={500}
+                  aria-label="Explain your reasoning"
                   style={{
                     width: '100%',
                     padding: '0.625rem',
@@ -3458,8 +3462,8 @@
                 {resultData.points >= 0 ? '+' : ''}{resultData.points} points
               </div>
 
-              {/* Streak notification */}
-              {resultData.correct && currentStreak >= 1 && (
+              {/* Streak notification - show when 2+ in a row (matches top bar display) */}
+              {resultData.correct && currentStreak >= 2 && (
                 <div style={{
                   marginTop: '0.5rem',
                   padding: '0.375rem 0.75rem',
@@ -4036,17 +4040,25 @@
       const [prediction, setPrediction] = useState(currentScore);
 
       return (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '1rem'
-        }}>
-          <div 
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="prediction-modal-title"
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem'
+          }}
+        >
+          <div
             className="animate-in"
             style={{
               background: 'var(--bg-card)',
@@ -4057,12 +4069,12 @@
               width: '100%'
             }}
           >
-            <h2 className="mono" style={{
+            <h2 id="prediction-modal-title" className="mono" style={{
               fontSize: '1.25rem',
               color: 'var(--accent-amber)',
               marginBottom: '0.5rem'
             }}>
-              🎯 FINAL PREDICTION
+              <span aria-hidden="true">🎯</span> FINAL PREDICTION
             </h2>
             <p style={{
               color: 'var(--text-secondary)',
@@ -4091,6 +4103,7 @@
                 }}
                 min="-100"
                 max="100"
+                autoFocus
                 aria-label="Predicted final score"
                 style={{
                   width: '100%',
@@ -4191,8 +4204,8 @@
         // Update streak
         if (result.correct) {
           setCurrentStreak(prev => prev + 1);
-          // Play streak sound if streak >= 2
-          if (currentStreak >= 1) {
+          // Play streak sound if this will be 3+ in a row (currentStreak is 2+ before increment)
+          if (currentStreak >= 2) {
             setTimeout(() => SoundManager.play('streak'), 300);
           }
         } else {
@@ -4356,16 +4369,24 @@
 
           {/* Educational Tip Modal (between rounds) */}
           {showTip && currentTip && (
-            <div style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.75)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-              padding: '1rem'
-            }}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="tip-modal-title"
+              style={{
+                position: 'fixed',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                background: 'rgba(0, 0, 0, 0.75)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '1rem'
+              }}
+            >
               <div
                 className="animate-in"
                 style={{
@@ -4381,14 +4402,14 @@
                 <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>
                   {currentTip.icon}
                 </div>
-                <div className="mono" style={{
+                <div id="tip-modal-title" className="mono" style={{
                   fontSize: '0.75rem',
                   color: 'var(--accent-violet)',
                   marginBottom: '0.5rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em'
                 }}>
-                  💡 {currentTip.category}
+                  <span aria-hidden="true">💡</span> {currentTip.category}
                 </div>
                 <p style={{
                   fontSize: '1rem',
