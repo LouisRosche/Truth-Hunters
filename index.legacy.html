@@ -7,20 +7,225 @@
   <meta name="theme-color" content="#0a0e1a">
   <meta name="color-scheme" content="dark">
   <title>Truth Hunters: The Calibration Game</title>
-  <!-- Favicon: magnifying glass icon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='38' cy='38' r='28' fill='none' stroke='%2322d3ee' stroke-width='8'/><line x1='58' y1='58' x2='88' y2='88' stroke='%2322d3ee' stroke-width='10' stroke-linecap='round'/><circle cx='38' cy='38' r='12' fill='%2322d3ee' opacity='0.3'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Firebase SDK for class-wide leaderboards -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg-deep: #0a0e1a;
+      --bg-card: #111827;
+      --bg-elevated: #1e293b;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #8b9cb8;
+      --accent-cyan: #22d3ee;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-emerald: #34d399;
+      --accent-violet: #a78bfa;
+      --confidence-1: #3b82f6;
+      --confidence-2: #f59e0b;
+      --confidence-3: #ef4444;
+      --correct: #10b981;
+      --incorrect: #ef4444;
+      --border: #334155;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-serif: 'Source Serif 4', Georgia, serif;
+    }
+
+    html { font-size: 16px; }
+    
+    body {
+      font-family: var(--font-serif);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(ellipse at 20% 0%, rgba(34, 211, 238, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(167, 139, 250, 0.06) 0%, transparent 50%);
+    }
+
+    #root {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Utility Classes */
+    .mono { font-family: var(--font-mono); }
+    .serif { font-family: var(--font-serif); }
+    
+    /* Animations */
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .animate-in {
+      animation: fadeSlideIn 0.4s ease-out forwards;
+    }
+
+    .animate-pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .animate-shake {
+      animation: shake 0.4s ease-in-out;
+    }
+
+    .animate-celebrate {
+      animation: celebrate 0.3s ease-out;
+    }
+
+    /* Badge shimmer animation */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .achievement-badge {
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(251, 191, 36, 0.3) 50%,
+        transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2s ease-in-out infinite;
+    }
+
+    /* Streak fire animation */
+    @keyframes fireGlow {
+      0%, 100% {
+        text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        transform: scale(1);
+      }
+      50% {
+        text-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+        transform: scale(1.05);
+      }
+    }
+
+    .streak-fire {
+      animation: fireGlow 1s ease-in-out infinite;
+    }
+
+    /* Bounce animation for achievements */
+    @keyframes bounceIn {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .animate-bounce-in {
+      animation: bounceIn 0.4s ease-out forwards;
+    }
+
+    /* Chromebook-specific optimizations */
+    @media (max-width: 1024px) and (min-resolution: 1dppx) {
+      /* Reduce animation complexity for lower-end devices */
+      .animate-in {
+        animation-duration: 0.2s;
+      }
+
+      /* Ensure touch targets are at least 44px */
+      button, input, select, textarea {
+        min-height: 44px;
+      }
+
+      /* Optimize scrolling */
+      * {
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+    /* Small screen (typical Chromebook) */
+    @media (max-width: 1366px) and (max-height: 768px) {
+      html { font-size: 14px; }
+
+      .confidence-grid {
+        flex-wrap: wrap;
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* Focus styles for accessibility */
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--accent-cyan);
+      outline-offset: 2px;
+    }
+
+    /* Print Styles */
+    @media print {
+      body { 
+        background: white !important; 
+        color: black !important; 
+        font-size: 12pt;
+      }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      header, footer { display: none !important; }
+      * {
+        background: white !important;
+        color: black !important;
+        border-color: #ccc !important;
+      }
+    }
+    .print-only { display: none; }
+
+    /* Mobile responsiveness */
+    @media (max-width: 640px) {
+      html { font-size: 14px; }
+      .confidence-grid { flex-direction: column; }
+    }
+
+    /* Respect reduced motion preferences */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
 </head>
 <body>
   <div id="root">
-    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 1rem; background: #0a0e1a;">
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 1rem;">
       <div style="font-size: 3rem;">🔍</div>
       <div style="font-family: monospace; color: #22d3ee; font-size: 1.25rem;">Loading Truth Hunters...</div>
     </div>
   </div>
-
+  
   <noscript>
     <div style="padding: 2rem; text-align: center; font-family: system-ui, sans-serif; background: #0a0e1a; color: #f1f5f9; min-height: 100vh;">
       <h1>Truth Hunters: The Calibration Game</h1>
@@ -3059,32 +3264,9 @@
                       <li>Disable Google Analytics if asked</li>
                       <li>Go to Project Settings → Your apps → Add Web App</li>
                       <li>Copy the <code>firebaseConfig</code> object</li>
-                      <li>Go to Build → Firestore → Create database</li>
-                      <li>Choose <strong>production mode</strong></li>
-                      <li>Go to Rules tab and paste these security rules:</li>
-                    </ol>
-                    <pre style={{
-                      background: 'var(--bg-card)',
-                      padding: '0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.5rem',
-                      overflow: 'auto',
-                      margin: '0.375rem 0',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all'
-                    }}>{`rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /games/{gameId} {
-      allow read: if true;
-      allow create: if request.resource.data.score is number;
-      allow update, delete: if false;
-    }
-  }
-}`}</pre>
-                    <ol start={10} style={{ paddingLeft: '1.25rem', margin: 0 }}>
-                      <li>Click "Publish" to save rules</li>
-                      <li>Paste your config below!</li>
+                      <li>In Firebase Console → Build → Firestore → Create database</li>
+                      <li>Start in <strong>test mode</strong> (or add rules later)</li>
+                      <li>Paste config below!</li>
                     </ol>
                   </div>
                 </details>
@@ -3405,19 +3587,11 @@ service cloud.firestore {
               display: 'block',
               fontSize: '0.6875rem',
               color: 'var(--text-muted)',
-              marginBottom: '0.25rem',
+              marginBottom: '0.5rem',
               letterSpacing: '0.05em'
             }}>
               👥 TEAM MEMBERS (for leaderboard)
             </label>
-            <p style={{
-              fontSize: '0.5625rem',
-              color: 'var(--text-muted)',
-              marginBottom: '0.5rem',
-              opacity: 0.8
-            }}>
-              🔒 Names stored locally on this device only. If cloud leaderboard is enabled by your teacher, first names and last initials may be shared with your class.
-            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {players.map((player, index) => (
                 <div key={index} style={{
@@ -4877,22 +5051,6 @@ service cloud.firestore {
         };
       }, []);
 
-      // Network status detection for offline indicator
-      const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-      useEffect(() => {
-        const handleOnline = () => setIsOnline(true);
-        const handleOffline = () => setIsOnline(false);
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        return () => {
-          window.removeEventListener('online', handleOnline);
-          window.removeEventListener('offline', handleOffline);
-        };
-      }, []);
-
       // Start game with new settings object
       const startGame = useCallback((settings) => {
         const { teamName, rounds, difficulty, avatar, soundEnabled, players } = settings;
@@ -5080,25 +5238,6 @@ service cloud.firestore {
             totalRounds={gameState.totalRounds}
             phase={gameState.phase}
           />
-
-          {/* Offline indicator banner */}
-          {!isOnline && (
-            <div
-              role="alert"
-              aria-live="assertive"
-              style={{
-                background: 'var(--accent-amber)',
-                color: 'var(--bg-deep)',
-                padding: '0.5rem 1rem',
-                textAlign: 'center',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                fontFamily: 'var(--font-mono)'
-              }}
-            >
-              ⚠️ You're offline — Game works, but cloud leaderboard unavailable
-            </div>
-          )}
 
           <main role="main" style={{ flex: 1 }}>
             {gameState.phase === 'setup' && (
