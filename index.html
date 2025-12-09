@@ -632,10 +632,10 @@
       {
         id: 'hard-009',
         text: 'A single bolt of lightning contains enough energy to toast 100,000 slices of bread.',
-        answer: 'TRUE',
-        source: 'expert-sourced',
-        explanation: 'Lightning carries about 1 billion joules of energy. A toaster uses about 1,000 joules per slice. The math checks out for roughly 100,000 slices!',
-        errorPattern: 'N/A - Accurate',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Lightning energy varies enormously (1-5 billion joules total, but only 1-5% is electrical). A toaster uses about 60,000 joules per slice (1000W × 60 seconds). The actual number of slices would be far fewer than 100,000 - the specific number is fabricated precision.',
+        errorPattern: 'Confident specificity',
         subject: 'Physics',
         difficulty: 'hard'
       },
@@ -1025,129 +1025,116 @@
     // ============================================================
     // CONTENT MODERATION SYSTEM
     // Filters inappropriate content for middle school environment
+    // Uses word-boundary matching to avoid false positives
+    // Pre-compiled regex for performance
     // ============================================================
 
     /**
-     * Comprehensive list of inappropriate words/phrases to filter
-     * Includes profanity, slurs, gang terminology, and inappropriate content
-     * All patterns are lowercase for case-insensitive matching
+     * Words that must be blocked - uses word boundary matching
+     * These are unambiguous bad words that won't cause false positives
      */
-    const BLOCKED_PATTERNS = [
-      // Common profanity
-      'fuck', 'fck', 'f\\*ck', 'f\\*\\*k', 'fuk', 'fuq', 'phuck', 'phuk',
-      'shit', 'sh\\*t', 'sh1t', 'sht', 'bullshit', 'bs',
-      'ass', 'a\\*\\*', 'a55', 'asshole', 'assh0le', 'arsehole',
-      'bitch', 'b\\*tch', 'b1tch', 'biatch', 'biotch',
-      'damn', 'dammit', 'goddamn',
-      'hell', 'heck',
-      'crap', 'cr\\*p',
-      'piss', 'p\\*ss',
-      'dick', 'd\\*ck', 'd1ck', 'dik',
-      'cock', 'c\\*ck', 'c0ck',
-      'pussy', 'puss', 'pu55y',
-      'cunt', 'c\\*nt',
-      'whore', 'wh0re', 'hoe', 'h0e', 'hoar',
-      'slut', 'sl\\*t',
-      'bastard', 'b\\*stard',
+    const BLOCKED_WORDS = [
+      // Profanity (unambiguous)
+      'fuck', 'fucker', 'fucking', 'fucked', 'fck', 'fuk', 'fuq', 'phuck',
+      'shit', 'shitty', 'bullshit', 'shite',
+      'asshole', 'arsehole', 'asswipe',
+      'bitch', 'bitches', 'bitchy', 'biatch', 'biotch',
+      'bastard', 'bastards',
+      'cunt', 'cunts',
+      'damn', 'dammit', 'goddamn', 'goddamnit',
+      'piss', 'pissed', 'pissing',
+      'crap', 'crappy',
+      'dick', 'dicks', 'dickhead',
+      'cock', 'cocks', 'cocksucker',
+      'pussy', 'pussies',
+      'whore', 'whores',
+      'slut', 'sluts', 'slutty',
 
-      // Racial/ethnic slurs (abbreviated to avoid reproducing full slurs)
-      'nigga', 'n1gga', 'nigger', 'n1gger', 'negro',
-      'chink', 'ch1nk', 'gook', 'g00k',
-      'spic', 'sp1c', 'wetback', 'beaner',
-      'kike', 'k1ke',
-      'cracker', 'honky', 'honkey',
-      'towelhead', 'raghead', 'camel jockey',
-      'jap', 'j\\*p',
-      'paki', 'pak1',
+      // Racial/ethnic slurs
+      'nigga', 'niggas', 'nigger', 'niggers',
+      'chink', 'chinks',
+      'gook', 'gooks',
+      'spic', 'spics', 'spick',
+      'wetback', 'wetbacks',
+      'beaner', 'beaners',
+      'kike', 'kikes',
+      'towelhead', 'raghead',
 
       // Homophobic/transphobic slurs
-      'fag', 'f\\*g', 'faggot', 'f\\*ggot', 'fagot',
-      'dyke', 'd\\*ke',
-      'homo', 'h0mo',
-      'tranny', 'tr\\*nny',
-      'queer',
-      'lesbo',
+      'fag', 'fags', 'faggot', 'faggots',
+      'dyke', 'dykes',
+      'tranny', 'trannies',
+      'lesbo', 'lesbos',
 
-      // Gang-related terms and slang
-      'crip', 'cr1p', 'crippin', 'cripping',
-      'blood', 'bl00d', 'bloods', 'suwoop', 'su woop',
-      'gangsta', 'gangster', 'g\\*ngsta',
-      'thug', 'thugs', 'thuggin',
-      'gdk', 'bdk', 'gd', 'bd',
-      'folk', 'folks', 'folknation',
-      'latin king', 'almighty',
-      'ms13', 'ms-13', 'mara',
-      'sureno', 'norteno', 'sur13', 'norte',
-      'piru', 'hoover', 'rollin',
-      'opp', 'opps', '0pp',
-      'lack', 'lackin', 'lacking',
-      'drill', 'drillin',
-      'smoke', 'smokin', 'smoking',
-      'gang', 'g\\*ng', 'set', 'clique',
-      'hood', 'h00d', 'block',
-      'trap', 'tr\\*p', 'trappin',
-      'plug', 'plugged',
-      'strap', 'strapped', 'choppa', 'chopper', 'draco', 'glizzy',
-      'blicky', 'ratchet', 'heater', 'pole', 'stick',
-      'slide', 'sliding', 'spin', 'spinning',
-      'dead', 'deadass', 'd3ad',
-      'killa', 'killer', 'k1lla', 'murda', 'murder',
-      'diss', 'dissed', 'dissing',
+      // Gang identifiers (specific terms)
+      'bloods', 'crips', 'suwoop',
+      'gangbanger', 'gangbangers',
+      'ms13', 'surenos', 'nortenos',
+      'latin kings',
 
-      // Drug references
-      'weed', 'w33d', 'marijuana', 'pot', 'kush', 'dank', 'loud',
-      'cocaine', 'coke', 'c0ke', 'blow', 'snow', 'yayo', 'yay',
-      'heroin', 'h3roin', 'dope', 'd0pe', 'smack',
-      'meth', 'm3th', 'crystal', 'ice', 'crank', 'tina',
-      'xanax', 'xan', 'xanny', 'bars', 'percs', 'percocet', 'oxy',
-      'lean', 'syrup', 'sizzurp', 'purple drank', 'codeine',
-      'molly', 'm0lly', 'ecstasy', 'mdma', 'ex', 'x',
-      'acid', 'lsd', 'shrooms', 'mushrooms',
-      'high', 'h1gh', 'stoned', 'baked', 'faded', 'lit', 'zooted',
+      // Drug terms (unambiguous)
+      'cocaine', 'heroin', 'meth', 'methamphetamine',
+      'marijuana', 'weed', 'stoner',
+      'crackhead', 'pothead', 'tweaker',
+      'xanax', 'percocet', 'oxycontin',
 
-      // Sexual content
-      'sex', 's3x', 'sexy', 's3xy',
-      'porn', 'p0rn', 'porno', 'xxx',
-      'nude', 'nud3', 'naked', 'nak3d',
-      'boob', 'b00b', 'boobs', 'tits', 't1ts', 'titty', 'titties',
-      'penis', 'p3nis', 'peen', 'pp',
-      'vagina', 'vag', 'v\\*gina',
-      'rape', 'r\\*pe', 'raping',
-      'molest', 'pedo', 'pedophile',
-      'horny', 'h0rny',
-      'orgasm', '0rgasm',
-      'erection', 'boner', 'b0ner',
-      'masturbate', 'jerkoff', 'jerk off', 'wank', 'fap',
-      'blowjob', 'bl0wjob', 'bj', 'handjob', 'hj',
-      'cum', 'c\\*m', 'jizz', 'sperm',
+      // Sexual content (explicit)
+      'porn', 'porno', 'pornography',
+      'xxx', 'sexting',
+      'blowjob', 'handjob', 'rimjob',
+      'dildo', 'vibrator',
+      'masturbate', 'masturbation', 'jerkoff', 'wank',
+      'orgasm', 'orgasms',
+      'erection', 'boner', 'boners',
+      'boobs', 'titties', 'tits',
+      'penis', 'penises', 'vagina', 'vaginas',
+      'cumshot', 'creampie',
+      'nude', 'nudes', 'naked',
+      'horny',
 
-      // Violence
-      'kill', 'k1ll', 'killing',
-      'die', 'd1e', 'dying',
-      'suicide', 'suicidal', 'kms', 'kys',
-      'shoot', 'sh00t', 'shooting', 'shot',
-      'stab', 'stabbing',
-      'bomb', 'b0mb', 'bombing',
-      'terrorist', 'terror',
+      // Violence (explicit)
+      'suicide', 'suicidal',
+      'kms', 'kys',
+      'murder', 'murderer',
+      'rapist', 'rape', 'raping', 'raped',
+      'molest', 'molester', 'pedophile', 'pedo',
 
-      // Other inappropriate content
-      'nazi', 'n\\*zi', 'hitler', 'h1tler', 'heil',
+      // Hate symbols/groups
+      'nazi', 'nazis', 'hitler',
       'kkk', 'klan',
-      'slave', 'slavery',
-      'retard', 'r3tard', 'retarded',
-      'spaz', 'spastic',
-      'idiot', '1diot',
-      'stupid', 'stup1d',
-      'dumb', 'dumba',
-      'loser', 'l0ser',
-      'ugly', 'uglee',
-      'fat', 'fatty', 'fatso', 'fatass',
-      'skinny',
-      'anorexic', 'bulimic',
+      'heil',
 
-      // Leetspeak/number substitutions for common bad words
-      'f4ck', '5hit', 'a55', 'b1tch', 'd1ck', 'p3n1s', 'n1gg', 'f4g'
+      // Ableist slurs
+      'retard', 'retarded', 'retards',
+      'spaz', 'spastic'
     ];
+
+    /**
+     * Pre-compiled regex for efficient matching
+     * Uses word boundaries (\b) to avoid matching substrings
+     */
+    const BLOCKED_WORDS_REGEX = new RegExp(
+      '\\b(' + BLOCKED_WORDS.join('|') + ')\\b',
+      'i'
+    );
+
+    /**
+     * Patterns that should be blocked even as substrings (leetspeak variants)
+     * These are deliberate obfuscations that won't appear in normal words
+     */
+    const BLOCKED_LEETSPEAK = [
+      'f[u\\*@]ck', 'sh[i1!]t', 'b[i1!]tch', 'd[i1!]ck', 'c[o0]ck',
+      'n[i1!]gg', 'f[a4@]g', 'p[e3]n[i1!]s', 'c[u\\*]nt', 'a55',
+      'wh[o0]re', 'p[u\\*]ssy', 'b[o0]{2}b', 't[i1!]t', 'pr[o0]n'
+    ];
+
+    /**
+     * Pre-compiled leetspeak regex
+     */
+    const BLOCKED_LEETSPEAK_REGEX = new RegExp(
+      '(' + BLOCKED_LEETSPEAK.join('|') + ')',
+      'i'
+    );
 
     /**
      * Check if text contains inappropriate content
@@ -1157,35 +1144,34 @@
     const isContentAppropriate = (text) => {
       if (!text || typeof text !== 'string') return true;
 
-      // Normalize text: lowercase, remove extra spaces, decode common substitutions
-      const normalized = text
-        .toLowerCase()
-        .replace(/[^\w\s]/g, '') // Remove special chars
-        .replace(/0/g, 'o')
-        .replace(/1/g, 'i')
-        .replace(/3/g, 'e')
-        .replace(/4/g, 'a')
-        .replace(/5/g, 's')
-        .replace(/7/g, 't')
-        .replace(/8/g, 'b')
-        .replace(/@/g, 'a')
-        .replace(/\$/g, 's')
-        .replace(/\s+/g, ' ')
-        .trim();
+      const lowerText = text.toLowerCase();
 
-      // Check against blocked patterns
-      for (const pattern of BLOCKED_PATTERNS) {
-        try {
-          // Create regex that matches the pattern as a whole word or substring
-          const regex = new RegExp(pattern.replace(/\\/g, '\\'), 'i');
-          if (regex.test(normalized) || regex.test(text.toLowerCase())) {
-            return false;
-          }
-        } catch (e) {
-          // If regex fails, do simple includes check
-          if (normalized.includes(pattern) || text.toLowerCase().includes(pattern)) {
-            return false;
-          }
+      // Check word-boundary matched blocked words
+      if (BLOCKED_WORDS_REGEX.test(lowerText)) {
+        return false;
+      }
+
+      // Check leetspeak patterns (substring matching is OK for these)
+      if (BLOCKED_LEETSPEAK_REGEX.test(lowerText)) {
+        return false;
+      }
+
+      // Check for number substitutions in the original text
+      // Only normalize if the text contains suspicious number patterns
+      if (/[0-9@$]/.test(text)) {
+        const normalized = lowerText
+          .replace(/0/g, 'o')
+          .replace(/1/g, 'i')
+          .replace(/3/g, 'e')
+          .replace(/4/g, 'a')
+          .replace(/5/g, 's')
+          .replace(/7/g, 't')
+          .replace(/8/g, 'b')
+          .replace(/@/g, 'a')
+          .replace(/\$/g, 's');
+
+        if (BLOCKED_WORDS_REGEX.test(normalized)) {
+          return false;
         }
       }
 
@@ -3339,17 +3325,21 @@
           {phase === 'stake' && (
             <div className="animate-in" style={{ marginTop: '1.25rem' }}>
               {timeoutWarning && (
-                <div style={{
-                  padding: '0.625rem 1rem',
-                  background: 'rgba(251, 191, 36, 0.15)',
-                  border: '1px solid var(--accent-amber)',
-                  borderRadius: '8px',
-                  marginBottom: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <span>⚠️</span>
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  style={{
+                    padding: '0.625rem 1rem',
+                    background: 'rgba(251, 191, 36, 0.15)',
+                    border: '1px solid var(--accent-amber)',
+                    borderRadius: '8px',
+                    marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span aria-hidden="true">⚠️</span>
                   <span style={{ color: 'var(--accent-amber)', fontSize: '0.8125rem' }}>
                     Time's up! Select a verdict to continue.
                   </span>
@@ -3499,7 +3489,7 @@
                 color: 'var(--text-muted)'
               }}>
                 You said <strong>{resultData.verdict}</strong> with{' '}
-                <strong>{'●'.repeat(resultData.confidence)}</strong> confidence
+                <strong aria-label={`${resultData.confidence} out of 3`}>{'●'.repeat(resultData.confidence)}</strong> confidence
               </div>
             </div>
           )}
@@ -3792,7 +3782,7 @@
                         fontSize: '0.75rem',
                         color: 'var(--text-muted)'
                       }}>
-                        {result.teamVerdict} • {'●'.repeat(result.confidence)}
+                        {result.teamVerdict} • <span aria-label={`${result.confidence} out of 3 confidence`}>{'●'.repeat(result.confidence)}</span>
                       </div>
                     </div>
                     <div className="mono" style={{
@@ -4093,7 +4083,15 @@
               <input
                 type="number"
                 value={prediction}
-                onChange={(e) => setPrediction(parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 0;
+                  // Bound prediction to reasonable range (-100 to 100)
+                  const bounded = Math.max(-100, Math.min(100, val));
+                  setPrediction(bounded);
+                }}
+                min="-100"
+                max="100"
+                aria-label="Predicted final score"
                 style={{
                   width: '100%',
                   padding: '1rem',
@@ -4217,10 +4215,17 @@
             }
           }
 
+          // Get next claim with bounds checking
+          const nextRound = prev.currentRound + 1;
+          const nextClaimIndex = prev.currentRound; // 0-indexed, current round just completed
+          const nextClaim = !isLastRound && nextClaimIndex < prev.claims.length
+            ? prev.claims[nextClaimIndex]
+            : null;
+
           return {
             ...prev,
-            currentRound: isLastRound ? prev.currentRound : prev.currentRound + 1,
-            currentClaim: isLastRound ? null : prev.claims[prev.currentRound],
+            currentRound: isLastRound ? prev.currentRound : nextRound,
+            currentClaim: nextClaim,
             team: {
               ...prev.team,
               score: newScore,
@@ -4238,18 +4243,27 @@
           const calibrationBonus = Math.abs(prev.team.score - prediction) <= 2 ? 3 : 0;
           const finalScore = prev.team.score + calibrationBonus;
 
+          // Calculate accuracy percentage
+          const correctCount = prev.team.results.filter(r => r.correct).length;
+          const totalRounds = prev.team.results.length;
+          const accuracy = totalRounds > 0 ? Math.round((correctCount / totalRounds) * 100) : 0;
+
+          // Calculate achievements earned
+          const gameStats = calculateGameStats(prev.team.results, prev.claims, prev.team.score, prediction);
+          const earnedAchievementIds = ACHIEVEMENTS
+            .filter(a => a.condition(gameStats))
+            .map(a => a.id);
+
           // Save to leaderboard
           LeaderboardManager.save({
             teamName: prev.team.name,
             teamAvatar: prev.team.avatar?.emoji || '🔍',
             players: prev.team.players || [],
             score: finalScore,
+            accuracy: accuracy,
             difficulty: prev.difficulty,
             rounds: prev.totalRounds,
-            correctCount: prev.team.results.filter(r => r.correct).length,
-            calibrationBonus: calibrationBonus,
-            predictedScore: prediction,
-            actualScore: prev.team.score
+            achievements: earnedAchievementIds
           });
 
           return {
