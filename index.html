@@ -13,6 +13,9 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Firebase SDK for class-wide leaderboards -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -704,6 +707,53 @@
     ];
 
     // ============================================================
+    // CLAIMS DATABASE VALIDATION
+    // Check for duplicate IDs and missing required fields
+    // ============================================================
+
+    (function validateClaimsDatabase() {
+      const ids = new Set();
+      const duplicates = [];
+      const invalidClaims = [];
+
+      CLAIMS_DATABASE.forEach((claim, index) => {
+        // Check for required fields
+        if (!claim.id || !claim.text || !claim.answer) {
+          invalidClaims.push({ index, claim, reason: 'Missing required field (id, text, or answer)' });
+          return;
+        }
+
+        // Check for duplicate IDs
+        if (ids.has(claim.id)) {
+          duplicates.push(claim.id);
+        } else {
+          ids.add(claim.id);
+        }
+
+        // Validate answer is valid
+        if (!['TRUE', 'FALSE', 'MIXED'].includes(claim.answer)) {
+          invalidClaims.push({ index, claim, reason: `Invalid answer: ${claim.answer}` });
+        }
+
+        // Validate difficulty if present
+        if (claim.difficulty && !['easy', 'medium', 'hard'].includes(claim.difficulty)) {
+          invalidClaims.push({ index, claim, reason: `Invalid difficulty: ${claim.difficulty}` });
+        }
+      });
+
+      // Log warnings in development
+      if (duplicates.length > 0) {
+        console.warn('⚠️ Duplicate claim IDs found:', duplicates);
+      }
+      if (invalidClaims.length > 0) {
+        console.warn('⚠️ Invalid claims found:', invalidClaims);
+      }
+      if (duplicates.length === 0 && invalidClaims.length === 0) {
+        console.log('✓ Claims database validation passed:', CLAIMS_DATABASE.length, 'claims');
+      }
+    })();
+
+    // ============================================================
     // ACHIEVEMENTS & BADGES (Engagement System)
     // ============================================================
 
@@ -1255,17 +1305,95 @@
      * @property {string[]} achievements - achievement IDs earned
      */
 
+    /**
+     * Check if localStorage is available and working
+     * @returns {boolean}
+     */
+    const isLocalStorageAvailable = () => {
+      try {
+        const testKey = '__storage_test__';
+        localStorage.setItem(testKey, testKey);
+        localStorage.removeItem(testKey);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    // Cache the result since it won't change during session
+    const LOCAL_STORAGE_AVAILABLE = isLocalStorageAvailable();
+
     const LeaderboardManager = {
       /**
+       * Check if storage is available
+       * @returns {boolean}
+       */
+      isAvailable() {
+        return LOCAL_STORAGE_AVAILABLE;
+      },
+
+      /**
        * Get all game records from localStorage
+       * Includes validation and corruption recovery
        * @returns {GameRecord[]}
        */
       getAll() {
+        if (!LOCAL_STORAGE_AVAILABLE) {
+          return [];
+        }
+
         try {
           const data = localStorage.getItem(STORAGE_KEY);
-          return data ? JSON.parse(data) : [];
+          if (!data) return [];
+
+          const parsed = JSON.parse(data);
+
+          // Validate that it's an array
+          if (!Array.isArray(parsed)) {
+            console.warn('Leaderboard data is not an array, resetting');
+            this.clear();
+            return [];
+          }
+
+          // Filter out corrupted entries and validate required fields
+          const validated = parsed.filter(record => {
+            // Must be an object
+            if (!record || typeof record !== 'object') return false;
+            // Must have required fields
+            if (typeof record.score !== 'number') return false;
+            if (typeof record.timestamp !== 'number') return false;
+            // Team name must be a string (can be empty)
+            if (typeof record.teamName !== 'string') record.teamName = 'Unknown Team';
+            // Players must be an array
+            if (!Array.isArray(record.players)) record.players = [];
+            // Sanitize player entries
+            record.players = record.players.filter(p =>
+              p && typeof p === 'object' &&
+              typeof p.firstName === 'string' &&
+              typeof p.lastInitial === 'string'
+            );
+            return true;
+          });
+
+          // If we filtered out corrupted entries, save the cleaned data
+          if (validated.length !== parsed.length) {
+            console.warn(`Removed ${parsed.length - validated.length} corrupted leaderboard entries`);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
+            } catch (e) {
+              // Ignore save errors during cleanup
+            }
+          }
+
+          return validated;
         } catch (e) {
-          console.warn('Failed to load leaderboard:', e);
+          console.warn('Failed to load leaderboard (data may be corrupted):', e);
+          // Attempt to clear corrupted data
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch (clearError) {
+            // Ignore
+          }
           return [];
         }
       },
@@ -1411,6 +1539,262 @@
       }
     };
 
+    // ============================================================
+    // FIREBASE BACKEND (Class-wide leaderboard support)
+    // To enable: Set FIREBASE_CONFIG in localStorage or configure below
+    // ============================================================
+
+    const FIREBASE_CONFIG_KEY = 'truthHunters_firebaseConfig';
+    const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
+
+    /**
+     * Firebase Backend Manager for class-wide leaderboards
+     * Provides cloud storage with fallback to localStorage
+     */
+    const FirebaseBackend = {
+      db: null,
+      initialized: false,
+      classCode: null,
+
+      /**
+       * Check if Firebase is available and configured
+       */
+      isConfigured() {
+        try {
+          const config = localStorage.getItem(FIREBASE_CONFIG_KEY);
+          return config && typeof firebase !== 'undefined';
+        } catch (e) {
+          return false;
+        }
+      },
+
+      /**
+       * Get stored class code
+       */
+      getClassCode() {
+        try {
+          return localStorage.getItem(FIREBASE_CLASS_KEY) || null;
+        } catch (e) {
+          return null;
+        }
+      },
+
+      /**
+       * Set class code for filtering leaderboard
+       */
+      setClassCode(code) {
+        try {
+          if (code) {
+            localStorage.setItem(FIREBASE_CLASS_KEY, sanitizeInput(code).toUpperCase());
+          } else {
+            localStorage.removeItem(FIREBASE_CLASS_KEY);
+          }
+          this.classCode = code;
+        } catch (e) {
+          console.warn('Failed to save class code:', e);
+        }
+      },
+
+      /**
+       * Initialize Firebase with config
+       * @param {Object} config - Firebase configuration object
+       */
+      init(config) {
+        try {
+          if (typeof firebase === 'undefined') {
+            console.warn('Firebase SDK not loaded');
+            return false;
+          }
+
+          // Don't reinitialize if already done
+          if (this.initialized && this.db) {
+            return true;
+          }
+
+          // Initialize Firebase app if not already initialized
+          if (!firebase.apps.length) {
+            firebase.initializeApp(config);
+          }
+
+          this.db = firebase.firestore();
+          this.initialized = true;
+          this.classCode = this.getClassCode();
+
+          // Save config for future sessions
+          try {
+            localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
+          } catch (e) {
+            // Ignore storage errors
+          }
+
+          console.log('Firebase backend initialized successfully');
+          return true;
+        } catch (e) {
+          console.warn('Failed to initialize Firebase:', e);
+          return false;
+        }
+      },
+
+      /**
+       * Try to initialize from stored config
+       */
+      tryAutoInit() {
+        try {
+          const storedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
+          if (storedConfig) {
+            const config = JSON.parse(storedConfig);
+            return this.init(config);
+          }
+        } catch (e) {
+          console.warn('Auto-init failed:', e);
+        }
+        return false;
+      },
+
+      /**
+       * Save game record to Firestore
+       * @param {Object} record - Game record to save
+       */
+      async save(record) {
+        if (!this.initialized || !this.db) {
+          return false;
+        }
+
+        try {
+          const classCode = this.getClassCode() || 'PUBLIC';
+
+          const docData = {
+            ...record,
+            classCode: classCode,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            // Ensure required fields
+            teamName: sanitizeInput(record.teamName || 'Team'),
+            score: typeof record.score === 'number' ? record.score : 0,
+            players: (record.players || []).map(p => ({
+              firstName: sanitizeInput(p.firstName || ''),
+              lastInitial: sanitizeInput(p.lastInitial || '')
+            }))
+          };
+
+          await this.db.collection('games').add(docData);
+          return true;
+        } catch (e) {
+          console.warn('Failed to save to Firebase:', e);
+          return false;
+        }
+      },
+
+      /**
+       * Get top teams from Firestore
+       * @param {number} limit - Number of teams to fetch
+       * @param {string} classFilter - Optional class code filter
+       */
+      async getTopTeams(limit = 10, classFilter = null) {
+        if (!this.initialized || !this.db) {
+          return [];
+        }
+
+        try {
+          const filterClass = classFilter || this.getClassCode();
+          let query = this.db.collection('games')
+            .orderBy('score', 'desc')
+            .limit(limit);
+
+          if (filterClass) {
+            query = this.db.collection('games')
+              .where('classCode', '==', filterClass)
+              .orderBy('score', 'desc')
+              .limit(limit);
+          }
+
+          const snapshot = await query.get();
+          return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().createdAt?.toMillis() || Date.now()
+          }));
+        } catch (e) {
+          console.warn('Failed to fetch from Firebase:', e);
+          return [];
+        }
+      },
+
+      /**
+       * Get top players aggregated from Firestore
+       * @param {number} limit
+       */
+      async getTopPlayers(limit = 10) {
+        if (!this.initialized || !this.db) {
+          return [];
+        }
+
+        try {
+          const classCode = this.getClassCode();
+          let query = this.db.collection('games');
+
+          if (classCode) {
+            query = query.where('classCode', '==', classCode);
+          }
+
+          const snapshot = await query.get();
+          const playerScores = {};
+
+          snapshot.docs.forEach(doc => {
+            const game = doc.data();
+            if (!game.players) return;
+
+            game.players.forEach(player => {
+              const key = `${player.firstName}_${player.lastInitial}`.toLowerCase();
+              const displayName = formatPlayerName(player.firstName, player.lastInitial);
+
+              if (!playerScores[key]) {
+                playerScores[key] = {
+                  displayName,
+                  totalScore: 0,
+                  gamesPlayed: 0,
+                  bestScore: -Infinity
+                };
+              }
+
+              playerScores[key].totalScore += game.score || 0;
+              playerScores[key].gamesPlayed += 1;
+              playerScores[key].bestScore = Math.max(playerScores[key].bestScore, game.score || 0);
+            });
+          });
+
+          return Object.values(playerScores)
+            .filter(p => p.gamesPlayed > 0)
+            .map(p => ({
+              ...p,
+              avgScore: Math.round(p.totalScore / p.gamesPlayed)
+            }))
+            .sort((a, b) => b.bestScore - a.bestScore)
+            .slice(0, limit);
+        } catch (e) {
+          console.warn('Failed to fetch players from Firebase:', e);
+          return [];
+        }
+      },
+
+      /**
+       * Disconnect and clear config
+       */
+      disconnect() {
+        try {
+          localStorage.removeItem(FIREBASE_CONFIG_KEY);
+          localStorage.removeItem(FIREBASE_CLASS_KEY);
+          this.initialized = false;
+          this.db = null;
+          this.classCode = null;
+        } catch (e) {
+          // Ignore
+        }
+      }
+    };
+
+    // Try to auto-initialize Firebase on load
+    FirebaseBackend.tryAutoInit();
+
     /**
      * Format player display name
      * @param {string} firstName
@@ -1422,6 +1806,45 @@
       const cleanLast = (lastInitial || '').trim().charAt(0).toUpperCase();
       if (!cleanFirst) return 'Anonymous';
       return cleanLast ? `${cleanFirst} ${cleanLast}.` : cleanFirst;
+    };
+
+    // ============================================================
+    // UTILITY FUNCTIONS
+    // ============================================================
+
+    /**
+     * Create a debounced version of a function
+     * Prevents rapid repeated calls (e.g., double-click protection)
+     * @param {Function} fn - Function to debounce
+     * @param {number} delay - Delay in milliseconds
+     * @returns {Function}
+     */
+    const debounce = (fn, delay) => {
+      let timeoutId = null;
+      return (...args) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          fn(...args);
+          timeoutId = null;
+        }, delay);
+      };
+    };
+
+    /**
+     * Create a throttled click handler that prevents double-clicks
+     * @param {Function} fn - Click handler
+     * @param {number} delay - Minimum delay between clicks (default 500ms)
+     * @returns {Function}
+     */
+    const preventDoubleClick = (fn, delay = 500) => {
+      let lastClick = 0;
+      return (...args) => {
+        const now = Date.now();
+        if (now - lastClick >= delay) {
+          lastClick = now;
+          fn(...args);
+        }
+      };
     };
 
     // ============================================================
@@ -1721,25 +2144,73 @@
     class ErrorBoundary extends React.Component {
       constructor(props) {
         super(props);
-        this.state = { hasError: false, error: null };
+        this.state = { hasError: false, error: null, errorInfo: null };
       }
 
       static getDerivedStateFromError(error) {
         return { hasError: true, error };
       }
 
+      componentDidCatch(error, errorInfo) {
+        // Log error details for debugging
+        console.error('Truth Hunters Error:', error);
+        console.error('Component stack:', errorInfo?.componentStack);
+
+        this.setState({ errorInfo });
+
+        // Attempt to save error to localStorage for debugging (if available)
+        try {
+          const errorLog = {
+            message: error?.message || 'Unknown error',
+            stack: error?.stack,
+            componentStack: errorInfo?.componentStack,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+          };
+          const existingLogs = JSON.parse(localStorage.getItem('truthHunters_errorLog') || '[]');
+          existingLogs.push(errorLog);
+          // Keep only last 5 errors
+          localStorage.setItem('truthHunters_errorLog', JSON.stringify(existingLogs.slice(-5)));
+        } catch (e) {
+          // localStorage not available, ignore
+        }
+      }
+
       render() {
         if (this.state.hasError) {
+          const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
           return React.createElement('div', {
+            role: 'alert',
+            'aria-live': 'assertive',
             style: {
               padding: '2rem',
               textAlign: 'center',
-              color: 'var(--text-primary)'
+              color: 'var(--text-primary)',
+              maxWidth: '600px',
+              margin: '2rem auto'
             }
           }, [
-            React.createElement('h2', { key: 'title', style: { color: 'var(--accent-rose)' } }, '⚠️ Something went wrong'),
-            React.createElement('p', { key: 'msg', style: { color: 'var(--text-secondary)', margin: '1rem 0' } }, 
-              'Please refresh the page to restart the game.'),
+            React.createElement('h2', { key: 'title', style: { color: 'var(--accent-rose)', marginBottom: '1rem' } }, '⚠️ Something went wrong'),
+            React.createElement('p', { key: 'msg', style: { color: 'var(--text-secondary)', margin: '1rem 0' } },
+              'An unexpected error occurred. Please refresh the page to restart the game.'),
+            // Show error details in development
+            isDev && this.state.error && React.createElement('details', {
+              key: 'details',
+              style: {
+                textAlign: 'left',
+                background: 'var(--bg-elevated)',
+                padding: '1rem',
+                borderRadius: '8px',
+                margin: '1rem 0',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-mono)'
+              }
+            }, [
+              React.createElement('summary', { key: 'summary', style: { cursor: 'pointer', marginBottom: '0.5rem' } }, 'Error Details'),
+              React.createElement('pre', { key: 'pre', style: { overflow: 'auto', whiteSpace: 'pre-wrap' } },
+                this.state.error.toString() + '\n\n' + (this.state.error.stack || ''))
+            ]),
             React.createElement('button', {
               key: 'btn',
               onClick: () => window.location.reload(),
@@ -1750,7 +2221,8 @@
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontWeight: 600
+                fontWeight: 600,
+                marginTop: '1rem'
               }
             }, 'Refresh Page')
           ]);
@@ -2172,8 +2644,24 @@
       );
     };
 
-    /** Button Component */
-    const Button = ({ children, onClick, variant = 'primary', disabled, fullWidth, size = 'md', ariaLabel }) => {
+    /** Button Component with double-click protection */
+    const Button = ({ children, onClick, variant = 'primary', disabled, fullWidth, size = 'md', ariaLabel, preventDoubleClickMs = 500 }) => {
+      const lastClickRef = useRef(0);
+
+      const handleClick = useCallback((e) => {
+        if (disabled) return;
+
+        // Prevent rapid double-clicks
+        const now = Date.now();
+        if (now - lastClickRef.current < preventDoubleClickMs) {
+          e.preventDefault();
+          return;
+        }
+        lastClickRef.current = now;
+
+        onClick?.(e);
+      }, [onClick, disabled, preventDoubleClickMs]);
+
       const variants = {
         primary: {
           background: 'var(--accent-cyan)',
@@ -2200,7 +2688,7 @@
 
       return (
         <button
-          onClick={onClick}
+          onClick={handleClick}
           disabled={disabled}
           aria-label={ariaLabel}
           aria-disabled={disabled}
@@ -2234,6 +2722,17 @@
       const [leaderboardTab, setLeaderboardTab] = useState('teams'); // 'teams' or 'players'
       const [validationError, setValidationError] = useState('');
 
+      // Firebase/Class code state
+      const [showTeacherSetup, setShowTeacherSetup] = useState(false);
+      const [classCode, setClassCode] = useState(FirebaseBackend.getClassCode() || '');
+      const [firebaseConfigText, setFirebaseConfigText] = useState('');
+      const [firebaseStatus, setFirebaseStatus] = useState(
+        FirebaseBackend.initialized ? 'connected' : 'disconnected'
+      );
+      const [cloudTeams, setCloudTeams] = useState([]);
+      const [cloudPlayers, setCloudPlayers] = useState([]);
+      const [loadingCloud, setLoadingCloud] = useState(false);
+
       // Player inputs (up to 4 players per group)
       const [players, setPlayers] = useState([
         { firstName: '', lastInitial: '' },
@@ -2246,6 +2745,55 @@
       useEffect(() => {
         SoundManager.init();
       }, []);
+
+      // Load cloud leaderboard when showing leaderboard and Firebase is connected
+      useEffect(() => {
+        if (showLeaderboard && FirebaseBackend.initialized) {
+          setLoadingCloud(true);
+          Promise.all([
+            FirebaseBackend.getTopTeams(10),
+            FirebaseBackend.getTopPlayers(10)
+          ]).then(([teams, players]) => {
+            setCloudTeams(teams);
+            setCloudPlayers(players);
+          }).catch(e => {
+            console.warn('Failed to load cloud leaderboard:', e);
+          }).finally(() => {
+            setLoadingCloud(false);
+          });
+        }
+      }, [showLeaderboard]);
+
+      // Handle Firebase configuration
+      const handleConnectFirebase = () => {
+        try {
+          // Parse the config JSON
+          const config = JSON.parse(firebaseConfigText);
+          if (FirebaseBackend.init(config)) {
+            setFirebaseStatus('connected');
+            if (classCode) {
+              FirebaseBackend.setClassCode(classCode);
+            }
+          } else {
+            setFirebaseStatus('error');
+          }
+        } catch (e) {
+          console.error('Invalid Firebase config:', e);
+          setFirebaseStatus('error');
+        }
+      };
+
+      const handleDisconnectFirebase = () => {
+        FirebaseBackend.disconnect();
+        setFirebaseStatus('disconnected');
+        setFirebaseConfigText('');
+      };
+
+      const handleClassCodeChange = (e) => {
+        const code = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+        setClassCode(code);
+        FirebaseBackend.setClassCode(code);
+      };
 
       const handleSoundToggle = () => {
         const newState = SoundManager.toggle();
@@ -2360,6 +2908,46 @@
               }}>
                 LEADERBOARD
               </h2>
+              {/* Status indicator */}
+              {FirebaseBackend.initialized ? (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(52, 211, 153, 0.1)',
+                  border: '1px solid rgba(52, 211, 153, 0.3)',
+                  borderRadius: '6px',
+                  fontSize: '0.6875rem',
+                  color: 'var(--accent-emerald)'
+                }}>
+                  ☁️ Connected to class leaderboard
+                  {classCode && ` • Class: ${classCode}`}
+                  {loadingCloud && ' • Loading...'}
+                </div>
+              ) : (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(251, 191, 36, 0.1)',
+                  border: '1px solid rgba(251, 191, 36, 0.3)',
+                  borderRadius: '6px',
+                  fontSize: '0.6875rem',
+                  color: 'var(--text-muted)'
+                }}>
+                  💾 Device-only scores • <button
+                    onClick={() => { setShowLeaderboard(false); setShowTeacherSetup(true); }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-cyan)',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontSize: 'inherit',
+                      fontFamily: 'inherit',
+                      padding: 0
+                    }}
+                  >Teacher: Enable class-wide</button>
+                </div>
+              )}
             </div>
 
             {/* Tab Selector */}
@@ -2412,21 +3000,26 @@
                 borderRadius: '12px',
                 overflow: 'hidden'
               }}>
-                {topTeams.length === 0 ? (
-                  <div style={{
-                    padding: '2rem',
-                    textAlign: 'center',
-                    color: 'var(--text-muted)'
-                  }}>
-                    No games played yet. Be the first!
-                  </div>
-                ) : (
-                  topTeams.map((game, index) => (
+                {(() => {
+                  // Use cloud data if Firebase is connected, otherwise use local
+                  const displayTeams = FirebaseBackend.initialized && cloudTeams.length > 0 ? cloudTeams : topTeams;
+                  if (displayTeams.length === 0) {
+                    return (
+                      <div style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: 'var(--text-muted)'
+                      }}>
+                        {loadingCloud ? 'Loading...' : 'No games played yet. Be the first!'}
+                      </div>
+                    );
+                  }
+                  return displayTeams.map((game, index) => (
                     <div
-                      key={game.id}
+                      key={game.id || index}
                       style={{
                         padding: '0.875rem 1rem',
-                        borderBottom: index < topTeams.length - 1 ? '1px solid var(--border)' : 'none',
+                        borderBottom: index < displayTeams.length - 1 ? '1px solid var(--border)' : 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.75rem',
@@ -2473,21 +3066,26 @@
                 borderRadius: '12px',
                 overflow: 'hidden'
               }}>
-                {topPlayers.length === 0 ? (
-                  <div style={{
-                    padding: '2rem',
-                    textAlign: 'center',
-                    color: 'var(--text-muted)'
-                  }}>
-                    No players yet. Start a game!
-                  </div>
-                ) : (
-                  topPlayers.map((player, index) => (
+                {(() => {
+                  // Use cloud data if Firebase is connected, otherwise use local
+                  const displayPlayers = FirebaseBackend.initialized && cloudPlayers.length > 0 ? cloudPlayers : topPlayers;
+                  if (displayPlayers.length === 0) {
+                    return (
+                      <div style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: 'var(--text-muted)'
+                      }}>
+                        {loadingCloud ? 'Loading...' : 'No players yet. Start a game!'}
+                      </div>
+                    );
+                  }
+                  return displayPlayers.map((player, index) => (
                     <div
-                      key={player.displayName}
+                      key={player.displayName || index}
                       style={{
                         padding: '0.875rem 1rem',
-                        borderBottom: index < topPlayers.length - 1 ? '1px solid var(--border)' : 'none',
+                        borderBottom: index < displayPlayers.length - 1 ? '1px solid var(--border)' : 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.75rem',
@@ -2518,10 +3116,253 @@
                         Best: {player.bestScore}
                       </div>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
             )}
+          </div>
+        );
+      }
+
+      // Teacher Setup View (Firebase Configuration)
+      if (showTeacherSetup) {
+        return (
+          <div style={{
+            maxWidth: '640px',
+            margin: '0 auto',
+            padding: '1.5rem'
+          }}>
+            <div className="animate-in" style={{ marginBottom: '1.5rem' }}>
+              <button
+                onClick={() => setShowTeacherSetup(false)}
+                className="mono"
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer'
+                }}
+              >
+                ← Back to Setup
+              </button>
+            </div>
+
+            <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⚙️</div>
+              <h2 className="mono" style={{
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                color: 'var(--accent-cyan)'
+              }}>
+                TEACHER SETUP
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                Enable class-wide leaderboards with Firebase (free)
+              </p>
+            </div>
+
+            {/* Status */}
+            <div className="animate-in" style={{
+              background: firebaseStatus === 'connected' ? 'rgba(52, 211, 153, 0.1)' : 'var(--bg-card)',
+              border: `1px solid ${firebaseStatus === 'connected' ? 'var(--accent-emerald)' : 'var(--border)'}`,
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1rem',
+              textAlign: 'center'
+            }}>
+              <span className="mono" style={{
+                color: firebaseStatus === 'connected' ? 'var(--accent-emerald)' :
+                       firebaseStatus === 'error' ? 'var(--accent-rose)' : 'var(--text-muted)'
+              }}>
+                {firebaseStatus === 'connected' ? '✓ Connected to Firebase' :
+                 firebaseStatus === 'error' ? '✗ Connection Error' : '○ Not Connected'}
+              </span>
+            </div>
+
+            {/* Class Code */}
+            <div className="animate-in" style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <label className="mono" style={{
+                display: 'block',
+                fontSize: '0.75rem',
+                color: 'var(--accent-amber)',
+                marginBottom: '0.5rem'
+              }}>
+                CLASS CODE (optional)
+              </label>
+              <input
+                type="text"
+                value={classCode}
+                onChange={handleClassCodeChange}
+                placeholder="e.g., PERIOD3, SMITH5A"
+                maxLength={10}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '1rem',
+                  textTransform: 'uppercase'
+                }}
+              />
+              <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                Use to filter leaderboard by class period or section
+              </p>
+            </div>
+
+            {/* Firebase Config */}
+            {firebaseStatus !== 'connected' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <label className="mono" style={{
+                  display: 'block',
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-cyan)',
+                  marginBottom: '0.5rem'
+                }}>
+                  FIREBASE CONFIG JSON
+                </label>
+
+                {/* Setup Instructions */}
+                <details style={{ marginBottom: '0.75rem' }}>
+                  <summary style={{
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.75rem'
+                  }}>
+                    📋 How to get your Firebase config (5 min)
+                  </summary>
+                  <div style={{
+                    marginTop: '0.5rem',
+                    padding: '0.75rem',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '6px',
+                    fontSize: '0.6875rem',
+                    color: 'var(--text-muted)',
+                    lineHeight: 1.6
+                  }}>
+                    <ol style={{ paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener" style={{ color: 'var(--accent-cyan)' }}>console.firebase.google.com</a></li>
+                      <li>Click "Create a project" (free tier works)</li>
+                      <li>Name it (e.g., "truth-hunters-myschool")</li>
+                      <li>Disable Google Analytics if asked</li>
+                      <li>Go to Project Settings → Your apps → Add Web App</li>
+                      <li>Copy the <code>firebaseConfig</code> object</li>
+                      <li>In Firebase Console → Build → Firestore → Create database</li>
+                      <li>Start in <strong>test mode</strong> (or add rules later)</li>
+                      <li>Paste config below!</li>
+                    </ol>
+                  </div>
+                </details>
+
+                <textarea
+                  value={firebaseConfigText}
+                  onChange={(e) => setFirebaseConfigText(e.target.value)}
+                  placeholder='{"apiKey": "...", "projectId": "...", ...}'
+                  rows={5}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.6875rem',
+                    resize: 'vertical'
+                  }}
+                />
+
+                <button
+                  onClick={handleConnectFirebase}
+                  disabled={!firebaseConfigText.trim()}
+                  className="mono"
+                  style={{
+                    width: '100%',
+                    marginTop: '0.75rem',
+                    padding: '0.75rem',
+                    background: firebaseConfigText.trim() ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                    color: firebaseConfigText.trim() ? 'var(--bg-deep)' : 'var(--text-muted)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: firebaseConfigText.trim() ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  Connect Firebase
+                </button>
+              </div>
+            )}
+
+            {/* Disconnect Option */}
+            {firebaseStatus === 'connected' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <p style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '0.75rem'
+                }}>
+                  Firebase is connected. Scores from all devices with this config will appear in the leaderboard.
+                </p>
+                <button
+                  onClick={handleDisconnectFirebase}
+                  className="mono"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    color: 'var(--accent-rose)',
+                    border: '1px solid var(--accent-rose)',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Disconnect Firebase
+                </button>
+              </div>
+            )}
+
+            {/* Done Button */}
+            <button
+              onClick={() => setShowTeacherSetup(false)}
+              className="mono"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: 'var(--accent-emerald)',
+                color: 'var(--bg-deep)',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              Done
+            </button>
           </div>
         );
       }
@@ -3525,9 +4366,13 @@
 
       // Play achievement sound on mount if achievements earned
       useEffect(() => {
+        let timeoutId = null;
         if (earnedAchievements.length > 0) {
-          setTimeout(() => SoundManager.play('achievement'), 500);
+          timeoutId = setTimeout(() => SoundManager.play('achievement'), 500);
         }
+        return () => {
+          if (timeoutId) clearTimeout(timeoutId);
+        };
       }, [earnedAchievements.length]);
 
       // Get random reflection prompt
@@ -3745,56 +4590,95 @@
             }}>
               ROUND BREAKDOWN
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {team.results.map((result, i) => {
                 const claim = claims.find(c => c.id === result.claimId);
                 return (
                   <div key={i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
                     padding: '0.75rem',
                     background: 'var(--bg-elevated)',
                     borderRadius: '8px'
                   }}>
+                    {/* Result header row */}
                     <div style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: result.correct 
-                        ? 'rgba(16, 185, 129, 0.2)' 
-                        : 'rgba(239, 68, 68, 0.2)',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.875rem',
-                      color: result.correct ? 'var(--correct)' : 'var(--incorrect)'
+                      gap: '0.75rem',
+                      marginBottom: result.reasoning ? '0.5rem' : 0
                     }}>
-                      {result.correct ? '✓' : '✗'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        background: result.correct
+                          ? 'rgba(16, 185, 129, 0.2)'
+                          : 'rgba(239, 68, 68, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         fontSize: '0.875rem',
-                        color: 'var(--text-primary)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        color: result.correct ? 'var(--correct)' : 'var(--incorrect)'
                       }}>
-                        {claim?.text.substring(0, 50)}...
+                        {result.correct ? '✓' : '✗'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '0.875rem',
+                          color: 'var(--text-primary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {claim?.text.substring(0, 50)}...
+                        </div>
+                        <div className="mono" style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--text-muted)'
+                        }}>
+                          {result.teamVerdict} • <span aria-label={`${result.confidence} out of 3 confidence`}>{'●'.repeat(result.confidence)}</span>
+                        </div>
                       </div>
                       <div className="mono" style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-muted)'
+                        fontWeight: 600,
+                        flexShrink: 0,
+                        color: result.points >= 0 ? 'var(--correct)' : 'var(--incorrect)'
                       }}>
-                        {result.teamVerdict} • <span aria-label={`${result.confidence} out of 3 confidence`}>{'●'.repeat(result.confidence)}</span>
+                        {result.points >= 0 ? '+' : ''}{result.points}
                       </div>
                     </div>
-                    <div className="mono" style={{
-                      fontWeight: 600,
-                      color: result.points >= 0 ? 'var(--correct)' : 'var(--incorrect)'
-                    }}>
-                      {result.points >= 0 ? '+' : ''}{result.points}
-                    </div>
+                    {/* Team's reasoning (if provided) */}
+                    {result.reasoning && (
+                      <div style={{
+                        marginLeft: '2.25rem',
+                        padding: '0.5rem 0.75rem',
+                        background: 'var(--bg-card)',
+                        borderRadius: '6px',
+                        borderLeft: '2px solid var(--accent-cyan)',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        fontStyle: 'italic'
+                      }}>
+                        <span style={{ color: 'var(--text-muted)', marginRight: '0.25rem' }}>Your reasoning:</span>
+                        {result.reasoning}
+                      </div>
+                    )}
+                    {/* Correct explanation (if wrong) */}
+                    {!result.correct && claim?.explanation && (
+                      <div style={{
+                        marginLeft: '2.25rem',
+                        marginTop: result.reasoning ? '0.375rem' : 0,
+                        padding: '0.5rem 0.75rem',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        borderRadius: '6px',
+                        borderLeft: '2px solid var(--incorrect)',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        <span style={{ color: 'var(--incorrect)', marginRight: '0.25rem' }}>Actually:</span>
+                        {claim.explanation}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -4155,6 +5039,18 @@
       const [showTip, setShowTip] = useState(false);
       const [currentTip, setCurrentTip] = useState(null);
 
+      // Ref for sound timeout cleanup
+      const streakSoundTimeoutRef = useRef(null);
+
+      // Cleanup sound timeouts on unmount
+      useEffect(() => {
+        return () => {
+          if (streakSoundTimeoutRef.current) {
+            clearTimeout(streakSoundTimeoutRef.current);
+          }
+        };
+      }, []);
+
       // Start game with new settings object
       const startGame = useCallback((settings) => {
         const { teamName, rounds, difficulty, avatar, soundEnabled, players } = settings;
@@ -4206,7 +5102,14 @@
           setCurrentStreak(prev => prev + 1);
           // Play streak sound if this will be 3+ in a row (currentStreak is 2+ before increment)
           if (currentStreak >= 2) {
-            setTimeout(() => SoundManager.play('streak'), 300);
+            // Clear any pending streak sound timeout
+            if (streakSoundTimeoutRef.current) {
+              clearTimeout(streakSoundTimeoutRef.current);
+            }
+            streakSoundTimeoutRef.current = setTimeout(() => {
+              SoundManager.play('streak');
+              streakSoundTimeoutRef.current = null;
+            }, 300);
           }
         } else {
           setCurrentStreak(0);
@@ -4267,8 +5170,8 @@
             .filter(a => a.condition(gameStats))
             .map(a => a.id);
 
-          // Save to leaderboard
-          LeaderboardManager.save({
+          // Save to leaderboard (local + Firebase if configured)
+          const gameRecord = {
             teamName: prev.team.name,
             teamAvatar: prev.team.avatar?.emoji || '🔍',
             players: prev.team.players || [],
@@ -4277,7 +5180,16 @@
             difficulty: prev.difficulty,
             rounds: prev.totalRounds,
             achievements: earnedAchievementIds
-          });
+          };
+
+          LeaderboardManager.save(gameRecord);
+
+          // Also save to Firebase for class-wide leaderboard
+          if (FirebaseBackend.initialized) {
+            FirebaseBackend.save(gameRecord).catch(e => {
+              console.warn('Firebase save failed:', e);
+            });
+          }
 
           return {
             ...prev,
