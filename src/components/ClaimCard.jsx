@@ -87,7 +87,7 @@ export function ClaimCard({ claim, showAnswer = false }) {
           margin: '1rem 0'
         }}
       >
-        "{claim.text}"
+        &ldquo;{claim.text}&rdquo;
       </blockquote>
 
       {/* Answer reveal section */}

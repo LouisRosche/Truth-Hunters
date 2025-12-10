@@ -18,13 +18,13 @@ import { SoundManager } from '../services/sound';
 export function PlayingScreen({
   claim,
   round,
-  totalRounds,
+  totalRounds: _totalRounds,
   onSubmit,
   phase,
   setPhase,
   difficulty,
   currentStreak,
-  hintsUsed,
+  hintsUsed: _hintsUsed,
   onUseHint,
   teamAvatar
 }) {
@@ -66,6 +66,7 @@ export function PlayingScreen({
       stakeTimer.start();
       setTimeoutWarning(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, discussTime, stakeTime]);
 
   const handleSubmitVerdict = useCallback(() => {
@@ -346,7 +347,7 @@ export function PlayingScreen({
             >
               <span aria-hidden="true">⚠️</span>
               <span style={{ color: 'var(--accent-amber)', fontSize: '0.8125rem' }}>
-                Time's up! Select a verdict to continue.
+                Time&apos;s up! Select a verdict to continue.
               </span>
             </div>
           )}

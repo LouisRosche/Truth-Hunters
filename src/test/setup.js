@@ -3,6 +3,7 @@
  * Configures the testing environment
  */
 
+import { beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 
 // Mock localStorage

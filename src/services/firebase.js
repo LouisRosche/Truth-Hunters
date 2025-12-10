@@ -1,8 +1,20 @@
 /**
  * FIREBASE BACKEND
- * Class-wide leaderboard support using Firestore
+ * Class-wide leaderboard support using Firestore (modular SDK)
  */
 
+import { initializeApp, getApps } from 'firebase/app';
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp
+} from 'firebase/firestore';
 import { sanitizeInput } from '../utils/moderation';
 import { formatPlayerName } from '../utils/helpers';
 
@@ -14,6 +26,7 @@ const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
  * Provides cloud storage with fallback to localStorage
  */
 export const FirebaseBackend = {
+  app: null,
   db: null,
   initialized: false,
   classCode: null,
@@ -24,7 +37,7 @@ export const FirebaseBackend = {
   isConfigured() {
     try {
       const config = localStorage.getItem(FIREBASE_CONFIG_KEY);
-      return config && typeof firebase !== 'undefined';
+      return !!config;
     } catch (e) {
       return false;
     }
@@ -63,22 +76,20 @@ export const FirebaseBackend = {
    */
   init(config) {
     try {
-      if (typeof firebase === 'undefined') {
-        console.warn('Firebase SDK not loaded');
-        return false;
-      }
-
       // Don't reinitialize if already done
       if (this.initialized && this.db) {
         return true;
       }
 
       // Initialize Firebase app if not already initialized
-      if (!firebase.apps.length) {
-        firebase.initializeApp(config);
+      const apps = getApps();
+      if (apps.length === 0) {
+        this.app = initializeApp(config);
+      } else {
+        this.app = apps[0];
       }
 
-      this.db = firebase.firestore();
+      this.db = getFirestore(this.app);
       this.initialized = true;
       this.classCode = this.getClassCode();
 
@@ -128,7 +139,7 @@ export const FirebaseBackend = {
       const docData = {
         ...record,
         classCode: classCode,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
         // Ensure required fields
         teamName: sanitizeInput(record.teamName || 'Team'),
         score: typeof record.score === 'number' ? record.score : 0,
@@ -138,7 +149,8 @@ export const FirebaseBackend = {
         }))
       };
 
-      await this.db.collection('games').add(docData);
+      const gamesRef = collection(this.db, 'games');
+      await addDoc(gamesRef, docData);
       return true;
     } catch (e) {
       console.warn('Failed to save to Firebase:', e);
@@ -148,28 +160,35 @@ export const FirebaseBackend = {
 
   /**
    * Get top teams from Firestore
-   * @param {number} limit - Number of teams to fetch
+   * @param {number} limitCount - Number of teams to fetch
    * @param {string} classFilter - Optional class code filter
    */
-  async getTopTeams(limit = 10, classFilter = null) {
+  async getTopTeams(limitCount = 10, classFilter = null) {
     if (!this.initialized || !this.db) {
       return [];
     }
 
     try {
       const filterClass = classFilter || this.getClassCode();
-      let query = this.db.collection('games')
-        .orderBy('score', 'desc')
-        .limit(limit);
+      const gamesRef = collection(this.db, 'games');
 
+      let q;
       if (filterClass) {
-        query = this.db.collection('games')
-          .where('classCode', '==', filterClass)
-          .orderBy('score', 'desc')
-          .limit(limit);
+        q = query(
+          gamesRef,
+          where('classCode', '==', filterClass),
+          orderBy('score', 'desc'),
+          limit(limitCount)
+        );
+      } else {
+        q = query(
+          gamesRef,
+          orderBy('score', 'desc'),
+          limit(limitCount)
+        );
       }
 
-      const snapshot = await query.get();
+      const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -183,22 +202,25 @@ export const FirebaseBackend = {
 
   /**
    * Get top players aggregated from Firestore
-   * @param {number} limit
+   * @param {number} limitCount
    */
-  async getTopPlayers(limit = 10) {
+  async getTopPlayers(limitCount = 10) {
     if (!this.initialized || !this.db) {
       return [];
     }
 
     try {
       const classCode = this.getClassCode();
-      let query = this.db.collection('games');
+      const gamesRef = collection(this.db, 'games');
 
+      let q;
       if (classCode) {
-        query = query.where('classCode', '==', classCode);
+        q = query(gamesRef, where('classCode', '==', classCode));
+      } else {
+        q = query(gamesRef);
       }
 
-      const snapshot = await query.get();
+      const snapshot = await getDocs(q);
       const playerScores = {};
 
       snapshot.docs.forEach(doc => {
@@ -231,7 +253,7 @@ export const FirebaseBackend = {
           avgScore: Math.round(p.totalScore / p.gamesPlayed)
         }))
         .sort((a, b) => b.bestScore - a.bestScore)
-        .slice(0, limit);
+        .slice(0, limitCount);
     } catch (e) {
       console.warn('Failed to fetch players from Firebase:', e);
       return [];
@@ -247,6 +269,7 @@ export const FirebaseBackend = {
       localStorage.removeItem(FIREBASE_CLASS_KEY);
       this.initialized = false;
       this.db = null;
+      this.app = null;
       this.classCode = null;
     } catch (e) {
       // Ignore

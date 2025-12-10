@@ -174,7 +174,8 @@ export function sanitizeInput(text) {
     .replace(/`/g, '&#96;')
     .replace(/\\/g, '&#92;');
 
-  // Remove control characters
+  // Remove control characters (intentional use of control chars in regex)
+  // eslint-disable-next-line no-control-regex
   sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
 
   return sanitized;

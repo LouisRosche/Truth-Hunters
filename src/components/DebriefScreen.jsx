@@ -6,12 +6,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from './Button';
 import { ACHIEVEMENTS } from '../data/achievements';
-import { AI_ERROR_PATTERNS, REFLECTION_PROMPTS } from '../data/constants';
+import { AI_ERROR_PATTERNS } from '../data/claims';
+import { REFLECTION_PROMPTS } from '../data/constants';
 import { calculateGameStats } from '../utils/scoring';
 import { getRandomItem } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
 
-export function DebriefScreen({ team, claims, onRestart, difficulty, teamAvatar }) {
+export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty, teamAvatar: _teamAvatar }) {
   const [showPatterns, setShowPatterns] = useState(false);
   const [showAchievements, setShowAchievements] = useState(true);
   const [selectedReflection, setSelectedReflection] = useState(null);

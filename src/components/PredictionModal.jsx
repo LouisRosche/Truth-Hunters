@@ -56,7 +56,7 @@ export function PredictionModal({ onSubmit, currentScore }) {
             marginBottom: '1.5rem'
           }}
         >
-          What do you think your final score will be? If you're within ±2 points, you'll earn a
+          What do you think your final score will be? If you&apos;re within ±2 points, you&apos;ll earn a
           calibration bonus!
         </p>
 

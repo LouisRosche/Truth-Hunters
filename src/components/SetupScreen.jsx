@@ -160,8 +160,10 @@ export function SetupScreen({ onStart }) {
     mixed: 'rgba(167, 139, 250, 0.15)'
   };
 
-  // Leaderboard data
+  // Leaderboard data - showLeaderboard dep triggers refresh when viewing
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const topTeams = useMemo(() => LeaderboardManager.getTopTeams(10), [showLeaderboard]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const topPlayers = useMemo(() => LeaderboardManager.getTopPlayers(10), [showLeaderboard]);
 
   // Leaderboard View
