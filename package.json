@@ -14,20 +14,20 @@
     "cms": "vite --config vite.cms.config.js"
   },
   "dependencies": {
+    "firebase": "^12.6.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "firebase": "^10.7.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^5.0.10",
-    "vitest": "^1.1.0",
-    "@testing-library/react": "^14.1.2",
     "@testing-library/jest-dom": "^6.2.0",
-    "jsdom": "^23.0.1",
+    "@testing-library/react": "^14.1.2",
+    "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0"
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "jsdom": "^23.0.1",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.0"
   },
   "keywords": [
     "education",

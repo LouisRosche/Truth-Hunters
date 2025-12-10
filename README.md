@@ -1,5 +1,7 @@
 # Truth Hunters: The Calibration Game
 
+[![CI/CD](https://github.com/LouisRosche/TruthDetector/actions/workflows/ci.yml/badge.svg)](https://github.com/LouisRosche/TruthDetector/actions/workflows/ci.yml)
+
 A research-backed educational game for middle schoolers to develop epistemic skills, AI error detection, and confidence calibration.
 
 ## Overview
@@ -90,9 +92,12 @@ TruthDetector/
 │   │   └── moderation.js
 │   ├── App.jsx
 │   └── main.jsx
-├── cms/                # Claims management system
-├── index.html          # Original single-file version
-└── index.html.new      # Vite entry point
+├── cms/                    # Claims management system
+├── .github/workflows/      # CI/CD automation
+├── index.html              # Vite entry point
+├── index.standalone.html   # Standalone single-file version (no build needed)
+├── netlify.toml            # Netlify deployment config
+└── vercel.json             # Vercel deployment config
 ```
 
 ## Claims Management (CMS)
@@ -192,6 +197,62 @@ For class-wide leaderboards:
 - **Vite** - Build tool
 - **Vitest** - Testing framework
 - **Firebase** - Optional backend for class leaderboards
+
+## Deployment
+
+### GitHub Pages (Automatic)
+
+The repository includes CI/CD that automatically deploys to GitHub Pages on every push to `main`:
+
+1. Enable GitHub Pages in your repository settings (Settings → Pages → Source: GitHub Actions)
+2. Push to `main` branch
+3. Your site will be live at `https://[username].github.io/TruthDetector/`
+
+### Netlify (One-Click)
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LouisRosche/TruthDetector)
+
+Or manually:
+1. Connect your repository to Netlify
+2. Build settings are auto-detected from `netlify.toml`
+3. Deploy!
+
+### Vercel (One-Click)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LouisRosche/TruthDetector)
+
+Or manually:
+1. Import your repository in Vercel
+2. Settings are auto-detected from `vercel.json`
+3. Deploy!
+
+### Static Hosting (Manual)
+
+For any static host (S3, Firebase Hosting, Apache, nginx, etc.):
+
+```bash
+npm run build
+# Upload contents of dist/ to your server
+```
+
+**Important**: Configure your server to serve `index.html` for all routes (SPA fallback).
+
+### Standalone Version
+
+For quick deployment without a build step, use `index.standalone.html`:
+- Single HTML file with everything embedded
+- No build tools required
+- Just upload to any web server
+- Note: Uses CDN-hosted React/Firebase (requires internet connection)
+
+### Security Headers
+
+Production deployments should include these security headers (pre-configured in `netlify.toml` and `vercel.json`):
+
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Content-Security-Policy` (restricts script sources)
+- `Referrer-Policy: strict-origin-when-cross-origin`
 
 ## Contributing
 
