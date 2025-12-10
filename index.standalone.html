@@ -1,0 +1,5227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Truth Hunters: A research-backed game for middle schoolers to develop epistemic skills, AI error detection, and confidence calibration.">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="color-scheme" content="dark">
+  <title>Truth Hunters: The Calibration Game</title>
+  <!-- Favicon: magnifying glass icon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='38' cy='38' r='28' fill='none' stroke='%2322d3ee' stroke-width='8'/><line x1='58' y1='58' x2='88' y2='88' stroke='%2322d3ee' stroke-width='10' stroke-linecap='round'/><circle cx='38' cy='38' r='12' fill='%2322d3ee' opacity='0.3'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="root">
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 1rem; background: #0a0e1a;">
+      <div style="font-size: 3rem;">🔍</div>
+      <div style="font-family: monospace; color: #22d3ee; font-size: 1.25rem;">Loading Truth Hunters...</div>
+    </div>
+  </div>
+
+  <noscript>
+    <div style="padding: 2rem; text-align: center; font-family: system-ui, sans-serif; background: #0a0e1a; color: #f1f5f9; min-height: 100vh;">
+      <h1>Truth Hunters: The Calibration Game</h1>
+      <p style="margin: 1rem 0;">This game requires JavaScript to run.</p>
+      <p>Please enable JavaScript in your browser settings and reload the page.</p>
+    </div>
+  </noscript>
+
+  <script type="text/babel" data-type="module">
+    // ============================================================
+    // TRUTH HUNTERS: THE CALIBRATION GAME
+    // A research-backed epistemic training game for middle schoolers
+    // ============================================================
+    // Research Base:
+    // - Johnson & Johnson (2009): Cooperative learning structures
+    // - Wineburg et al. (2022): Lateral reading & web credibility
+    // - Barzilai & Chinn (2018): Epistemic education goals
+    // - Lichtenstein et al.: Calibration training
+    // ============================================================
+
+    const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+    // ============================================================
+    // TYPE DEFINITIONS (JSDoc for TypeScript-equivalent safety)
+    // ============================================================
+
+    /**
+     * @typedef {'TRUE' | 'FALSE' | 'MIXED'} Verdict
+     * @typedef {'ai-generated' | 'expert-sourced'} ClaimSource
+     * @typedef {1 | 2 | 3} ConfidenceLevel
+     * @typedef {'setup' | 'playing' | 'reveal' | 'discuss' | 'stake' | 'verdict' | 'result' | 'debrief'} GamePhase
+     */
+
+    /**
+     * @typedef {Object} Claim
+     * @property {string} id
+     * @property {string} text
+     * @property {Verdict} answer
+     * @property {ClaimSource} source
+     * @property {string} explanation
+     * @property {string} errorPattern
+     * @property {string} subject
+     */
+
+    /**
+     * @typedef {Object} RoundResult
+     * @property {number} round
+     * @property {string} claimId
+     * @property {Verdict | null} teamVerdict
+     * @property {ConfidenceLevel} confidence
+     * @property {boolean} correct
+     * @property {number} points
+     * @property {string} reasoning
+     */
+
+    /**
+     * @typedef {Object} TeamState
+     * @property {string} name
+     * @property {number} score
+     * @property {number} predictedScore
+     * @property {RoundResult[]} results
+     */
+
+    /**
+     * @typedef {Object} GameState
+     * @property {GamePhase} phase
+     * @property {number} currentRound
+     * @property {number} totalRounds
+     * @property {Claim[]} claims
+     * @property {Claim | null} currentClaim
+     * @property {TeamState} team
+     * @property {number} timer
+     * @property {boolean} timerActive
+     */
+
+    // ============================================================
+    // CLAIM DATABASE
+    // ============================================================
+
+    /** @type {Claim[]} */
+    const CLAIMS_DATABASE = [
+      // ==================== EASY DIFFICULTY ====================
+      {
+        id: 'easy-001',
+        text: 'The mitochondria converts glucose into ATP through a process called photosynthesis, which occurs in all animal cells.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'Mitochondria use cellular respiration, not photosynthesis. Photosynthesis occurs in chloroplasts in plant cells.',
+        errorPattern: 'Confident terminology swap',
+        subject: 'Biology',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-002',
+        text: 'Your brain uses about 20% of your body\'s total energy, even though it\'s only about 2% of your body weight.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Well-documented in neuroscience literature (Raichle & Gusnard, 2002). The brain\'s high metabolic demand reflects its computational complexity.',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Neuroscience',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-003',
+        text: 'The Great Wall of China is the only human-made structure visible from space with the naked eye.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'This is a persistent myth. Astronauts confirm it\'s not visible without aid from low Earth orbit. Other structures like highways and cities are actually more visible.',
+        errorPattern: 'Myth perpetuation',
+        subject: 'Geography',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-004',
+        text: 'Water boils at 100 degrees Celsius (212°F) at sea level.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'This is a well-established physical property of water at standard atmospheric pressure (1 atm).',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Physics',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-005',
+        text: 'Goldfish have a 3-second memory, which is why they seem content swimming in small bowls.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'Studies show goldfish can remember things for months! They can learn mazes, recognize their owners, and remember feeding times.',
+        errorPattern: 'Myth perpetuation',
+        subject: 'Animal Science',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-006',
+        text: 'Bananas are berries, but strawberries are not.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Botanically, berries develop from a single ovary and have seeds embedded in flesh. Bananas qualify; strawberries are "accessory fruits."',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Botany',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-007',
+        text: 'Humans only use 10% of their brains.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'Brain scans show we use virtually all parts of our brain, and most of the brain is active almost all the time.',
+        errorPattern: 'Myth perpetuation',
+        subject: 'Neuroscience',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-008',
+        text: 'A group of flamingos is called a "flamboyance."',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'This is the official collective noun for flamingos, likely inspired by their vibrant pink color and dramatic appearance.',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Animal Science',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-009',
+        text: 'Lightning never strikes the same place twice.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'Lightning frequently strikes the same place multiple times. The Empire State Building is struck about 20-25 times per year!',
+        errorPattern: 'Myth perpetuation',
+        subject: 'Weather Science',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-010',
+        text: 'Octopuses have three hearts and blue blood.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Two hearts pump blood to the gills, while the third pumps it to the body. Their blood contains copper-based hemocyanin, making it blue.',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Marine Biology',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-011',
+        text: 'The planet Venus spins in the opposite direction from most other planets in our solar system.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Venus has retrograde rotation, spinning clockwise when viewed from above its north pole, unlike Earth and most planets.',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Astronomy',
+        difficulty: 'easy'
+      },
+      {
+        id: 'easy-012',
+        text: 'Cracking your knuckles causes arthritis.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'Multiple studies have found no link between knuckle cracking and arthritis. The sound comes from gas bubbles popping in joint fluid.',
+        errorPattern: 'Myth perpetuation',
+        subject: 'Human Biology',
+        difficulty: 'easy'
+      },
+
+      // ==================== MEDIUM DIFFICULTY ====================
+      {
+        id: 'med-001',
+        text: 'Isaac Newton discovered gravity in 1687 when an apple fell on his head at Cambridge University, leading him to immediately publish the Principia Mathematica that same day.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Newton did publish Principia in 1687, but the apple story is likely apocryphal, and "same day" is fabricated.',
+        errorPattern: 'Timeline compression',
+        subject: 'History of Science',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-002',
+        text: 'The Amazon River is the longest river in the world at 6,992 kilometers, flowing through Brazil, Peru, and Argentina.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'The Nile is generally considered the longest river. The Amazon doesn\'t flow through Argentina—it flows through Brazil, Peru, Colombia, and other countries.',
+        errorPattern: 'Geographic fabrication',
+        subject: 'Geography',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-003',
+        text: 'Sound travels faster through water than through air because water molecules are packed more closely together.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Sound travels about 4.3 times faster in water (~1,480 m/s) than in air (~343 m/s) due to water\'s higher density and elasticity.',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Physics',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-004',
+        text: 'Albert Einstein failed mathematics in school, which proves that grades don\'t matter for future success.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'Einstein excelled at mathematics. This myth arose from confusion about Swiss grading scales. He mastered calculus by age 15.',
+        errorPattern: 'Myth perpetuation',
+        subject: 'History of Science',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-005',
+        text: 'Honey never spoils. Archaeologists have found 3,000-year-old honey in Egyptian tombs that was still edible.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Honey\'s low moisture content, acidic pH, and hydrogen peroxide production make it inhospitable to bacteria and microorganisms.',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Chemistry',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-006',
+        text: 'The human body contains enough iron to make a 3-inch nail, enough carbon to make 900 pencils, and enough phosphorus to make 2,200 match heads.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'The iron claim is roughly accurate (~3-4g of iron). However, the pencil and match head numbers are exaggerated fabrications with false precision.',
+        errorPattern: 'Confident specificity',
+        subject: 'Chemistry',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-007',
+        text: 'When you blush, the lining of your stomach also turns red.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'While adrenaline does affect blood flow to both the face and digestive system, claiming the stomach "turns red" like facial blushing oversimplifies the biology. This claim is widely repeated but lacks strong peer-reviewed evidence.',
+        errorPattern: 'Plausible adjacency',
+        subject: 'Human Biology',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-008',
+        text: 'The Statue of Liberty was originally intended to be placed in Egypt at the entrance of the Suez Canal before being gifted to America.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Sculptor Bartholdi did propose a similar lighthouse statue for the Suez Canal, but it was a different design. The Statue of Liberty was always intended for America as a gift from France.',
+        errorPattern: 'Plausible adjacency',
+        subject: 'History',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-009',
+        text: 'A day on Venus is longer than a year on Venus.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Venus rotates so slowly that one day (243 Earth days) is longer than its year (225 Earth days to orbit the Sun).',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Astronomy',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-010',
+        text: 'Vikings wore horned helmets into battle, which made them appear more fearsome to their enemies.',
+        answer: 'FALSE',
+        source: 'ai-generated',
+        explanation: 'No archaeological evidence supports horned Viking helmets in battle. This myth comes from 19th-century romanticized artwork and opera costumes.',
+        errorPattern: 'Myth perpetuation',
+        subject: 'History',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-011',
+        text: 'Sharks have been around longer than trees.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Sharks appeared about 450 million years ago. Trees evolved about 350 million years ago. Sharks predate trees by 100 million years!',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Evolution',
+        difficulty: 'medium'
+      },
+      {
+        id: 'med-012',
+        text: 'Mount Everest is the tallest mountain on Earth, measuring exactly 29,032 feet from base to peak.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Everest is highest above sea level, but Mauna Kea is taller base-to-peak (33,500 ft, mostly underwater). The "exact" measurement changes with snow and tectonic activity.',
+        errorPattern: 'Confident specificity',
+        subject: 'Geography',
+        difficulty: 'medium'
+      },
+
+      // ==================== HARD DIFFICULTY ====================
+      {
+        id: 'hard-001',
+        text: 'During the April 2024 solar eclipse, the moon\'s shadow traveled across North America at approximately 1,500 miles per hour, and the path of totality passed through Austin, Texas on April 8th.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Date and Austin are correct, but shadow speed varies significantly (~1,000-5,000 mph depending on location). The specific number presented as fact without context is misleading.',
+        errorPattern: 'Confident specificity',
+        subject: 'Astronomy',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-002',
+        text: 'The inventor of the Pringles can is buried in one, as specified in his will after he designed the iconic tube in 1966.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Fredric Baur\'s ashes were indeed buried in a Pringles can (true), but he was a chemist who helped develop the shape/packaging, not the sole inventor, and the year is imprecise.',
+        errorPattern: 'Timeline compression',
+        subject: 'History',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-003',
+        text: 'Oxford University is older than the Aztec Empire.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Teaching at Oxford began around 1096. The Aztec Empire was founded in 1428 when the Triple Alliance was formed. Oxford is over 300 years older!',
+        errorPattern: 'N/A - Accurate',
+        subject: 'History',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-004',
+        text: 'The shortest war in history lasted exactly 38 minutes, fought between Britain and Zanzibar on August 27, 1896, resulting in exactly 500 Zanzibari casualties.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'The Anglo-Zanzibar War did occur on that date and lasted 38-45 minutes, but casualty numbers vary (roughly 500) and "exactly" is fabricated precision.',
+        errorPattern: 'Confident specificity',
+        subject: 'History',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-005',
+        text: 'Cleopatra lived closer in time to the Moon landing than to the construction of the Great Pyramid of Giza.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'The Great Pyramid was built around 2560 BCE. Cleopatra lived around 30 BCE (2,530 years later). The Moon landing was 1969 CE (1,999 years after Cleopatra).',
+        errorPattern: 'N/A - Accurate',
+        subject: 'History',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-006',
+        text: 'CRISPR gene editing was discovered when scientists noticed bacteria defending themselves against viruses, leading to the first human trials in China in 2015 at Beijing University.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'CRISPR was discovered from bacterial immune systems (true), but the first human trials were in 2016, not 2015, and occurred at Sichuan University, not Beijing University.',
+        errorPattern: 'Geographic fabrication',
+        subject: 'Biotechnology',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-007',
+        text: 'There are more possible iterations of a game of chess than there are atoms in the observable universe.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'The Shannon number estimates 10^120 possible chess games. The observable universe has roughly 10^80 atoms. Chess possibilities vastly exceed atoms!',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Mathematics',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-008',
+        text: 'The first computer programmer was a woman named Ada Lovelace, who wrote the first algorithm in 1843 for Charles Babbage\'s Difference Engine.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Ada Lovelace did write the first algorithm (true), but it was for the Analytical Engine, not the Difference Engine. These were different machines with different purposes.',
+        errorPattern: 'Plausible adjacency',
+        subject: 'Computer Science',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-009',
+        text: 'A single bolt of lightning contains enough energy to toast 100,000 slices of bread.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Lightning energy varies enormously (1-5 billion joules total, but only 1-5% is electrical). A toaster uses about 60,000 joules per slice (1000W × 60 seconds). The actual number of slices would be far fewer than 100,000 - the specific number is fabricated precision.',
+        errorPattern: 'Confident specificity',
+        subject: 'Physics',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-010',
+        text: 'The human brain generates approximately 23 watts of electrical power when awake, enough to power a standard LED light bulb, which was first measured by Dr. Hans Berger in 1929.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'The brain uses about 12-20 watts (close but "23" is false precision). Berger did pioneer EEG in 1929, but he measured brain waves, not power consumption.',
+        errorPattern: 'Confident specificity',
+        subject: 'Neuroscience',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-011',
+        text: 'Neutron stars are so dense that a teaspoon of neutron star material would weigh about 6 billion tons on Earth.',
+        answer: 'TRUE',
+        source: 'expert-sourced',
+        explanation: 'Neutron stars have densities of 10^17 kg/m³. A teaspoon (about 5 mL) would indeed weigh several billion tons due to this extreme density.',
+        errorPattern: 'N/A - Accurate',
+        subject: 'Astronomy',
+        difficulty: 'hard'
+      },
+      {
+        id: 'hard-012',
+        text: 'The placebo effect can work even when patients know they\'re taking a placebo, a phenomenon discovered at Harvard Medical School in 2010 and replicated in exactly 47 subsequent studies.',
+        answer: 'MIXED',
+        source: 'ai-generated',
+        explanation: 'Open-label placebos do work (demonstrated around 2010 at Harvard), but "exactly 47 studies" is fabricated. The real number of replications varies and isn\'t precisely 47.',
+        errorPattern: 'Confident specificity',
+        subject: 'Medical Science',
+        difficulty: 'hard'
+      }
+    ];
+
+    // ============================================================
+    // AI ERROR PATTERNS (for debrief)
+    // ============================================================
+
+    const AI_ERROR_PATTERNS = [
+      {
+        name: 'Confident Specificity',
+        description: 'Precise numbers, dates, or measurements that sound authoritative but are fabricated',
+        example: '"exactly 1,500 mph" or "2,200 match heads"'
+      },
+      {
+        name: 'Plausible Adjacency',
+        description: 'Almost-right terminology swaps that sound correct to non-experts',
+        example: '"photosynthesis" instead of "cellular respiration"'
+      },
+      {
+        name: 'Myth Perpetuation',
+        description: 'Repeating common misconceptions as if they were facts',
+        example: 'Great Wall visible from space, Einstein failed math'
+      },
+      {
+        name: 'Timeline Compression',
+        description: 'Events mashed together implausibly or with invented connections',
+        example: '"published that same day"'
+      },
+      {
+        name: 'Geographic/Factual Invention',
+        description: 'Made-up but plausible-sounding details about places, people, or events',
+        example: 'Amazon flowing through Argentina'
+      }
+    ];
+
+    // ============================================================
+    // CLAIMS DATABASE VALIDATION
+    // Check for duplicate IDs and missing required fields
+    // ============================================================
+
+    (function validateClaimsDatabase() {
+      const ids = new Set();
+      const duplicates = [];
+      const invalidClaims = [];
+
+      CLAIMS_DATABASE.forEach((claim, index) => {
+        // Check for required fields
+        if (!claim.id || !claim.text || !claim.answer) {
+          invalidClaims.push({ index, claim, reason: 'Missing required field (id, text, or answer)' });
+          return;
+        }
+
+        // Check for duplicate IDs
+        if (ids.has(claim.id)) {
+          duplicates.push(claim.id);
+        } else {
+          ids.add(claim.id);
+        }
+
+        // Validate answer is valid
+        if (!['TRUE', 'FALSE', 'MIXED'].includes(claim.answer)) {
+          invalidClaims.push({ index, claim, reason: `Invalid answer: ${claim.answer}` });
+        }
+
+        // Validate difficulty if present
+        if (claim.difficulty && !['easy', 'medium', 'hard'].includes(claim.difficulty)) {
+          invalidClaims.push({ index, claim, reason: `Invalid difficulty: ${claim.difficulty}` });
+        }
+      });
+
+      // Log warnings in development
+      if (duplicates.length > 0) {
+        console.warn('⚠️ Duplicate claim IDs found:', duplicates);
+      }
+      if (invalidClaims.length > 0) {
+        console.warn('⚠️ Invalid claims found:', invalidClaims);
+      }
+      if (duplicates.length === 0 && invalidClaims.length === 0) {
+        console.log('✓ Claims database validation passed:', CLAIMS_DATABASE.length, 'claims');
+      }
+    })();
+
+    // ============================================================
+    // ACHIEVEMENTS & BADGES (Engagement System)
+    // ============================================================
+
+    const ACHIEVEMENTS = [
+      {
+        id: 'first-truth',
+        name: 'Truth Seeker',
+        description: 'Get your first answer correct',
+        icon: '🔍',
+        condition: (stats) => stats.totalCorrect >= 1
+      },
+      {
+        id: 'streak-3',
+        name: 'On Fire',
+        description: 'Get 3 correct answers in a row',
+        icon: '🔥',
+        condition: (stats) => stats.maxStreak >= 3
+      },
+      {
+        id: 'streak-5',
+        name: 'Unstoppable',
+        description: 'Get 5 correct answers in a row',
+        icon: '⚡',
+        condition: (stats) => stats.maxStreak >= 5
+      },
+      {
+        id: 'ai-detector',
+        name: 'AI Detector',
+        description: 'Correctly identify 3 AI-generated claims',
+        icon: '🤖',
+        condition: (stats) => stats.aiCaughtCorrect >= 3
+      },
+      {
+        id: 'calibrated',
+        name: 'Well Calibrated',
+        description: 'Predict your final score within ±2 points',
+        icon: '🎯',
+        condition: (stats) => stats.calibrationBonus
+      },
+      {
+        id: 'humble-learner',
+        name: 'Humble Learner',
+        description: 'Use low confidence and get it right 3+ times',
+        icon: '🌱',
+        condition: (stats) => stats.humbleCorrect >= 3
+      },
+      {
+        id: 'risk-taker',
+        name: 'Calculated Risk',
+        description: 'Use high confidence and get it right 3+ times',
+        icon: '💎',
+        condition: (stats) => stats.boldCorrect >= 3
+      },
+      {
+        id: 'perfect-round',
+        name: 'Perfect Game',
+        description: 'Get every answer correct in a game',
+        icon: '👑',
+        condition: (stats) => stats.perfectGame
+      },
+      {
+        id: 'myth-buster',
+        name: 'Myth Buster',
+        description: 'Correctly identify 3 myth perpetuation errors',
+        icon: '💥',
+        condition: (stats) => stats.mythsBusted >= 3
+      },
+      {
+        id: 'mixed-master',
+        name: 'Nuance Navigator',
+        description: 'Correctly identify 3 MIXED claims',
+        icon: '⚖️',
+        condition: (stats) => stats.mixedCorrect >= 3
+      },
+      {
+        id: 'team-player',
+        name: 'Team Spirit',
+        description: 'Complete a full game with your team',
+        icon: '🤝',
+        condition: (stats) => stats.gameCompleted
+      },
+      {
+        id: 'comeback-kid',
+        name: 'Comeback Kid',
+        description: 'Win after being in negative points',
+        icon: '🚀',
+        condition: (stats) => stats.comeback
+      }
+    ];
+
+    // ============================================================
+    // EDUCATIONAL TIPS (Shown between rounds)
+    // ============================================================
+
+    const EDUCATIONAL_TIPS = [
+      {
+        category: 'AI Detection',
+        tip: 'Watch for "exactly" or very specific numbers — AI often invents precise-sounding details.',
+        icon: '🎯'
+      },
+      {
+        category: 'Critical Thinking',
+        tip: 'Ask yourself: "How would someone verify this?" If it seems hard to check, be skeptical.',
+        icon: '🤔'
+      },
+      {
+        category: 'Calibration',
+        tip: 'It\'s okay to say "I\'m not sure." Knowing what you don\'t know is a superpower!',
+        icon: '🌟'
+      },
+      {
+        category: 'Team Strategy',
+        tip: 'The Skeptic role is crucial — even if you agree, try to find a reason it might be wrong.',
+        icon: '🗣️'
+      },
+      {
+        category: 'AI Detection',
+        tip: 'AI loves to mix true facts with false details. Look for the "too good to be true" parts.',
+        icon: '🔍'
+      },
+      {
+        category: 'Humility',
+        tip: 'Getting it wrong doesn\'t mean you\'re bad at this — it means you\'re learning!',
+        icon: '🌱'
+      },
+      {
+        category: 'Critical Thinking',
+        tip: 'Famous stories (like Newton\'s apple) often get exaggerated over time. Question the dramatic details.',
+        icon: '📚'
+      },
+      {
+        category: 'Team Strategy',
+        tip: 'Before locking in, ask: "Did everyone get to share their thoughts?"',
+        icon: '🤝'
+      },
+      {
+        category: 'Calibration',
+        tip: 'If your team disagrees, that\'s a sign to use lower confidence — disagreement = uncertainty.',
+        icon: '⚖️'
+      },
+      {
+        category: 'AI Detection',
+        tip: 'AI often gets the "what" right but messes up the "when" or "where" — check those details!',
+        icon: '📍'
+      },
+      {
+        category: 'Humility',
+        tip: 'The smartest people aren\'t always right — they\'re the ones who update their beliefs with evidence.',
+        icon: '🧠'
+      },
+      {
+        category: 'Critical Thinking',
+        tip: 'Just because something sounds scientific doesn\'t mean it\'s true. Look for the source!',
+        icon: '🔬'
+      }
+    ];
+
+    // ============================================================
+    // TEAM AVATARS & ENCOURAGEMENTS (Prosocial Elements)
+    // ============================================================
+
+    const TEAM_AVATARS = [
+      { id: 'owl', emoji: '🦉', name: 'Wise Owls' },
+      { id: 'fox', emoji: '🦊', name: 'Clever Foxes' },
+      { id: 'dolphin', emoji: '🐬', name: 'Smart Dolphins' },
+      { id: 'eagle', emoji: '🦅', name: 'Sharp Eagles' },
+      { id: 'octopus', emoji: '🐙', name: 'Curious Octopi' },
+      { id: 'bee', emoji: '🐝', name: 'Busy Bees' },
+      { id: 'wolf', emoji: '🐺', name: 'Pack Wolves' },
+      { id: 'rocket', emoji: '🚀', name: 'Rockets' }
+    ];
+
+    const ENCOURAGEMENTS = {
+      correct: [
+        'Great teamwork! 🎉',
+        'Your skepticism paid off!',
+        'Excellent critical thinking!',
+        'You saw through that one!',
+        'Truth hunters strike again!',
+        'Sharp eyes, sharp minds!',
+        'That\'s how it\'s done!',
+        'Your team is on fire! 🔥'
+      ],
+      incorrect: [
+        'Good try! That was a tricky one.',
+        'Now you know for next time!',
+        'Even experts get fooled sometimes.',
+        'Learning moment! 📚',
+        'This is how we grow!',
+        'Tricky! But now you\'ll remember.',
+        'The best learners make mistakes!',
+        'Stay curious, keep questioning!'
+      ],
+      streak: [
+        '2 in a row! Keep it up!',
+        '3 in a row! You\'re on fire! 🔥',
+        '4 in a row! Incredible teamwork!',
+        '5 in a row! UNSTOPPABLE! ⚡',
+        'LEGENDARY STREAK! 👑'
+      ]
+    };
+
+    // ============================================================
+    // DIFFICULTY CONFIGURATION
+    // ============================================================
+
+    const DIFFICULTY_CONFIG = {
+      easy: {
+        name: 'Beginner',
+        description: 'Common myths and straightforward facts',
+        discussTime: 150, // 2:30
+        stakeTime: 45,
+        pointMultiplier: 1,
+        color: 'var(--accent-emerald)',
+        icon: '🌱'
+      },
+      medium: {
+        name: 'Standard',
+        description: 'Mixed claims requiring careful analysis',
+        discussTime: 120, // 2:00
+        stakeTime: 30,
+        pointMultiplier: 1.5,
+        color: 'var(--accent-amber)',
+        icon: '⚡'
+      },
+      hard: {
+        name: 'Expert',
+        description: 'Subtle errors and complex claims',
+        discussTime: 90, // 1:30
+        stakeTime: 25,
+        pointMultiplier: 2,
+        color: 'var(--accent-rose)',
+        icon: '🔥'
+      },
+      mixed: {
+        name: 'Progressive',
+        description: 'Starts easy, gets harder each round',
+        discussTime: 120,
+        stakeTime: 30,
+        pointMultiplier: 1,
+        color: 'var(--accent-violet)',
+        icon: '📈'
+      }
+    };
+
+    // Background colors for difficulty badges (rgba for proper opacity)
+    const DIFFICULTY_BG_COLORS = {
+      easy: 'rgba(52, 211, 153, 0.2)',
+      medium: 'rgba(251, 191, 36, 0.2)',
+      hard: 'rgba(251, 113, 133, 0.2)',
+      mixed: 'rgba(167, 139, 250, 0.2)'
+    };
+
+    // ============================================================
+    // HINT SYSTEM
+    // ============================================================
+
+    const HINT_TYPES = [
+      {
+        id: 'source-hint',
+        name: 'Source Check',
+        description: 'Reveals if claim is AI-generated or expert-sourced',
+        cost: 2,
+        icon: '🔍'
+      },
+      {
+        id: 'error-hint',
+        name: 'Error Pattern',
+        description: 'Hints at what type of error to look for',
+        cost: 3,
+        icon: '🎯'
+      },
+      {
+        id: 'subject-hint',
+        name: 'Subject Expert',
+        description: 'Get context about this subject area',
+        cost: 1,
+        icon: '📚'
+      }
+    ];
+
+    // ============================================================
+    // REFLECTION PROMPTS (Humility Development)
+    // ============================================================
+
+    const REFLECTION_PROMPTS = [
+      {
+        question: 'What claim surprised you the most today?',
+        followUp: 'What made it hard to judge?'
+      },
+      {
+        question: 'Did your team disagree on any claims?',
+        followUp: 'How did you work through the disagreement?'
+      },
+      {
+        question: 'Which AI error pattern fooled you the most?',
+        followUp: 'How will you watch for it next time?'
+      },
+      {
+        question: 'When were you most confident but wrong?',
+        followUp: 'What can you learn from that moment?'
+      },
+      {
+        question: 'What\'s one thing you\'ll check more carefully next time?',
+        followUp: 'How will you remember to do this?'
+      },
+      {
+        question: 'How did having different team roles help your group?',
+        followUp: 'Which role helped you think differently?'
+      }
+    ];
+
+    // ============================================================
+    // LEADERBOARD & PERSISTENCE (localStorage Backend)
+    // ============================================================
+
+    const STORAGE_KEY = 'truthHunters_leaderboard';
+
+    // ============================================================
+    // CONTENT MODERATION SYSTEM
+    // Filters inappropriate content for middle school environment
+    // Uses word-boundary matching to avoid false positives
+    // Pre-compiled regex for performance
+    // ============================================================
+
+    /**
+     * Words that must be blocked - uses word boundary matching
+     * These are unambiguous bad words that won't cause false positives
+     */
+    const BLOCKED_WORDS = [
+      // Profanity (unambiguous)
+      'fuck', 'fucker', 'fucking', 'fucked', 'fck', 'fuk', 'fuq', 'phuck',
+      'shit', 'shitty', 'bullshit', 'shite',
+      'asshole', 'arsehole', 'asswipe',
+      'bitch', 'bitches', 'bitchy', 'biatch', 'biotch',
+      'bastard', 'bastards',
+      'cunt', 'cunts',
+      'damn', 'dammit', 'goddamn', 'goddamnit',
+      'piss', 'pissed', 'pissing',
+      'crap', 'crappy',
+      'dick', 'dicks', 'dickhead',
+      'cock', 'cocks', 'cocksucker',
+      'pussy', 'pussies',
+      'whore', 'whores',
+      'slut', 'sluts', 'slutty',
+
+      // Racial/ethnic slurs
+      'nigga', 'niggas', 'nigger', 'niggers',
+      'chink', 'chinks',
+      'gook', 'gooks',
+      'spic', 'spics', 'spick',
+      'wetback', 'wetbacks',
+      'beaner', 'beaners',
+      'kike', 'kikes',
+      'towelhead', 'raghead',
+
+      // Homophobic/transphobic slurs
+      'fag', 'fags', 'faggot', 'faggots',
+      'dyke', 'dykes',
+      'tranny', 'trannies',
+      'lesbo', 'lesbos',
+
+      // Gang identifiers (specific terms)
+      'bloods', 'crips', 'suwoop',
+      'gangbanger', 'gangbangers',
+      'ms13', 'surenos', 'nortenos',
+      'latin kings',
+
+      // Drug terms (unambiguous)
+      'cocaine', 'heroin', 'meth', 'methamphetamine',
+      'marijuana', 'weed', 'stoner',
+      'crackhead', 'pothead', 'tweaker',
+      'xanax', 'percocet', 'oxycontin',
+
+      // Sexual content (explicit)
+      'porn', 'porno', 'pornography',
+      'xxx', 'sexting',
+      'blowjob', 'handjob', 'rimjob',
+      'dildo', 'vibrator',
+      'masturbate', 'masturbation', 'jerkoff', 'wank',
+      'orgasm', 'orgasms',
+      'erection', 'boner', 'boners',
+      'boobs', 'titties', 'tits',
+      'penis', 'penises', 'vagina', 'vaginas',
+      'cumshot', 'creampie',
+      'nude', 'nudes', 'naked',
+      'horny',
+
+      // Violence (explicit)
+      'suicide', 'suicidal',
+      'kms', 'kys',
+      'murder', 'murderer',
+      'rapist', 'rape', 'raping', 'raped',
+      'molest', 'molester', 'pedophile', 'pedo',
+
+      // Hate symbols/groups
+      'nazi', 'nazis', 'hitler',
+      'kkk', 'klan',
+      'heil',
+
+      // Ableist slurs
+      'retard', 'retarded', 'retards',
+      'spaz', 'spastic'
+    ];
+
+    /**
+     * Pre-compiled regex for efficient matching
+     * Uses word boundaries (\b) to avoid matching substrings
+     */
+    const BLOCKED_WORDS_REGEX = new RegExp(
+      '\\b(' + BLOCKED_WORDS.join('|') + ')\\b',
+      'i'
+    );
+
+    /**
+     * Patterns that should be blocked even as substrings (leetspeak variants)
+     * These are deliberate obfuscations that won't appear in normal words
+     */
+    const BLOCKED_LEETSPEAK = [
+      'f[u\\*@]ck', 'sh[i1!]t', 'b[i1!]tch', 'd[i1!]ck', 'c[o0]ck',
+      'n[i1!]gg', 'f[a4@]g', 'p[e3]n[i1!]s', 'c[u\\*]nt', 'a55',
+      'wh[o0]re', 'p[u\\*]ssy', 'b[o0]{2}b', 't[i1!]t', 'pr[o0]n'
+    ];
+
+    /**
+     * Pre-compiled leetspeak regex
+     */
+    const BLOCKED_LEETSPEAK_REGEX = new RegExp(
+      '(' + BLOCKED_LEETSPEAK.join('|') + ')',
+      'i'
+    );
+
+    /**
+     * Check if text contains inappropriate content
+     * @param {string} text - Text to check
+     * @returns {boolean} - True if text is clean, false if it contains bad content
+     */
+    const isContentAppropriate = (text) => {
+      if (!text || typeof text !== 'string') return true;
+
+      const lowerText = text.toLowerCase();
+
+      // Check word-boundary matched blocked words
+      if (BLOCKED_WORDS_REGEX.test(lowerText)) {
+        return false;
+      }
+
+      // Check leetspeak patterns (substring matching is OK for these)
+      if (BLOCKED_LEETSPEAK_REGEX.test(lowerText)) {
+        return false;
+      }
+
+      // Check for number substitutions in the original text
+      // Only normalize if the text contains suspicious number patterns
+      if (/[0-9@$]/.test(text)) {
+        const normalized = lowerText
+          .replace(/0/g, 'o')
+          .replace(/1/g, 'i')
+          .replace(/3/g, 'e')
+          .replace(/4/g, 'a')
+          .replace(/5/g, 's')
+          .replace(/7/g, 't')
+          .replace(/8/g, 'b')
+          .replace(/@/g, 'a')
+          .replace(/\$/g, 's');
+
+        if (BLOCKED_WORDS_REGEX.test(normalized)) {
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    /**
+     * Sanitize text input - removes or replaces inappropriate content
+     * @param {string} text - Text to sanitize
+     * @returns {string} - Sanitized text
+     */
+    const sanitizeInput = (text) => {
+      if (!text || typeof text !== 'string') return '';
+
+      // First, trim and limit length
+      let sanitized = text.trim().substring(0, 50);
+
+      // Remove any HTML/script tags to prevent XSS
+      sanitized = sanitized
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/`/g, '&#96;')
+        .replace(/\\/g, '&#92;');
+
+      // Remove control characters
+      sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
+
+      return sanitized;
+    };
+
+    /**
+     * Validate and clean team/player name
+     * @param {string} name - Name to validate
+     * @returns {{isValid: boolean, cleaned: string, error: string|null}}
+     */
+    const validateName = (name) => {
+      const cleaned = sanitizeInput(name);
+
+      if (!cleaned || cleaned.length === 0) {
+        return { isValid: false, cleaned: '', error: 'Name cannot be empty' };
+      }
+
+      if (cleaned.length < 2) {
+        return { isValid: false, cleaned, error: 'Name must be at least 2 characters' };
+      }
+
+      if (!isContentAppropriate(cleaned)) {
+        return { isValid: false, cleaned: '', error: 'Please choose an appropriate name' };
+      }
+
+      // Allow letters (including international), numbers, spaces, and basic punctuation
+      // \p{L} matches any Unicode letter (José, François, 李, etc.)
+      const validPattern = /^[\p{L}\p{N}\s\-_.!?]+$/u;
+      if (!validPattern.test(name.trim())) {
+        return { isValid: false, cleaned: cleaned.replace(/[^\p{L}\p{N}\s\-_.!?]/gu, ''), error: 'Name contains invalid characters' };
+      }
+
+      return { isValid: true, cleaned, error: null };
+    };
+
+    /**
+     * @typedef {Object} PlayerRecord
+     * @property {string} firstName
+     * @property {string} lastInitial
+     * @property {string} displayName - "FirstName L."
+     */
+
+    /**
+     * @typedef {Object} GameRecord
+     * @property {string} id - unique game ID
+     * @property {string} teamName
+     * @property {string} teamAvatar - emoji
+     * @property {PlayerRecord[]} players
+     * @property {number} score
+     * @property {number} accuracy - percentage 0-100
+     * @property {string} difficulty
+     * @property {number} rounds
+     * @property {number} timestamp
+     * @property {string[]} achievements - achievement IDs earned
+     */
+
+    /**
+     * Check if localStorage is available and working
+     * @returns {boolean}
+     */
+    const isLocalStorageAvailable = () => {
+      try {
+        const testKey = '__storage_test__';
+        localStorage.setItem(testKey, testKey);
+        localStorage.removeItem(testKey);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    // Cache the result since it won't change during session
+    const LOCAL_STORAGE_AVAILABLE = isLocalStorageAvailable();
+
+    const LeaderboardManager = {
+      /**
+       * Check if storage is available
+       * @returns {boolean}
+       */
+      isAvailable() {
+        return LOCAL_STORAGE_AVAILABLE;
+      },
+
+      /**
+       * Get all game records from localStorage
+       * Includes validation and corruption recovery
+       * @returns {GameRecord[]}
+       */
+      getAll() {
+        if (!LOCAL_STORAGE_AVAILABLE) {
+          return [];
+        }
+
+        try {
+          const data = localStorage.getItem(STORAGE_KEY);
+          if (!data) return [];
+
+          const parsed = JSON.parse(data);
+
+          // Validate that it's an array
+          if (!Array.isArray(parsed)) {
+            console.warn('Leaderboard data is not an array, resetting');
+            this.clear();
+            return [];
+          }
+
+          // Filter out corrupted entries and validate required fields
+          const validated = parsed.filter(record => {
+            // Must be an object
+            if (!record || typeof record !== 'object') return false;
+            // Must have required fields
+            if (typeof record.score !== 'number') return false;
+            if (typeof record.timestamp !== 'number') return false;
+            // Team name must be a string (can be empty)
+            if (typeof record.teamName !== 'string') record.teamName = 'Unknown Team';
+            // Players must be an array
+            if (!Array.isArray(record.players)) record.players = [];
+            // Sanitize player entries
+            record.players = record.players.filter(p =>
+              p && typeof p === 'object' &&
+              typeof p.firstName === 'string' &&
+              typeof p.lastInitial === 'string'
+            );
+            return true;
+          });
+
+          // If we filtered out corrupted entries, save the cleaned data
+          if (validated.length !== parsed.length) {
+            console.warn(`Removed ${parsed.length - validated.length} corrupted leaderboard entries`);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
+            } catch (e) {
+              // Ignore save errors during cleanup
+            }
+          }
+
+          return validated;
+        } catch (e) {
+          console.warn('Failed to load leaderboard (data may be corrupted):', e);
+          // Attempt to clear corrupted data
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch (clearError) {
+            // Ignore
+          }
+          return [];
+        }
+      },
+
+      /**
+       * Save a new game record
+       * @param {GameRecord} record
+       * @returns {boolean} - True if save was successful
+       */
+      save(record) {
+        try {
+          const records = this.getAll();
+
+          // Sanitize team name and player names before saving
+          const sanitizedRecord = {
+            ...record,
+            teamName: sanitizeInput(record.teamName || 'Team'),
+            players: (record.players || []).map(p => ({
+              firstName: sanitizeInput(p.firstName || ''),
+              lastInitial: sanitizeInput(p.lastInitial || ''),
+              displayName: sanitizeInput(formatPlayerName(p.firstName, p.lastInitial))
+            })),
+            id: `game_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+            timestamp: Date.now()
+          };
+
+          // Validate content before saving
+          if (!isContentAppropriate(sanitizedRecord.teamName)) {
+            sanitizedRecord.teamName = 'Team';
+          }
+
+          sanitizedRecord.players = sanitizedRecord.players.filter(p =>
+            isContentAppropriate(p.firstName) && isContentAppropriate(p.lastInitial)
+          );
+
+          records.push(sanitizedRecord);
+
+          // Keep only last 100 games to prevent storage bloat
+          const trimmed = records.slice(-100);
+
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+          } catch (quotaError) {
+            // Handle quota exceeded - try to save fewer records
+            if (quotaError.name === 'QuotaExceededError' ||
+                quotaError.code === 22 ||
+                quotaError.code === 1014) {
+              console.warn('Storage quota exceeded, reducing stored games');
+              // Keep only last 50 games
+              const reduced = trimmed.slice(-50);
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(reduced));
+              } catch (retryError) {
+                // Last resort: keep only last 10 games
+                const minimal = trimmed.slice(-10);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(minimal));
+              }
+            } else {
+              throw quotaError;
+            }
+          }
+          return true;
+        } catch (e) {
+          console.warn('Failed to save to leaderboard:', e);
+          return false;
+        }
+      },
+
+      /**
+       * Get top teams by score
+       * @param {number} limit
+       * @returns {GameRecord[]}
+       */
+      getTopTeams(limit = 10) {
+        const records = this.getAll();
+        return records
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit);
+      },
+
+      /**
+       * Get top players by aggregated score
+       * @param {number} limit
+       * @returns {Array<{displayName: string, totalScore: number, gamesPlayed: number, avgScore: number}>}
+       */
+      getTopPlayers(limit = 10) {
+        const records = this.getAll();
+        const playerScores = {};
+
+        records.forEach(game => {
+          if (!game.players) return;
+          game.players.forEach(player => {
+            const key = `${player.firstName}_${player.lastInitial}`.toLowerCase();
+            const displayName = `${player.firstName} ${player.lastInitial}.`;
+
+            if (!playerScores[key]) {
+              playerScores[key] = {
+                displayName,
+                totalScore: 0,
+                gamesPlayed: 0,
+                bestScore: 0
+              };
+            }
+
+            // Each player on the team shares the team's score
+            playerScores[key].totalScore += game.score;
+            playerScores[key].gamesPlayed += 1;
+            playerScores[key].bestScore = Math.max(playerScores[key].bestScore, game.score);
+          });
+        });
+
+        return Object.values(playerScores)
+          .filter(p => p.gamesPlayed > 0) // Guard against division by zero
+          .map(p => ({
+            ...p,
+            avgScore: Math.round(p.totalScore / p.gamesPlayed)
+          }))
+          .sort((a, b) => b.bestScore - a.bestScore)
+          .slice(0, limit);
+      },
+
+      /**
+       * Get recent games
+       * @param {number} limit
+       * @returns {GameRecord[]}
+       */
+      getRecent(limit = 10) {
+        const records = this.getAll();
+        return records
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, limit);
+      },
+
+      /**
+       * Clear all records (for testing)
+       */
+      clear() {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+          console.warn('Failed to clear leaderboard:', e);
+        }
+      }
+    };
+
+    // ============================================================
+    // FIREBASE BACKEND (Class-wide leaderboard support)
+    // To enable: Set FIREBASE_CONFIG in localStorage or configure below
+    // ============================================================
+
+    const FIREBASE_CONFIG_KEY = 'truthHunters_firebaseConfig';
+    const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
+
+    /**
+     * Firebase Backend Manager for class-wide leaderboards
+     * Provides cloud storage with fallback to localStorage
+     */
+    const FirebaseBackend = {
+      db: null,
+      initialized: false,
+      classCode: null,
+
+      /**
+       * Check if Firebase is available and configured
+       */
+      isConfigured() {
+        try {
+          const config = localStorage.getItem(FIREBASE_CONFIG_KEY);
+          return config && typeof firebase !== 'undefined';
+        } catch (e) {
+          return false;
+        }
+      },
+
+      /**
+       * Get stored class code
+       */
+      getClassCode() {
+        try {
+          return localStorage.getItem(FIREBASE_CLASS_KEY) || null;
+        } catch (e) {
+          return null;
+        }
+      },
+
+      /**
+       * Set class code for filtering leaderboard
+       */
+      setClassCode(code) {
+        try {
+          if (code) {
+            localStorage.setItem(FIREBASE_CLASS_KEY, sanitizeInput(code).toUpperCase());
+          } else {
+            localStorage.removeItem(FIREBASE_CLASS_KEY);
+          }
+          this.classCode = code;
+        } catch (e) {
+          console.warn('Failed to save class code:', e);
+        }
+      },
+
+      /**
+       * Initialize Firebase with config
+       * @param {Object} config - Firebase configuration object
+       */
+      init(config) {
+        try {
+          if (typeof firebase === 'undefined') {
+            console.warn('Firebase SDK not loaded');
+            return false;
+          }
+
+          // Don't reinitialize if already done
+          if (this.initialized && this.db) {
+            return true;
+          }
+
+          // Initialize Firebase app if not already initialized
+          if (!firebase.apps.length) {
+            firebase.initializeApp(config);
+          }
+
+          this.db = firebase.firestore();
+          this.initialized = true;
+          this.classCode = this.getClassCode();
+
+          // Save config for future sessions
+          try {
+            localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
+          } catch (e) {
+            // Ignore storage errors
+          }
+
+          console.log('Firebase backend initialized successfully');
+          return true;
+        } catch (e) {
+          console.warn('Failed to initialize Firebase:', e);
+          return false;
+        }
+      },
+
+      /**
+       * Try to initialize from stored config
+       */
+      tryAutoInit() {
+        try {
+          const storedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
+          if (storedConfig) {
+            const config = JSON.parse(storedConfig);
+            return this.init(config);
+          }
+        } catch (e) {
+          console.warn('Auto-init failed:', e);
+        }
+        return false;
+      },
+
+      /**
+       * Save game record to Firestore
+       * @param {Object} record - Game record to save
+       */
+      async save(record) {
+        if (!this.initialized || !this.db) {
+          return false;
+        }
+
+        try {
+          const classCode = this.getClassCode() || 'PUBLIC';
+
+          const docData = {
+            ...record,
+            classCode: classCode,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            // Ensure required fields
+            teamName: sanitizeInput(record.teamName || 'Team'),
+            score: typeof record.score === 'number' ? record.score : 0,
+            players: (record.players || []).map(p => ({
+              firstName: sanitizeInput(p.firstName || ''),
+              lastInitial: sanitizeInput(p.lastInitial || '')
+            }))
+          };
+
+          await this.db.collection('games').add(docData);
+          return true;
+        } catch (e) {
+          console.warn('Failed to save to Firebase:', e);
+          return false;
+        }
+      },
+
+      /**
+       * Get top teams from Firestore
+       * @param {number} limit - Number of teams to fetch
+       * @param {string} classFilter - Optional class code filter
+       */
+      async getTopTeams(limit = 10, classFilter = null) {
+        if (!this.initialized || !this.db) {
+          return [];
+        }
+
+        try {
+          const filterClass = classFilter || this.getClassCode();
+          let query = this.db.collection('games')
+            .orderBy('score', 'desc')
+            .limit(limit);
+
+          if (filterClass) {
+            query = this.db.collection('games')
+              .where('classCode', '==', filterClass)
+              .orderBy('score', 'desc')
+              .limit(limit);
+          }
+
+          const snapshot = await query.get();
+          return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().createdAt?.toMillis() || Date.now()
+          }));
+        } catch (e) {
+          console.warn('Failed to fetch from Firebase:', e);
+          return [];
+        }
+      },
+
+      /**
+       * Get top players aggregated from Firestore
+       * @param {number} limit
+       */
+      async getTopPlayers(limit = 10) {
+        if (!this.initialized || !this.db) {
+          return [];
+        }
+
+        try {
+          const classCode = this.getClassCode();
+          let query = this.db.collection('games');
+
+          if (classCode) {
+            query = query.where('classCode', '==', classCode);
+          }
+
+          const snapshot = await query.get();
+          const playerScores = {};
+
+          snapshot.docs.forEach(doc => {
+            const game = doc.data();
+            if (!game.players) return;
+
+            game.players.forEach(player => {
+              const key = `${player.firstName}_${player.lastInitial}`.toLowerCase();
+              const displayName = formatPlayerName(player.firstName, player.lastInitial);
+
+              if (!playerScores[key]) {
+                playerScores[key] = {
+                  displayName,
+                  totalScore: 0,
+                  gamesPlayed: 0,
+                  bestScore: -Infinity
+                };
+              }
+
+              playerScores[key].totalScore += game.score || 0;
+              playerScores[key].gamesPlayed += 1;
+              playerScores[key].bestScore = Math.max(playerScores[key].bestScore, game.score || 0);
+            });
+          });
+
+          return Object.values(playerScores)
+            .filter(p => p.gamesPlayed > 0)
+            .map(p => ({
+              ...p,
+              avgScore: Math.round(p.totalScore / p.gamesPlayed)
+            }))
+            .sort((a, b) => b.bestScore - a.bestScore)
+            .slice(0, limit);
+        } catch (e) {
+          console.warn('Failed to fetch players from Firebase:', e);
+          return [];
+        }
+      },
+
+      /**
+       * Disconnect and clear config
+       */
+      disconnect() {
+        try {
+          localStorage.removeItem(FIREBASE_CONFIG_KEY);
+          localStorage.removeItem(FIREBASE_CLASS_KEY);
+          this.initialized = false;
+          this.db = null;
+          this.classCode = null;
+        } catch (e) {
+          // Ignore
+        }
+      }
+    };
+
+    // Try to auto-initialize Firebase on load
+    FirebaseBackend.tryAutoInit();
+
+    /**
+     * Format player display name
+     * @param {string} firstName
+     * @param {string} lastInitial
+     * @returns {string}
+     */
+    const formatPlayerName = (firstName, lastInitial) => {
+      const cleanFirst = (firstName || '').trim();
+      const cleanLast = (lastInitial || '').trim().charAt(0).toUpperCase();
+      if (!cleanFirst) return 'Anonymous';
+      return cleanLast ? `${cleanFirst} ${cleanLast}.` : cleanFirst;
+    };
+
+    // ============================================================
+    // UTILITY FUNCTIONS
+    // ============================================================
+
+    /**
+     * Create a debounced version of a function
+     * Prevents rapid repeated calls (e.g., double-click protection)
+     * @param {Function} fn - Function to debounce
+     * @param {number} delay - Delay in milliseconds
+     * @returns {Function}
+     */
+    const debounce = (fn, delay) => {
+      let timeoutId = null;
+      return (...args) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          fn(...args);
+          timeoutId = null;
+        }, delay);
+      };
+    };
+
+    /**
+     * Create a throttled click handler that prevents double-clicks
+     * @param {Function} fn - Click handler
+     * @param {number} delay - Minimum delay between clicks (default 500ms)
+     * @returns {Function}
+     */
+    const preventDoubleClick = (fn, delay = 500) => {
+      let lastClick = 0;
+      return (...args) => {
+        const now = Date.now();
+        if (now - lastClick >= delay) {
+          lastClick = now;
+          fn(...args);
+        }
+      };
+    };
+
+    // ============================================================
+    // SCORING UTILITIES
+    // ============================================================
+
+    /**
+     * Calculate points based on correctness and confidence
+     * @param {boolean} correct
+     * @param {ConfidenceLevel} confidence
+     * @returns {number}
+     */
+    const calculatePoints = (correct, confidence) => {
+      const pointsMatrix = {
+        1: { correct: 1, incorrect: -1 },
+        2: { correct: 3, incorrect: -3 },
+        3: { correct: 5, incorrect: -6 }
+      };
+      return pointsMatrix[confidence][correct ? 'correct' : 'incorrect'];
+    };
+
+    /**
+     * Shuffle array using Fisher-Yates
+     * @template T
+     * @param {T[]} array
+     * @returns {T[]}
+     */
+    const shuffleArray = (array) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    /**
+     * Select claims based on difficulty setting
+     * @param {string} difficulty - 'easy' | 'medium' | 'hard' | 'mixed'
+     * @param {number} count - number of claims to select
+     * @returns {Claim[]}
+     */
+    const selectClaimsByDifficulty = (difficulty, count) => {
+      if (difficulty === 'mixed') {
+        // Progressive: distribute claims across difficulties
+        const easyCount = Math.ceil(count * 0.3);
+        const medCount = Math.ceil(count * 0.4);
+        const hardCount = count - easyCount - medCount;
+
+        const easy = shuffleArray(CLAIMS_DATABASE.filter(c => c.difficulty === 'easy')).slice(0, easyCount);
+        const med = shuffleArray(CLAIMS_DATABASE.filter(c => c.difficulty === 'medium')).slice(0, medCount);
+        const hard = shuffleArray(CLAIMS_DATABASE.filter(c => c.difficulty === 'hard')).slice(0, hardCount);
+
+        // Order: easy first, then medium, then hard
+        return [...easy, ...med, ...hard];
+      }
+
+      const filtered = CLAIMS_DATABASE.filter(c => c.difficulty === difficulty);
+      return shuffleArray(filtered).slice(0, count);
+    };
+
+    /**
+     * Calculate comprehensive game stats for achievements
+     * @param {RoundResult[]} results
+     * @param {Claim[]} claims
+     * @param {number} score
+     * @param {number} predictedScore
+     * @returns {Object}
+     */
+    const calculateGameStats = (results, claims, score, predictedScore) => {
+      const stats = {
+        totalCorrect: 0,
+        totalIncorrect: 0,
+        maxStreak: 0,
+        currentStreak: 0,
+        aiCaughtCorrect: 0,
+        humbleCorrect: 0,      // low confidence + correct
+        boldCorrect: 0,        // high confidence + correct
+        mixedCorrect: 0,       // MIXED verdicts correct
+        mythsBusted: 0,        // myth perpetuation caught
+        perfectGame: false,
+        gameCompleted: true,
+        calibrationBonus: Math.abs(score - predictedScore) <= 2,
+        comeback: false,
+        lowestPoint: 0
+      };
+
+      let runningScore = 0;
+      let currentStreak = 0;
+
+      results.forEach((result, index) => {
+        const claim = claims.find(c => c.id === result.claimId);
+
+        if (result.correct) {
+          stats.totalCorrect++;
+          currentStreak++;
+          stats.maxStreak = Math.max(stats.maxStreak, currentStreak);
+
+          // Track humble/bold correct
+          if (result.confidence === 1) stats.humbleCorrect++;
+          if (result.confidence === 3) stats.boldCorrect++;
+
+          // Track MIXED correct
+          if (claim?.answer === 'MIXED') stats.mixedCorrect++;
+
+          // Track AI catches
+          if (claim?.source === 'ai-generated') stats.aiCaughtCorrect++;
+
+          // Track myths busted
+          if (claim?.errorPattern === 'Myth perpetuation') stats.mythsBusted++;
+        } else {
+          stats.totalIncorrect++;
+          currentStreak = 0;
+        }
+
+        runningScore += result.points;
+        stats.lowestPoint = Math.min(stats.lowestPoint, runningScore);
+      });
+
+      stats.currentStreak = currentStreak;
+      stats.perfectGame = stats.totalCorrect === results.length && results.length > 0;
+      stats.comeback = stats.lowestPoint < 0 && score > 0;
+
+      return stats;
+    };
+
+    /**
+     * Get random item from array
+     * @template T
+     * @param {T[]} array
+     * @returns {T}
+     */
+    const getRandomItem = (array) => array[Math.floor(Math.random() * array.length)];
+
+    /**
+     * Get rotating team role assignments based on round
+     * @param {number} round
+     * @returns {Array<{role: string, task: string}>}
+     */
+    const getRotatingRoles = (round) => {
+      const roles = [
+        { role: 'Reader', task: 'Read claim aloud clearly' },
+        { role: 'Skeptic', task: 'Challenge assumptions' },
+        { role: 'Researcher', task: 'Recall relevant knowledge' },
+        { role: 'Decider', task: 'Guide final verdict' }
+      ];
+
+      // Rotate roles based on round number
+      const rotation = (round - 1) % roles.length;
+      return [...roles.slice(rotation), ...roles.slice(0, rotation)];
+    };
+
+    /**
+     * Simple sound effect system (Chromebook-optimized)
+     * Uses Web Audio API with minimal resource usage
+     */
+    const SoundManager = {
+      ctx: null,
+      enabled: true,
+
+      init() {
+        try {
+          if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+        } catch (e) {
+          console.warn('Audio not available:', e);
+          this.ctx = null;
+        }
+      },
+
+      play(type) {
+        if (!this.enabled || !this.ctx) return;
+
+        try {
+          // Resume audio context if suspended (browser autoplay policy)
+          if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          const now = this.ctx.currentTime;
+
+          switch(type) {
+            case 'correct':
+              osc.frequency.setValueAtTime(523, now); // C5
+              osc.frequency.setValueAtTime(659, now + 0.1); // E5
+              osc.frequency.setValueAtTime(784, now + 0.2); // G5
+              gain.gain.setValueAtTime(0.3, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+              osc.start(now);
+              osc.stop(now + 0.4);
+              break;
+
+            case 'incorrect':
+              osc.frequency.setValueAtTime(200, now);
+              osc.frequency.setValueAtTime(150, now + 0.15);
+              gain.gain.setValueAtTime(0.3, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+              osc.start(now);
+              osc.stop(now + 0.3);
+              break;
+
+            case 'tick':
+              osc.frequency.setValueAtTime(800, now);
+              gain.gain.setValueAtTime(0.1, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+              osc.start(now);
+              osc.stop(now + 0.05);
+              break;
+
+            case 'achievement':
+              osc.frequency.setValueAtTime(523, now);
+              osc.frequency.setValueAtTime(659, now + 0.1);
+              osc.frequency.setValueAtTime(784, now + 0.2);
+              osc.frequency.setValueAtTime(1047, now + 0.3);
+              gain.gain.setValueAtTime(0.3, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+              osc.start(now);
+              osc.stop(now + 0.5);
+              break;
+
+            case 'streak':
+              osc.frequency.setValueAtTime(440, now);
+              osc.frequency.setValueAtTime(554, now + 0.08);
+              osc.frequency.setValueAtTime(659, now + 0.16);
+              gain.gain.setValueAtTime(0.25, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+              osc.start(now);
+              osc.stop(now + 0.3);
+              break;
+          }
+        } catch (e) {
+          // Silently fail if audio doesn't work
+          console.warn('Sound playback failed:', e);
+        }
+      },
+
+      toggle() {
+        this.enabled = !this.enabled;
+        return this.enabled;
+      }
+    };
+
+    /**
+     * Get hint content for a claim
+     * @param {Claim} claim
+     * @param {string} hintType
+     * @returns {string}
+     */
+    const getHintContent = (claim, hintType) => {
+      switch(hintType) {
+        case 'source-hint':
+          return claim.source === 'ai-generated'
+            ? '🤖 This claim was generated by AI'
+            : '📚 This claim comes from expert sources';
+        case 'error-hint':
+          if (claim.source === 'expert-sourced') {
+            return '✅ This claim doesn\'t contain typical AI errors';
+          }
+          return `🎯 Look for: ${claim.errorPattern}`;
+        case 'subject-hint':
+          const subjectHints = {
+            'Biology': 'Think about what you learned in life science class!',
+            'Physics': 'Consider the basic laws of how things move and interact.',
+            'Chemistry': 'Remember: matter, elements, and reactions.',
+            'History': 'Dates and places are often where errors hide.',
+            'Geography': 'Double-check locations and measurements.',
+            'Astronomy': 'Space facts often sound unbelievable but might be true!',
+            'Neuroscience': 'The brain is complex - be careful with percentages.',
+            'History of Science': 'Famous scientist stories often get embellished.',
+            'Marine Biology': 'Ocean creatures can be surprisingly strange!',
+            'Human Biology': 'Your own body can be surprising.',
+            'Animal Science': 'Animal facts are often exaggerated in myths.',
+            'Evolution': 'Think in millions of years, not thousands.',
+            'Botany': 'Plant classifications can be counterintuitive.',
+            'Weather Science': 'Weather phenomena are often misunderstood.',
+            'Mathematics': 'Big numbers can be hard to grasp.',
+            'Computer Science': 'Tech history has many misconceptions.',
+            'Biotechnology': 'Cutting-edge science dates matter.',
+            'Medical Science': 'Medical claims need careful scrutiny.'
+          };
+          return subjectHints[claim.subject] || 'Think critically about this subject area!';
+        default:
+          return 'No hint available.';
+      }
+    };
+
+    // ============================================================
+    // ERROR BOUNDARY
+    // ============================================================
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null, errorInfo: null };
+      }
+
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        // Log error details for debugging
+        console.error('Truth Hunters Error:', error);
+        console.error('Component stack:', errorInfo?.componentStack);
+
+        this.setState({ errorInfo });
+
+        // Attempt to save error to localStorage for debugging (if available)
+        try {
+          const errorLog = {
+            message: error?.message || 'Unknown error',
+            stack: error?.stack,
+            componentStack: errorInfo?.componentStack,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+          };
+          const existingLogs = JSON.parse(localStorage.getItem('truthHunters_errorLog') || '[]');
+          existingLogs.push(errorLog);
+          // Keep only last 5 errors
+          localStorage.setItem('truthHunters_errorLog', JSON.stringify(existingLogs.slice(-5)));
+        } catch (e) {
+          // localStorage not available, ignore
+        }
+      }
+
+      render() {
+        if (this.state.hasError) {
+          const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+          return React.createElement('div', {
+            role: 'alert',
+            'aria-live': 'assertive',
+            style: {
+              padding: '2rem',
+              textAlign: 'center',
+              color: 'var(--text-primary)',
+              maxWidth: '600px',
+              margin: '2rem auto'
+            }
+          }, [
+            React.createElement('h2', { key: 'title', style: { color: 'var(--accent-rose)', marginBottom: '1rem' } }, '⚠️ Something went wrong'),
+            React.createElement('p', { key: 'msg', style: { color: 'var(--text-secondary)', margin: '1rem 0' } },
+              'An unexpected error occurred. Please refresh the page to restart the game.'),
+            // Show error details in development
+            isDev && this.state.error && React.createElement('details', {
+              key: 'details',
+              style: {
+                textAlign: 'left',
+                background: 'var(--bg-elevated)',
+                padding: '1rem',
+                borderRadius: '8px',
+                margin: '1rem 0',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-mono)'
+              }
+            }, [
+              React.createElement('summary', { key: 'summary', style: { cursor: 'pointer', marginBottom: '0.5rem' } }, 'Error Details'),
+              React.createElement('pre', { key: 'pre', style: { overflow: 'auto', whiteSpace: 'pre-wrap' } },
+                this.state.error.toString() + '\n\n' + (this.state.error.stack || ''))
+            ]),
+            React.createElement('button', {
+              key: 'btn',
+              onClick: () => window.location.reload(),
+              style: {
+                padding: '0.75rem 1.5rem',
+                background: 'var(--accent-cyan)',
+                color: 'var(--bg-deep)',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                marginTop: '1rem'
+              }
+            }, 'Refresh Page')
+          ]);
+        }
+        return this.props.children;
+      }
+    }
+
+    // ============================================================
+    // CUSTOM HOOKS
+    // ============================================================
+
+    /**
+     * Timer hook with pause/resume and tab visibility handling
+     * @param {number} initialTime
+     * @param {() => void} onComplete
+     */
+    const useTimer = (initialTime, onComplete) => {
+      const [time, setTime] = useState(initialTime);
+      const [isActive, setIsActive] = useState(false);
+      const [isPaused, setIsPaused] = useState(false);
+      const callbackRef = useRef(onComplete);
+
+      useEffect(() => {
+        callbackRef.current = onComplete;
+      }, [onComplete]);
+
+      // Handle tab visibility - pause when hidden
+      useEffect(() => {
+        const handleVisibilityChange = () => {
+          if (document.hidden) {
+            setIsPaused(true);
+          } else {
+            setIsPaused(false);
+          }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }, []);
+
+      useEffect(() => {
+        if (!isActive || isPaused) return;
+        
+        const interval = setInterval(() => {
+          setTime(t => {
+            if (t <= 1) {
+              setIsActive(false);
+              callbackRef.current?.();
+              return 0;
+            }
+            return t - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(interval);
+      }, [isActive, isPaused]);
+
+      const start = useCallback(() => setIsActive(true), []);
+      const pause = useCallback(() => setIsActive(false), []);
+      const reset = useCallback((newTime) => {
+        setTime(newTime ?? initialTime);
+        setIsActive(false);
+      }, [initialTime]);
+
+      return { time, isActive, isPaused, start, pause, reset };
+    };
+
+    // ============================================================
+    // COMPONENTS
+    // ============================================================
+
+    /** Header Component */
+    const Header = ({ score, round, totalRounds, phase }) => (
+      <header 
+        role="banner"
+        aria-label="Game status"
+        style={{
+        padding: '1rem 1.5rem',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        background: 'rgba(17, 24, 39, 0.8)',
+        backdropFilter: 'blur(8px)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span style={{ fontSize: '1.5rem' }}>🔍</span>
+          <h1 className="mono" style={{ 
+            fontSize: '1.125rem', 
+            fontWeight: 700,
+            letterSpacing: '-0.025em',
+            color: 'var(--accent-cyan)'
+          }}>
+            TRUTH HUNTERS
+          </h1>
+        </div>
+        
+        {phase !== 'setup' && phase !== 'debrief' && (
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <div className="mono" style={{ 
+              fontSize: '0.875rem',
+              color: 'var(--text-secondary)'
+            }}>
+              ROUND <span style={{ color: 'var(--accent-amber)', fontWeight: 700 }}>{round}</span>/{totalRounds}
+            </div>
+            <div className="mono" style={{
+              padding: '0.375rem 0.75rem',
+              background: score >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              border: `1px solid ${score >= 0 ? 'var(--correct)' : 'var(--incorrect)'}`,
+              borderRadius: '4px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: score >= 0 ? 'var(--correct)' : 'var(--incorrect)'
+            }}>
+              {score >= 0 ? '+' : ''}{score} PTS
+            </div>
+          </div>
+        )}
+      </header>
+    );
+
+    /** Timer Display Component */
+    const TimerDisplay = ({ time, isActive, isPaused, label }) => {
+      const isLow = time <= 10;
+      
+      return (
+        <div 
+          role="timer"
+          aria-live={isLow ? 'assertive' : 'polite'}
+          aria-label={`${label}: ${Math.floor(time / 60)} minutes ${time % 60} seconds remaining${isPaused ? ', paused' : ''}`}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}
+        >
+          <span className="mono" style={{
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            color: isPaused ? 'var(--accent-amber)' : 'var(--text-muted)'
+          }}>
+            {isPaused ? '⏸ PAUSED' : label}
+          </span>
+          <div 
+            className={`mono ${isLow && isActive ? 'animate-pulse' : ''}`}
+            style={{
+              fontSize: '2rem',
+              fontWeight: 700,
+              color: isLow ? 'var(--accent-rose)' : 'var(--accent-cyan)',
+              textShadow: isLow ? '0 0 20px var(--accent-rose)' : 'none'
+            }}
+          >
+            {Math.floor(time / 60)}:{String(time % 60).padStart(2, '0')}
+          </div>
+        </div>
+      );
+    };
+
+    /** Claim Card Component */
+    const ClaimCard = ({ claim, showAnswer = false }) => (
+      <div 
+        className="animate-in"
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '3px',
+          background: claim.source === 'ai-generated' 
+            ? 'linear-gradient(90deg, var(--accent-violet), var(--accent-rose))'
+            : 'linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan))'
+        }} />
+        
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '1rem' 
+        }}>
+          <span className="mono" style={{
+            fontSize: '0.75rem',
+            padding: '0.25rem 0.5rem',
+            background: 'var(--bg-elevated)',
+            borderRadius: '4px',
+            color: 'var(--text-secondary)'
+          }}>
+            {claim.subject}
+          </span>
+          
+          {showAnswer && (
+            <span className="mono" style={{
+              fontSize: '0.75rem',
+              padding: '0.25rem 0.5rem',
+              background: claim.source === 'ai-generated' 
+                ? 'rgba(167, 139, 250, 0.2)' 
+                : 'rgba(52, 211, 153, 0.2)',
+              color: claim.source === 'ai-generated' 
+                ? 'var(--accent-violet)' 
+                : 'var(--accent-emerald)',
+              borderRadius: '4px'
+            }}>
+              {claim.source === 'ai-generated' ? '🤖 AI-Generated' : '📚 Expert-Sourced'}
+            </span>
+          )}
+        </div>
+
+        <blockquote style={{
+          fontSize: '1.125rem',
+          lineHeight: 1.7,
+          color: 'var(--text-primary)',
+          fontStyle: 'italic',
+          borderLeft: '3px solid var(--accent-cyan)',
+          paddingLeft: '1rem',
+          margin: '1rem 0'
+        }}>
+          "{claim.text}"
+        </blockquote>
+
+        {showAnswer && (
+          <div className="animate-in" style={{ marginTop: '1.5rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '0.75rem'
+            }}>
+              <span className="mono" style={{
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                padding: '0.375rem 0.75rem',
+                borderRadius: '4px',
+                background: claim.answer === 'TRUE' 
+                  ? 'rgba(16, 185, 129, 0.2)' 
+                  : claim.answer === 'FALSE'
+                    ? 'rgba(239, 68, 68, 0.2)'
+                    : 'rgba(251, 191, 36, 0.2)',
+                color: claim.answer === 'TRUE' 
+                  ? 'var(--correct)' 
+                  : claim.answer === 'FALSE'
+                    ? 'var(--incorrect)'
+                    : 'var(--accent-amber)'
+              }}>
+                {claim.answer}
+              </span>
+              {claim.source === 'ai-generated' && (
+                <span className="mono" style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-rose)'
+                }}>
+                  Error: {claim.errorPattern}
+                </span>
+              )}
+            </div>
+            <p style={{ 
+              color: 'var(--text-secondary)',
+              fontSize: '0.9375rem',
+              lineHeight: 1.6
+            }}>
+              {claim.explanation}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+
+    /** Confidence Selector Component */
+    const ConfidenceSelector = ({ value, onChange, disabled }) => {
+      const levels = [
+        { value: 1, label: 'We think so', risk: '+1 / -1', color: 'var(--confidence-1)' },
+        { value: 2, label: 'Pretty sure', risk: '+3 / -3', color: 'var(--confidence-2)' },
+        { value: 3, label: 'Certain', risk: '+5 / -6', color: 'var(--confidence-3)' }
+      ];
+
+      const handleKeyDown = (e, levelValue) => {
+        if (disabled) return;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = Math.min(3, levelValue + 1);
+          onChange(next);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prev = Math.max(1, levelValue - 1);
+          onChange(prev);
+        }
+      };
+
+      return (
+        <div role="radiogroup" aria-label="Confidence level" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {levels.map((level) => (
+            <button
+              key={level.value}
+              type="button"
+              role="radio"
+              aria-checked={value === level.value}
+              tabIndex={value === level.value ? 0 : -1}
+              onClick={() => onChange(level.value)}
+              onKeyDown={(e) => handleKeyDown(e, level.value)}
+              disabled={disabled}
+              style={{
+                flex: '1 1 auto',
+                minWidth: '140px',
+                padding: '1rem',
+                background: value === level.value 
+                  ? `${level.color}20` 
+                  : 'var(--bg-elevated)',
+                border: `2px solid ${value === level.value ? level.color : 'var(--border)'}`,
+                borderRadius: '8px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div className="mono" style={{
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                color: level.color,
+                marginBottom: '0.25rem'
+              }}>
+                {'●'.repeat(level.value)}{'○'.repeat(3 - level.value)}
+              </div>
+              <div style={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                marginBottom: '0.25rem'
+              }}>
+                {level.label}
+              </div>
+              <div className="mono" style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-muted)'
+              }}>
+                {level.risk}
+              </div>
+            </button>
+          ))}
+        </div>
+      );
+    };
+
+    /** Verdict Selector Component */
+    const VerdictSelector = ({ value, onChange, disabled }) => {
+      const verdicts = [
+        { value: 'TRUE', emoji: '✓', color: 'var(--correct)' },
+        { value: 'MIXED', emoji: '◐', color: 'var(--accent-amber)' },
+        { value: 'FALSE', emoji: '✗', color: 'var(--incorrect)' }
+      ];
+
+      const handleKeyDown = (e, currentIndex) => {
+        if (disabled) return;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = (currentIndex + 1) % verdicts.length;
+          onChange(verdicts[next].value);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prev = (currentIndex - 1 + verdicts.length) % verdicts.length;
+          onChange(verdicts[prev].value);
+        }
+      };
+
+      const currentIndex = verdicts.findIndex(v => v.value === value);
+
+      return (
+        <div role="radiogroup" aria-label="Verdict selection" style={{ display: 'flex', gap: '0.75rem' }}>
+          {verdicts.map((v, i) => (
+            <button
+              key={v.value}
+              type="button"
+              role="radio"
+              aria-checked={value === v.value}
+              tabIndex={value === v.value || (value === null && i === 0) ? 0 : -1}
+              onClick={() => onChange(v.value)}
+              onKeyDown={(e) => handleKeyDown(e, i)}
+              disabled={disabled}
+              style={{
+                flex: 1,
+                padding: '1.25rem 1rem',
+                background: value === v.value ? `${v.color}20` : 'var(--bg-elevated)',
+                border: `2px solid ${value === v.value ? v.color : 'var(--border)'}`,
+                borderRadius: '8px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div style={{
+                fontSize: '1.75rem',
+                marginBottom: '0.25rem',
+                color: v.color
+              }}>
+                {v.emoji}
+              </div>
+              <div className="mono" style={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: value === v.value ? v.color : 'var(--text-secondary)'
+              }}>
+                {v.value}
+              </div>
+            </button>
+          ))}
+        </div>
+      );
+    };
+
+    /** Button Component with double-click protection */
+    const Button = ({ children, onClick, variant = 'primary', disabled, fullWidth, size = 'md', ariaLabel, preventDoubleClickMs = 500 }) => {
+      const lastClickRef = useRef(0);
+
+      const handleClick = useCallback((e) => {
+        if (disabled) return;
+
+        // Prevent rapid double-clicks
+        const now = Date.now();
+        if (now - lastClickRef.current < preventDoubleClickMs) {
+          e.preventDefault();
+          return;
+        }
+        lastClickRef.current = now;
+
+        onClick?.(e);
+      }, [onClick, disabled, preventDoubleClickMs]);
+
+      const variants = {
+        primary: {
+          background: 'var(--accent-cyan)',
+          color: 'var(--bg-deep)',
+          border: 'none'
+        },
+        secondary: {
+          background: 'transparent',
+          color: 'var(--accent-cyan)',
+          border: '2px solid var(--accent-cyan)'
+        },
+        danger: {
+          background: 'var(--accent-rose)',
+          color: 'white',
+          border: 'none'
+        }
+      };
+
+      const sizes = {
+        sm: { padding: '0.625rem 1rem', fontSize: '0.875rem', minHeight: '44px' },
+        md: { padding: '0.875rem 1.5rem', fontSize: '1rem', minHeight: '44px' },
+        lg: { padding: '1rem 2rem', fontSize: '1.125rem', minHeight: '48px' }
+      };
+
+      return (
+        <button
+          onClick={handleClick}
+          disabled={disabled}
+          aria-label={ariaLabel}
+          aria-disabled={disabled}
+          className="mono"
+          style={{
+            ...variants[variant],
+            ...sizes[size],
+            width: fullWidth ? '100%' : 'auto',
+            borderRadius: '8px',
+            fontWeight: 600,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.5 : 1,
+            transition: 'all 0.2s ease',
+            letterSpacing: '0.025em'
+          }}
+        >
+          {children}
+        </button>
+      );
+    };
+
+    /** Setup Screen - Enhanced with player inputs and leaderboard */
+    const SetupScreen = ({ onStart }) => {
+      const [teamName, setTeamName] = useState('');
+      const [rounds, setRounds] = useState(5);
+      const [difficulty, setDifficulty] = useState('mixed');
+      const [selectedAvatar, setSelectedAvatar] = useState(TEAM_AVATARS[0]);
+      const [soundEnabled, setSoundEnabled] = useState(true);
+      const [showHowToPlay, setShowHowToPlay] = useState(false);
+      const [showLeaderboard, setShowLeaderboard] = useState(false);
+      const [leaderboardTab, setLeaderboardTab] = useState('teams'); // 'teams' or 'players'
+      const [validationError, setValidationError] = useState('');
+
+      // Firebase/Class code state
+      const [showTeacherSetup, setShowTeacherSetup] = useState(false);
+      const [classCode, setClassCode] = useState(FirebaseBackend.getClassCode() || '');
+      const [firebaseConfigText, setFirebaseConfigText] = useState('');
+      const [firebaseStatus, setFirebaseStatus] = useState(
+        FirebaseBackend.initialized ? 'connected' : 'disconnected'
+      );
+      const [cloudTeams, setCloudTeams] = useState([]);
+      const [cloudPlayers, setCloudPlayers] = useState([]);
+      const [loadingCloud, setLoadingCloud] = useState(false);
+
+      // Player inputs (up to 4 players per group)
+      const [players, setPlayers] = useState([
+        { firstName: '', lastInitial: '' },
+        { firstName: '', lastInitial: '' },
+        { firstName: '', lastInitial: '' },
+        { firstName: '', lastInitial: '' }
+      ]);
+
+      // Initialize sound manager
+      useEffect(() => {
+        SoundManager.init();
+      }, []);
+
+      // Load cloud leaderboard when showing leaderboard and Firebase is connected
+      useEffect(() => {
+        if (showLeaderboard && FirebaseBackend.initialized) {
+          setLoadingCloud(true);
+          Promise.all([
+            FirebaseBackend.getTopTeams(10),
+            FirebaseBackend.getTopPlayers(10)
+          ]).then(([teams, players]) => {
+            setCloudTeams(teams);
+            setCloudPlayers(players);
+          }).catch(e => {
+            console.warn('Failed to load cloud leaderboard:', e);
+          }).finally(() => {
+            setLoadingCloud(false);
+          });
+        }
+      }, [showLeaderboard]);
+
+      // Handle Firebase configuration
+      const handleConnectFirebase = () => {
+        try {
+          // Parse the config JSON
+          const config = JSON.parse(firebaseConfigText);
+          if (FirebaseBackend.init(config)) {
+            setFirebaseStatus('connected');
+            if (classCode) {
+              FirebaseBackend.setClassCode(classCode);
+            }
+          } else {
+            setFirebaseStatus('error');
+          }
+        } catch (e) {
+          console.error('Invalid Firebase config:', e);
+          setFirebaseStatus('error');
+        }
+      };
+
+      const handleDisconnectFirebase = () => {
+        FirebaseBackend.disconnect();
+        setFirebaseStatus('disconnected');
+        setFirebaseConfigText('');
+      };
+
+      const handleClassCodeChange = (e) => {
+        const code = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+        setClassCode(code);
+        FirebaseBackend.setClassCode(code);
+      };
+
+      const handleSoundToggle = () => {
+        const newState = SoundManager.toggle();
+        setSoundEnabled(newState);
+        if (newState) SoundManager.play('tick');
+      };
+
+      const updatePlayer = (index, field, value) => {
+        setPlayers(prev => {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], [field]: value };
+          return updated;
+        });
+        // Clear validation error when user types
+        if (validationError) setValidationError('');
+      };
+
+      // Handle team name change with validation
+      const handleTeamNameChange = (e) => {
+        setTeamName(e.target.value);
+        // Clear validation error when user types
+        if (validationError) setValidationError('');
+      };
+
+      // Validate and start game
+      const handleStartGame = () => {
+        // Validate team name
+        const teamValidation = validateName(teamName);
+        if (!teamValidation.isValid) {
+          setValidationError(teamValidation.error || 'Please enter a valid team name');
+          return;
+        }
+
+        // Validate player names
+        const playersWithNames = players.filter(p => p.firstName.trim());
+        for (const player of playersWithNames) {
+          if (!isContentAppropriate(player.firstName)) {
+            setValidationError('Please use appropriate player names');
+            return;
+          }
+          if (player.lastInitial && !isContentAppropriate(player.lastInitial)) {
+            setValidationError('Please use appropriate player names');
+            return;
+          }
+        }
+
+        // All validations passed - start the game
+        setValidationError('');
+        onStart({
+          teamName: teamValidation.cleaned,
+          rounds,
+          difficulty,
+          avatar: selectedAvatar,
+          soundEnabled,
+          players: playersWithNames.map(p => ({
+            firstName: sanitizeInput(p.firstName),
+            lastInitial: sanitizeInput(p.lastInitial)
+          }))
+        });
+      };
+
+      // Get valid players (those with at least a first name)
+      const validPlayers = players.filter(p => p.firstName.trim());
+
+      // Difficulty background colors (fixed - using rgba instead of CSS var interpolation)
+      const difficultyBgColors = {
+        easy: 'rgba(52, 211, 153, 0.15)',
+        medium: 'rgba(251, 191, 36, 0.15)',
+        hard: 'rgba(251, 113, 133, 0.15)',
+        mixed: 'rgba(167, 139, 250, 0.15)'
+      };
+
+      // Leaderboard data
+      const topTeams = useMemo(() => LeaderboardManager.getTopTeams(10), [showLeaderboard]);
+      const topPlayers = useMemo(() => LeaderboardManager.getTopPlayers(10), [showLeaderboard]);
+
+      // Leaderboard View
+      if (showLeaderboard) {
+        return (
+          <div style={{
+            maxWidth: '640px',
+            margin: '0 auto',
+            padding: '1.5rem'
+          }}>
+            <div className="animate-in" style={{ marginBottom: '1.5rem' }}>
+              <button
+                onClick={() => setShowLeaderboard(false)}
+                className="mono"
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                ← Back to Setup
+              </button>
+            </div>
+
+            <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🏆</div>
+              <h2 className="mono" style={{
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                color: 'var(--accent-amber)'
+              }}>
+                LEADERBOARD
+              </h2>
+              {/* Status indicator */}
+              {FirebaseBackend.initialized ? (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(52, 211, 153, 0.1)',
+                  border: '1px solid rgba(52, 211, 153, 0.3)',
+                  borderRadius: '6px',
+                  fontSize: '0.6875rem',
+                  color: 'var(--accent-emerald)'
+                }}>
+                  ☁️ Connected to class leaderboard
+                  {classCode && ` • Class: ${classCode}`}
+                  {loadingCloud && ' • Loading...'}
+                </div>
+              ) : (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(251, 191, 36, 0.1)',
+                  border: '1px solid rgba(251, 191, 36, 0.3)',
+                  borderRadius: '6px',
+                  fontSize: '0.6875rem',
+                  color: 'var(--text-muted)'
+                }}>
+                  💾 Device-only scores • <button
+                    onClick={() => { setShowLeaderboard(false); setShowTeacherSetup(true); }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-cyan)',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontSize: 'inherit',
+                      fontFamily: 'inherit',
+                      padding: 0
+                    }}
+                  >Teacher: Enable class-wide</button>
+                </div>
+              )}
+            </div>
+
+            {/* Tab Selector */}
+            <div style={{
+              display: 'flex',
+              gap: '0.5rem',
+              marginBottom: '1rem'
+            }}>
+              <button
+                onClick={() => setLeaderboardTab('teams')}
+                className="mono"
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: leaderboardTab === 'teams' ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                  color: leaderboardTab === 'teams' ? 'var(--bg-deep)' : 'var(--text-secondary)',
+                  border: `1px solid ${leaderboardTab === 'teams' ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                🎯 Top Teams
+              </button>
+              <button
+                onClick={() => setLeaderboardTab('players')}
+                className="mono"
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: leaderboardTab === 'players' ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                  color: leaderboardTab === 'players' ? 'var(--bg-deep)' : 'var(--text-secondary)',
+                  border: `1px solid ${leaderboardTab === 'players' ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                👤 Top Players
+              </button>
+            </div>
+
+            {/* Teams Leaderboard */}
+            {leaderboardTab === 'teams' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                overflow: 'hidden'
+              }}>
+                {(() => {
+                  // Use cloud data if Firebase is connected, otherwise use local
+                  const displayTeams = FirebaseBackend.initialized && cloudTeams.length > 0 ? cloudTeams : topTeams;
+                  if (displayTeams.length === 0) {
+                    return (
+                      <div style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: 'var(--text-muted)'
+                      }}>
+                        {loadingCloud ? 'Loading...' : 'No games played yet. Be the first!'}
+                      </div>
+                    );
+                  }
+                  return displayTeams.map((game, index) => (
+                    <div
+                      key={game.id || index}
+                      style={{
+                        padding: '0.875rem 1rem',
+                        borderBottom: index < displayTeams.length - 1 ? '1px solid var(--border)' : 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        background: index < 3 ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
+                      }}
+                    >
+                      <div className="mono" style={{
+                        width: '2rem',
+                        fontSize: index < 3 ? '1.25rem' : '0.875rem',
+                        color: index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--text-muted)',
+                        fontWeight: 700
+                      }}>
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>{game.teamAvatar || '🔍'}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {game.teamName}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {game.players?.map(p => formatPlayerName(p.firstName, p.lastInitial)).join(', ') || 'Anonymous'}
+                        </div>
+                      </div>
+                      <div className="mono" style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: game.score >= 0 ? 'var(--correct)' : 'var(--incorrect)'
+                      }}>
+                        {game.score >= 0 ? '+' : ''}{game.score}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Players Leaderboard */}
+            {leaderboardTab === 'players' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                overflow: 'hidden'
+              }}>
+                {(() => {
+                  // Use cloud data if Firebase is connected, otherwise use local
+                  const displayPlayers = FirebaseBackend.initialized && cloudPlayers.length > 0 ? cloudPlayers : topPlayers;
+                  if (displayPlayers.length === 0) {
+                    return (
+                      <div style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: 'var(--text-muted)'
+                      }}>
+                        {loadingCloud ? 'Loading...' : 'No players yet. Start a game!'}
+                      </div>
+                    );
+                  }
+                  return displayPlayers.map((player, index) => (
+                    <div
+                      key={player.displayName || index}
+                      style={{
+                        padding: '0.875rem 1rem',
+                        borderBottom: index < displayPlayers.length - 1 ? '1px solid var(--border)' : 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        background: index < 3 ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
+                      }}
+                    >
+                      <div className="mono" style={{
+                        width: '2rem',
+                        fontSize: index < 3 ? '1.25rem' : '0.875rem',
+                        color: index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--text-muted)',
+                        fontWeight: 700
+                      }}>
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {player.displayName}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {player.gamesPlayed} game{player.gamesPlayed !== 1 ? 's' : ''} • avg: {player.avgScore}
+                        </div>
+                      </div>
+                      <div className="mono" style={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        color: 'var(--accent-amber)'
+                      }}>
+                        Best: {player.bestScore}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Teacher Setup View (Firebase Configuration)
+      if (showTeacherSetup) {
+        return (
+          <div style={{
+            maxWidth: '640px',
+            margin: '0 auto',
+            padding: '1.5rem'
+          }}>
+            <div className="animate-in" style={{ marginBottom: '1.5rem' }}>
+              <button
+                onClick={() => setShowTeacherSetup(false)}
+                className="mono"
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer'
+                }}
+              >
+                ← Back to Setup
+              </button>
+            </div>
+
+            <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⚙️</div>
+              <h2 className="mono" style={{
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                color: 'var(--accent-cyan)'
+              }}>
+                TEACHER SETUP
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                Enable class-wide leaderboards with Firebase (free)
+              </p>
+            </div>
+
+            {/* Status */}
+            <div className="animate-in" style={{
+              background: firebaseStatus === 'connected' ? 'rgba(52, 211, 153, 0.1)' : 'var(--bg-card)',
+              border: `1px solid ${firebaseStatus === 'connected' ? 'var(--accent-emerald)' : 'var(--border)'}`,
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1rem',
+              textAlign: 'center'
+            }}>
+              <span className="mono" style={{
+                color: firebaseStatus === 'connected' ? 'var(--accent-emerald)' :
+                       firebaseStatus === 'error' ? 'var(--accent-rose)' : 'var(--text-muted)'
+              }}>
+                {firebaseStatus === 'connected' ? '✓ Connected to Firebase' :
+                 firebaseStatus === 'error' ? '✗ Connection Error' : '○ Not Connected'}
+              </span>
+            </div>
+
+            {/* Class Code */}
+            <div className="animate-in" style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <label className="mono" style={{
+                display: 'block',
+                fontSize: '0.75rem',
+                color: 'var(--accent-amber)',
+                marginBottom: '0.5rem'
+              }}>
+                CLASS CODE (optional)
+              </label>
+              <input
+                type="text"
+                value={classCode}
+                onChange={handleClassCodeChange}
+                placeholder="e.g., PERIOD3, SMITH5A"
+                maxLength={10}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '1rem',
+                  textTransform: 'uppercase'
+                }}
+              />
+              <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                Use to filter leaderboard by class period or section
+              </p>
+            </div>
+
+            {/* Firebase Config */}
+            {firebaseStatus !== 'connected' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <label className="mono" style={{
+                  display: 'block',
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-cyan)',
+                  marginBottom: '0.5rem'
+                }}>
+                  FIREBASE CONFIG JSON
+                </label>
+
+                {/* Setup Instructions */}
+                <details style={{ marginBottom: '0.75rem' }}>
+                  <summary style={{
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.75rem'
+                  }}>
+                    📋 How to get your Firebase config (5 min)
+                  </summary>
+                  <div style={{
+                    marginTop: '0.5rem',
+                    padding: '0.75rem',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '6px',
+                    fontSize: '0.6875rem',
+                    color: 'var(--text-muted)',
+                    lineHeight: 1.6
+                  }}>
+                    <ol style={{ paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener" style={{ color: 'var(--accent-cyan)' }}>console.firebase.google.com</a></li>
+                      <li>Click "Create a project" (free tier works)</li>
+                      <li>Name it (e.g., "truth-hunters-myschool")</li>
+                      <li>Disable Google Analytics if asked</li>
+                      <li>Go to Project Settings → Your apps → Add Web App</li>
+                      <li>Copy the <code>firebaseConfig</code> object</li>
+                      <li>Go to Build → Firestore → Create database</li>
+                      <li>Choose <strong>production mode</strong></li>
+                      <li>Go to Rules tab and paste these security rules:</li>
+                    </ol>
+                    <pre style={{
+                      background: 'var(--bg-card)',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.5rem',
+                      overflow: 'auto',
+                      margin: '0.375rem 0',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all'
+                    }}>{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /games/{gameId} {
+      allow read: if true;
+      allow create: if request.resource.data.score is number;
+      allow update, delete: if false;
+    }
+  }
+}`}</pre>
+                    <ol start={10} style={{ paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>Click "Publish" to save rules</li>
+                      <li>Paste your config below!</li>
+                    </ol>
+                  </div>
+                </details>
+
+                <textarea
+                  value={firebaseConfigText}
+                  onChange={(e) => setFirebaseConfigText(e.target.value)}
+                  placeholder='{"apiKey": "...", "projectId": "...", ...}'
+                  rows={5}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.6875rem',
+                    resize: 'vertical'
+                  }}
+                />
+
+                <button
+                  onClick={handleConnectFirebase}
+                  disabled={!firebaseConfigText.trim()}
+                  className="mono"
+                  style={{
+                    width: '100%',
+                    marginTop: '0.75rem',
+                    padding: '0.75rem',
+                    background: firebaseConfigText.trim() ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                    color: firebaseConfigText.trim() ? 'var(--bg-deep)' : 'var(--text-muted)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: firebaseConfigText.trim() ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  Connect Firebase
+                </button>
+              </div>
+            )}
+
+            {/* Disconnect Option */}
+            {firebaseStatus === 'connected' && (
+              <div className="animate-in" style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <p style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '0.75rem'
+                }}>
+                  Firebase is connected. Scores from all devices with this config will appear in the leaderboard.
+                </p>
+                <button
+                  onClick={handleDisconnectFirebase}
+                  className="mono"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    color: 'var(--accent-rose)',
+                    border: '1px solid var(--accent-rose)',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Disconnect Firebase
+                </button>
+              </div>
+            )}
+
+            {/* Done Button */}
+            <button
+              onClick={() => setShowTeacherSetup(false)}
+              className="mono"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: 'var(--accent-emerald)',
+                color: 'var(--bg-deep)',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              Done
+            </button>
+          </div>
+        );
+      }
+
+      // Main Setup View
+      return (
+        <div style={{
+          maxWidth: '640px',
+          margin: '0 auto',
+          padding: '1.5rem'
+        }}>
+          {/* Header */}
+          <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</div>
+            <h1 className="mono" style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              color: 'var(--accent-cyan)',
+              marginBottom: '0.25rem',
+              letterSpacing: '-0.025em'
+            }}>
+              TRUTH HUNTERS
+            </h1>
+            <p style={{
+              fontSize: '0.9375rem',
+              color: 'var(--text-secondary)',
+              fontStyle: 'italic'
+            }}>
+              The Calibration Game
+            </p>
+          </div>
+
+          {/* Leaderboard Button */}
+          <div className="animate-in" style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '1rem'
+          }}>
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="mono"
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'rgba(251, 191, 36, 0.15)',
+                border: '1px solid var(--accent-amber)',
+                borderRadius: '6px',
+                color: 'var(--accent-amber)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              🏆 View Leaderboard
+            </button>
+          </div>
+
+          {/* How To Play - Collapsible */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.05s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '0.75rem'
+            }}
+          >
+            <button
+              onClick={() => setShowHowToPlay(!showHowToPlay)}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: 0
+              }}
+            >
+              <h2 className="mono" style={{
+                fontSize: '0.8125rem',
+                color: 'var(--accent-amber)',
+                letterSpacing: '0.05em'
+              }}>
+                📋 HOW TO PLAY
+              </h2>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                {showHowToPlay ? '▲' : '▼'}
+              </span>
+            </button>
+
+            {showHowToPlay && (
+              <ul style={{
+                listStyle: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                marginTop: '0.75rem'
+              }}>
+                {[
+                  'Read claims together — some are AI-generated!',
+                  'Discuss as a team using assigned roles',
+                  'Vote TRUE, FALSE, or MIXED',
+                  'Stake confidence points',
+                  'Learn from mistakes!'
+                ].map((item, i) => (
+                  <li key={i} style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.8125rem'
+                  }}>
+                    <span style={{ color: 'var(--accent-cyan)' }}>▸</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Team Name & Mascot */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.1s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '0.75rem'
+            }}
+          >
+            <label className="mono" style={{
+              display: 'block',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.375rem',
+              letterSpacing: '0.05em'
+            }}>
+              TEAM NAME *
+            </label>
+            <input
+              type="text"
+              value={teamName}
+              onChange={handleTeamNameChange}
+              placeholder="Enter your team name..."
+              maxLength={25}
+              required
+              autoComplete="off"
+              aria-describedby={validationError ? 'validation-error' : undefined}
+              style={{
+                width: '100%',
+                padding: '0.625rem 0.875rem',
+                background: 'var(--bg-elevated)',
+                border: validationError && validationError.includes('team') ? '1px solid var(--accent-rose)' : '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontSize: '0.9375rem',
+                fontFamily: 'var(--font-serif)',
+                marginBottom: '0.75rem'
+              }}
+            />
+
+            <label className="mono" style={{
+              display: 'block',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.375rem',
+              letterSpacing: '0.05em'
+            }}>
+              MASCOT
+            </label>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '0.375rem'
+            }}>
+              {TEAM_AVATARS.map((avatar) => (
+                <button
+                  key={avatar.id}
+                  onClick={() => setSelectedAvatar(avatar)}
+                  title={avatar.name}
+                  style={{
+                    padding: '0.5rem 0.375rem',
+                    background: selectedAvatar.id === avatar.id
+                      ? 'rgba(34, 211, 238, 0.15)'
+                      : 'var(--bg-elevated)',
+                    border: `2px solid ${selectedAvatar.id === avatar.id ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.125rem'
+                  }}
+                >
+                  <span style={{ fontSize: '1.25rem' }}>{avatar.emoji}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Player Inputs */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.15s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '0.75rem'
+            }}
+          >
+            <label className="mono" style={{
+              display: 'block',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.25rem',
+              letterSpacing: '0.05em'
+            }}>
+              👥 TEAM MEMBERS (for leaderboard)
+            </label>
+            <p style={{
+              fontSize: '0.5625rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.5rem',
+              opacity: 0.8
+            }}>
+              🔒 Names stored locally on this device only. If cloud leaderboard is enabled by your teacher, first names and last initials may be shared with your class.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {players.map((player, index) => (
+                <div key={index} style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  alignItems: 'center'
+                }}>
+                  <span className="mono" style={{
+                    fontSize: '0.6875rem',
+                    color: 'var(--text-muted)',
+                    width: '1rem'
+                  }}>
+                    {index + 1}.
+                  </span>
+                  <input
+                    type="text"
+                    value={player.firstName}
+                    onChange={(e) => updatePlayer(index, 'firstName', e.target.value)}
+                    placeholder="First Name"
+                    maxLength={15}
+                    autoComplete="off"
+                    style={{
+                      flex: 1,
+                      padding: '0.5rem 0.625rem',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.875rem',
+                      fontFamily: 'var(--font-serif)'
+                    }}
+                  />
+                  <input
+                    type="text"
+                    value={player.lastInitial}
+                    onChange={(e) => updatePlayer(index, 'lastInitial', e.target.value.charAt(0).toUpperCase())}
+                    placeholder="L"
+                    maxLength={1}
+                    autoComplete="off"
+                    style={{
+                      width: '2.5rem',
+                      padding: '0.5rem',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.875rem',
+                      fontFamily: 'var(--font-mono)',
+                      textAlign: 'center',
+                      textTransform: 'uppercase'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{
+              marginTop: '0.5rem',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              fontStyle: 'italic'
+            }}>
+              Enter first name + last initial (e.g., "Maya T.")
+            </div>
+          </div>
+
+          {/* Difficulty */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.2s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '0.75rem'
+            }}
+          >
+            <label className="mono" style={{
+              display: 'block',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.5rem',
+              letterSpacing: '0.05em'
+            }}>
+              DIFFICULTY
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.375rem' }}>
+              {Object.entries(DIFFICULTY_CONFIG).map(([key, config]) => (
+                <button
+                  key={key}
+                  onClick={() => setDifficulty(key)}
+                  style={{
+                    padding: '0.625rem',
+                    background: difficulty === key ? difficultyBgColors[key] : 'var(--bg-elevated)',
+                    border: `2px solid ${difficulty === key ? config.color : 'var(--border)'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    textAlign: 'left'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <span style={{ fontSize: '0.875rem' }}>{config.icon}</span>
+                    <span className="mono" style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: difficulty === key ? config.color : 'var(--text-primary)'
+                    }}>
+                      {config.name}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rounds */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.25s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '0.75rem'
+            }}
+          >
+            <label className="mono" style={{
+              display: 'block',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.5rem',
+              letterSpacing: '0.05em'
+            }}>
+              ROUNDS
+            </label>
+            <div style={{ display: 'flex', gap: '0.375rem' }}>
+              {[3, 5, 7, 10].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setRounds(n)}
+                  className="mono"
+                  style={{
+                    flex: 1,
+                    padding: '0.625rem 0.375rem',
+                    background: rounds === n ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                    color: rounds === n ? 'var(--bg-deep)' : 'var(--text-secondary)',
+                    border: `1px solid ${rounds === n ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.8125rem'
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <div style={{
+              marginTop: '0.375rem',
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)',
+              textAlign: 'center'
+            }}>
+              ~{Math.ceil(rounds * (DIFFICULTY_CONFIG[difficulty]?.discussTime + DIFFICULTY_CONFIG[difficulty]?.stakeTime || 180) / 60)} min
+            </div>
+          </div>
+
+          {/* Sound + Start */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.3s',
+              display: 'flex',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}
+          >
+            <button
+              onClick={handleSoundToggle}
+              className="mono"
+              style={{
+                padding: '0.75rem',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                fontSize: '1rem',
+                cursor: 'pointer'
+              }}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
+            <Button
+              onClick={handleStartGame}
+              fullWidth
+              size="lg"
+              disabled={!teamName.trim()}
+            >
+              {selectedAvatar.emoji} START MISSION →
+            </Button>
+          </div>
+
+          {/* Validation Error Display */}
+          {validationError && (
+            <div
+              id="validation-error"
+              role="alert"
+              className="animate-in"
+              style={{
+                padding: '0.75rem 1rem',
+                background: 'rgba(251, 113, 133, 0.15)',
+                border: '1px solid var(--accent-rose)',
+                borderRadius: '8px',
+                marginBottom: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <span style={{ fontSize: '1rem' }}>⚠️</span>
+              <span style={{
+                color: 'var(--accent-rose)',
+                fontSize: '0.875rem',
+                fontWeight: 500
+              }}>
+                {validationError}
+              </span>
+            </div>
+          )}
+
+          {/* Tip */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.35s',
+              padding: '0.75rem',
+              background: 'var(--bg-elevated)',
+              borderRadius: '6px',
+              textAlign: 'center'
+            }}
+          >
+            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+              💡 {getRandomItem(EDUCATIONAL_TIPS).tip}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    /** Playing Screen - Enhanced with hints, streaks, rotating roles */
+    const PlayingScreen = ({
+      claim,
+      round,
+      totalRounds,
+      onSubmit,
+      phase,
+      setPhase,
+      difficulty,
+      currentStreak,
+      hintsUsed,
+      onUseHint,
+      teamAvatar
+    }) => {
+      const [confidence, setConfidence] = useState(1);
+      const [verdict, setVerdict] = useState(null);
+      const [reasoning, setReasoning] = useState('');
+      const [showResult, setShowResult] = useState(false);
+      const [resultData, setResultData] = useState(null);
+      const [timeoutWarning, setTimeoutWarning] = useState(false);
+      const [activeHint, setActiveHint] = useState(null);
+      const [encouragement, setEncouragement] = useState('');
+      const submitRef = useRef(null);
+
+      // Get timing based on difficulty
+      const diffConfig = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.medium;
+      const discussTime = diffConfig.discussTime;
+      const stakeTime = diffConfig.stakeTime;
+
+      const discussTimer = useTimer(discussTime, () => setPhase('stake'));
+      const stakeTimer = useTimer(stakeTime, () => {
+        if (submitRef.current) {
+          submitRef.current();
+        } else {
+          setTimeoutWarning(true);
+        }
+      });
+
+      // Get rotating roles for this round
+      const roles = useMemo(() => getRotatingRoles(round), [round]);
+
+      useEffect(() => {
+        if (phase === 'discuss') {
+          discussTimer.reset(discussTime);
+          discussTimer.start();
+          setTimeoutWarning(false);
+          setActiveHint(null);
+        } else if (phase === 'stake') {
+          stakeTimer.reset(stakeTime);
+          stakeTimer.start();
+          setTimeoutWarning(false);
+        }
+      }, [phase, discussTime, stakeTime]);
+
+      const handleSubmitVerdict = useCallback(() => {
+        if (!verdict || !claim) return;
+
+        const correct = verdict === claim.answer;
+        const points = calculatePoints(correct, confidence);
+
+        // Play sound
+        SoundManager.play(correct ? 'correct' : 'incorrect');
+
+        // Get random encouragement
+        const msgs = correct ? ENCOURAGEMENTS.correct : ENCOURAGEMENTS.incorrect;
+        setEncouragement(getRandomItem(msgs));
+
+        setResultData({ correct, points, confidence, verdict });
+        setShowResult(true);
+        setPhase('result');
+      }, [verdict, confidence, claim, setPhase]);
+
+      useEffect(() => {
+        if (verdict) {
+          submitRef.current = handleSubmitVerdict;
+        } else {
+          submitRef.current = null;
+        }
+      }, [verdict, handleSubmitVerdict]);
+
+      useEffect(() => {
+        if (!showResult || !resultData || !claim) return;
+
+        const timeoutId = setTimeout(() => {
+          onSubmit({
+            claimId: claim.id,
+            teamVerdict: resultData.verdict,
+            confidence: resultData.confidence,
+            correct: resultData.correct,
+            points: resultData.points,
+            reasoning
+          });
+
+          setConfidence(1);
+          setVerdict(null);
+          setReasoning('');
+          setShowResult(false);
+          setResultData(null);
+          setActiveHint(null);
+        }, 4500);
+
+        return () => clearTimeout(timeoutId);
+      }, [showResult, resultData, claim, reasoning, onSubmit]);
+
+      const handleHintRequest = (hintType) => {
+        const hint = HINT_TYPES.find(h => h.id === hintType);
+        if (!hint) return;
+
+        const content = getHintContent(claim, hintType);
+        setActiveHint({ ...hint, content });
+        onUseHint(hint.cost);
+        SoundManager.play('tick');
+      };
+
+      return (
+        <div style={{
+          maxWidth: '800px',
+          margin: '0 auto',
+          padding: '1.25rem'
+        }}>
+          {/* Top Bar: Phase + Streak */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1rem'
+          }}>
+            {/* Phase Indicator */}
+            <div style={{ display: 'flex', gap: '0.375rem' }}>
+              {['discuss', 'stake', 'result'].map((p, i) => (
+                <div
+                  key={p}
+                  className="mono"
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.6875rem',
+                    background: phase === p ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                    color: phase === p ? 'var(--bg-deep)' : 'var(--text-muted)',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase'
+                  }}
+                >
+                  {i + 1}. {p}
+                </div>
+              ))}
+            </div>
+
+            {/* Streak Display */}
+            {currentStreak >= 2 && (
+              <div className="mono animate-pulse" style={{
+                padding: '0.25rem 0.625rem',
+                background: 'rgba(251, 191, 36, 0.15)',
+                border: '1px solid var(--accent-amber)',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                color: 'var(--accent-amber)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem'
+              }}>
+                🔥 {currentStreak} streak
+              </div>
+            )}
+          </div>
+
+          {/* Timer */}
+          {(phase === 'discuss' || phase === 'stake') && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <TimerDisplay
+                time={phase === 'discuss' ? discussTimer.time : stakeTimer.time}
+                isActive={phase === 'discuss' ? discussTimer.isActive : stakeTimer.isActive}
+                isPaused={phase === 'discuss' ? discussTimer.isPaused : stakeTimer.isPaused}
+                label={phase === 'discuss' ? 'Discussion Time' : 'Make Your Decision'}
+              />
+            </div>
+          )}
+
+          {/* Difficulty Badge */}
+          {claim.difficulty && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+              <span className="mono" style={{
+                padding: '0.25rem 0.5rem',
+                fontSize: '0.625rem',
+                background: DIFFICULTY_BG_COLORS[claim.difficulty] || 'rgba(167, 139, 250, 0.2)',
+                color: DIFFICULTY_CONFIG[claim.difficulty]?.color,
+                borderRadius: '4px',
+                textTransform: 'uppercase'
+              }}>
+                {DIFFICULTY_CONFIG[claim.difficulty]?.icon} {claim.difficulty}
+              </span>
+            </div>
+          )}
+
+          {/* Claim Card */}
+          <ClaimCard claim={claim} showAnswer={showResult} />
+
+          {/* Active Hint Display */}
+          {activeHint && (
+            <div className="animate-in" style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              background: 'rgba(167, 139, 250, 0.1)',
+              border: '1px solid var(--accent-violet)',
+              borderRadius: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <span>{activeHint.icon}</span>
+                <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-violet)' }}>
+                  {activeHint.name}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.9375rem', color: 'var(--text-primary)' }}>
+                {activeHint.content}
+              </div>
+            </div>
+          )}
+
+          {/* Discussion Phase */}
+          {phase === 'discuss' && (
+            <div className="animate-in" style={{ marginTop: '1.25rem' }}>
+              {/* Rotating Team Roles */}
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <h3 className="mono" style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--accent-amber)',
+                  marginBottom: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  🗣️ TEAM ROLES (Round {round})
+                </h3>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '0.5rem'
+                }}>
+                  {roles.map((r, i) => (
+                    <div key={r.role} style={{
+                      padding: '0.625rem',
+                      background: 'var(--bg-elevated)',
+                      borderRadius: '6px',
+                      borderLeft: i === 0 ? '3px solid var(--accent-cyan)' : 'none'
+                    }}>
+                      <div className="mono" style={{
+                        fontSize: '0.6875rem',
+                        color: i === 0 ? 'var(--accent-cyan)' : 'var(--accent-amber)',
+                        marginBottom: '0.125rem'
+                      }}>
+                        {i === 0 ? '👤 ' : ''}{r.role}
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        {r.task}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hint System */}
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <h3 className="mono" style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--accent-violet)',
+                  marginBottom: '0.75rem'
+                }}>
+                  💡 NEED A HINT? (costs points)
+                </h3>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {HINT_TYPES.map((hint) => (
+                    <button
+                      key={hint.id}
+                      onClick={() => handleHintRequest(hint.id)}
+                      disabled={activeHint?.id === hint.id}
+                      className="mono"
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        background: activeHint?.id === hint.id
+                          ? 'var(--accent-violet)'
+                          : 'var(--bg-elevated)',
+                        color: activeHint?.id === hint.id
+                          ? 'white'
+                          : 'var(--text-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        cursor: activeHint?.id === hint.id ? 'default' : 'pointer',
+                        opacity: activeHint?.id === hint.id ? 0.7 : 1
+                      }}
+                    >
+                      {hint.icon} {hint.name} (-{hint.cost}pts)
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button onClick={() => setPhase('stake')} fullWidth>
+                Ready to Vote →
+              </Button>
+            </div>
+          )}
+
+          {/* Stake Phase */}
+          {phase === 'stake' && (
+            <div className="animate-in" style={{ marginTop: '1.25rem' }}>
+              {timeoutWarning && (
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  style={{
+                    padding: '0.625rem 1rem',
+                    background: 'rgba(251, 191, 36, 0.15)',
+                    border: '1px solid var(--accent-amber)',
+                    borderRadius: '8px',
+                    marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span aria-hidden="true">⚠️</span>
+                  <span style={{ color: 'var(--accent-amber)', fontSize: '0.8125rem' }}>
+                    Time's up! Select a verdict to continue.
+                  </span>
+                </div>
+              )}
+
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '0.75rem'
+              }}>
+                <h3 className="mono" style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--accent-amber)',
+                  marginBottom: '0.75rem'
+                }}>
+                  VERDICT
+                </h3>
+                <VerdictSelector value={verdict} onChange={setVerdict} />
+              </div>
+
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '0.75rem'
+              }}>
+                <h3 className="mono" style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--accent-amber)',
+                  marginBottom: '0.75rem'
+                }}>
+                  CONFIDENCE
+                </h3>
+                <ConfidenceSelector value={confidence} onChange={setConfidence} />
+              </div>
+
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <label className="mono" style={{
+                  display: 'block',
+                  fontSize: '0.6875rem',
+                  color: 'var(--text-muted)',
+                  marginBottom: '0.375rem'
+                }}>
+                  WHY? (optional)
+                </label>
+                <textarea
+                  value={reasoning}
+                  onChange={(e) => setReasoning(e.target.value)}
+                  placeholder="What made you choose this?"
+                  rows={2}
+                  maxLength={500}
+                  aria-label="Explain your reasoning"
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.875rem',
+                    fontFamily: 'var(--font-serif)',
+                    resize: 'none'
+                  }}
+                />
+              </div>
+
+              <Button
+                onClick={handleSubmitVerdict}
+                fullWidth
+                disabled={!verdict}
+              >
+                {teamAvatar?.emoji || '🔒'} Lock In Answer →
+              </Button>
+            </div>
+          )}
+
+          {/* Result Phase */}
+          {phase === 'result' && resultData && (
+            <div
+              className={`animate-in ${resultData.correct ? 'animate-celebrate' : 'animate-shake'}`}
+              style={{
+                marginTop: '1.25rem',
+                background: resultData.correct
+                  ? 'rgba(16, 185, 129, 0.1)'
+                  : 'rgba(239, 68, 68, 0.1)',
+                border: `2px solid ${resultData.correct ? 'var(--correct)' : 'var(--incorrect)'}`,
+                borderRadius: '12px',
+                padding: '1.5rem',
+                textAlign: 'center'
+              }}
+            >
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>
+                {resultData.correct ? '✓' : '✗'}
+              </div>
+              <div className="mono" style={{
+                fontSize: '1.375rem',
+                fontWeight: 700,
+                color: resultData.correct ? 'var(--correct)' : 'var(--incorrect)',
+                marginBottom: '0.375rem'
+              }}>
+                {resultData.correct ? 'CORRECT!' : 'INCORRECT'}
+              </div>
+              <div className="mono" style={{
+                fontSize: '1.125rem',
+                color: resultData.points >= 0 ? 'var(--correct)' : 'var(--incorrect)',
+                marginBottom: '0.5rem'
+              }}>
+                {resultData.points >= 0 ? '+' : ''}{resultData.points} points
+              </div>
+
+              {/* Streak notification - show when 2+ in a row (matches top bar display) */}
+              {resultData.correct && currentStreak >= 2 && (
+                <div style={{
+                  marginTop: '0.5rem',
+                  padding: '0.375rem 0.75rem',
+                  background: 'rgba(251, 191, 36, 0.15)',
+                  borderRadius: '4px',
+                  display: 'inline-block'
+                }}>
+                  <span className="mono" style={{ fontSize: '0.8125rem', color: 'var(--accent-amber)' }}>
+                    {ENCOURAGEMENTS.streak[Math.min(currentStreak, ENCOURAGEMENTS.streak.length) - 1] || `${currentStreak + 1} in a row!`}
+                  </span>
+                </div>
+              )}
+
+              {/* Encouragement message */}
+              <div style={{
+                marginTop: '0.75rem',
+                fontSize: '0.9375rem',
+                color: 'var(--text-secondary)',
+                fontStyle: 'italic'
+              }}>
+                {encouragement}
+              </div>
+
+              <div style={{
+                marginTop: '0.75rem',
+                fontSize: '0.8125rem',
+                color: 'var(--text-muted)'
+              }}>
+                You said <strong>{resultData.verdict}</strong> with{' '}
+                <strong aria-label={`${resultData.confidence} out of 3`}>{'●'.repeat(resultData.confidence)}</strong> confidence
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    /** Debrief Screen - Enhanced with achievements and reflections */
+    const DebriefScreen = ({ team, claims, onRestart, difficulty, teamAvatar }) => {
+      const [showPatterns, setShowPatterns] = useState(false);
+      const [showAchievements, setShowAchievements] = useState(true);
+      const [selectedReflection, setSelectedReflection] = useState(null);
+      const [reflectionResponse, setReflectionResponse] = useState('');
+
+      const calibrationBonus = Math.abs(team.score - team.predictedScore) <= 2 ? 3 : 0;
+      const finalScore = team.score + calibrationBonus;
+
+      // Calculate comprehensive stats
+      const gameStats = useMemo(() =>
+        calculateGameStats(team.results, claims, team.score, team.predictedScore),
+        [team.results, claims, team.score, team.predictedScore]
+      );
+
+      // Determine earned achievements
+      const earnedAchievements = useMemo(() =>
+        ACHIEVEMENTS.filter(a => a.condition(gameStats)),
+        [gameStats]
+      );
+
+      // Play achievement sound on mount if achievements earned
+      useEffect(() => {
+        let timeoutId = null;
+        if (earnedAchievements.length > 0) {
+          timeoutId = setTimeout(() => SoundManager.play('achievement'), 500);
+        }
+        return () => {
+          if (timeoutId) clearTimeout(timeoutId);
+        };
+      }, [earnedAchievements.length]);
+
+      // Get random reflection prompt
+      const reflectionPrompt = useMemo(() => getRandomItem(REFLECTION_PROMPTS), []);
+
+      const correctCount = team.results.filter(r => r.correct).length;
+      const aiClaims = claims.filter(c => c.source === 'ai-generated');
+      const aiClaimResults = team.results.filter(r => {
+        const claim = claims.find(c => c.id === r.claimId);
+        return claim?.source === 'ai-generated';
+      });
+      const aiCorrectCount = aiClaimResults.filter(r => r.correct).length;
+      const aiCatchRate = aiClaims.length > 0
+        ? Math.round((aiCorrectCount / aiClaims.length) * 100)
+        : 0;
+
+      return (
+        <div style={{
+          maxWidth: '800px',
+          margin: '0 auto',
+          padding: '1.5rem'
+        }}>
+          {/* Final Score */}
+          <div 
+            className="animate-in"
+            style={{
+              background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '2rem',
+              textAlign: 'center',
+              marginBottom: '1.5rem'
+            }}
+          >
+            <div className="mono" style={{
+              fontSize: '0.875rem',
+              color: 'var(--text-muted)',
+              marginBottom: '0.5rem',
+              letterSpacing: '0.1em'
+            }}>
+              FINAL SCORE
+            </div>
+            <div className="mono" style={{
+              fontSize: '4rem',
+              fontWeight: 700,
+              color: finalScore >= 0 ? 'var(--accent-cyan)' : 'var(--accent-rose)',
+              lineHeight: 1,
+              marginBottom: '0.5rem'
+            }}>
+              {finalScore}
+            </div>
+            <div style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              {team.name}
+            </div>
+            
+            {calibrationBonus > 0 && (
+              <div style={{
+                display: 'inline-block',
+                padding: '0.5rem 1rem',
+                background: 'rgba(251, 191, 36, 0.15)',
+                border: '1px solid var(--accent-amber)',
+                borderRadius: '8px'
+              }}>
+                <span className="mono" style={{ color: 'var(--accent-amber)' }}>
+                  +3 CALIBRATION BONUS! 🎯
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Stats Grid */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.1s',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+              gap: '0.75rem',
+              marginBottom: '1.25rem'
+            }}
+          >
+            {[
+              { label: 'Accuracy', value: `${correctCount}/${team.results.length}`, sub: 'correct' },
+              { label: 'AI Detection', value: `${aiCatchRate}%`, sub: 'caught' },
+              { label: 'Best Streak', value: gameStats.maxStreak, sub: 'in a row' },
+              { label: 'Predicted', value: team.predictedScore, sub: 'estimate' }
+            ].map((stat, i) => (
+              <div key={i} style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                padding: '0.875rem',
+                textAlign: 'center'
+              }}>
+                <div className="mono" style={{
+                  fontSize: '0.6875rem',
+                  color: 'var(--text-muted)',
+                  marginBottom: '0.125rem'
+                }}>
+                  {stat.label}
+                </div>
+                <div className="mono" style={{
+                  fontSize: '1.375rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)'
+                }}>
+                  {stat.value}
+                </div>
+                <div style={{
+                  fontSize: '0.6875rem',
+                  color: 'var(--text-muted)'
+                }}>
+                  {stat.sub}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Achievements Section */}
+          {earnedAchievements.length > 0 && (
+            <div
+              className="animate-in"
+              style={{
+                animationDelay: '0.15s',
+                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%)',
+                border: '1px solid var(--accent-amber)',
+                borderRadius: '12px',
+                padding: '1.25rem',
+                marginBottom: '1.25rem'
+              }}
+            >
+              <button
+                onClick={() => setShowAchievements(!showAchievements)}
+                style={{
+                  width: '100%',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 0
+                }}
+              >
+                <h3 className="mono" style={{
+                  fontSize: '0.875rem',
+                  color: 'var(--accent-amber)'
+                }}>
+                  🏆 ACHIEVEMENTS UNLOCKED ({earnedAchievements.length})
+                </h3>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  {showAchievements ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {showAchievements && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: '0.75rem',
+                  marginTop: '1rem'
+                }}>
+                  {earnedAchievements.map((achievement) => (
+                    <div
+                      key={achievement.id}
+                      className="animate-in"
+                      style={{
+                        padding: '0.875rem',
+                        background: 'var(--bg-card)',
+                        borderRadius: '8px',
+                        textAlign: 'center',
+                        border: '1px solid var(--border)'
+                      }}
+                    >
+                      <div style={{ fontSize: '1.75rem', marginBottom: '0.375rem' }}>
+                        {achievement.icon}
+                      </div>
+                      <div className="mono" style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: 'var(--accent-amber)',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {achievement.name}
+                      </div>
+                      <div style={{
+                        fontSize: '0.6875rem',
+                        color: 'var(--text-muted)'
+                      }}>
+                        {achievement.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Round Results */}
+          <div 
+            className="animate-in"
+            style={{
+              animationDelay: '0.2s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              marginBottom: '1.5rem'
+            }}
+          >
+            <h3 className="mono" style={{
+              fontSize: '0.875rem',
+              color: 'var(--accent-amber)',
+              marginBottom: '1rem'
+            }}>
+              ROUND BREAKDOWN
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {team.results.map((result, i) => {
+                const claim = claims.find(c => c.id === result.claimId);
+                return (
+                  <div key={i} style={{
+                    padding: '0.75rem',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '8px'
+                  }}>
+                    {/* Result header row */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      marginBottom: result.reasoning ? '0.5rem' : 0
+                    }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        background: result.correct
+                          ? 'rgba(16, 185, 129, 0.2)'
+                          : 'rgba(239, 68, 68, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.875rem',
+                        color: result.correct ? 'var(--correct)' : 'var(--incorrect)'
+                      }}>
+                        {result.correct ? '✓' : '✗'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '0.875rem',
+                          color: 'var(--text-primary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {claim?.text.substring(0, 50)}...
+                        </div>
+                        <div className="mono" style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--text-muted)'
+                        }}>
+                          {result.teamVerdict} • <span aria-label={`${result.confidence} out of 3 confidence`}>{'●'.repeat(result.confidence)}</span>
+                        </div>
+                      </div>
+                      <div className="mono" style={{
+                        fontWeight: 600,
+                        flexShrink: 0,
+                        color: result.points >= 0 ? 'var(--correct)' : 'var(--incorrect)'
+                      }}>
+                        {result.points >= 0 ? '+' : ''}{result.points}
+                      </div>
+                    </div>
+                    {/* Team's reasoning (if provided) */}
+                    {result.reasoning && (
+                      <div style={{
+                        marginLeft: '2.25rem',
+                        padding: '0.5rem 0.75rem',
+                        background: 'var(--bg-card)',
+                        borderRadius: '6px',
+                        borderLeft: '2px solid var(--accent-cyan)',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        fontStyle: 'italic'
+                      }}>
+                        <span style={{ color: 'var(--text-muted)', marginRight: '0.25rem' }}>Your reasoning:</span>
+                        {result.reasoning}
+                      </div>
+                    )}
+                    {/* Correct explanation (if wrong) */}
+                    {!result.correct && claim?.explanation && (
+                      <div style={{
+                        marginLeft: '2.25rem',
+                        marginTop: result.reasoning ? '0.375rem' : 0,
+                        padding: '0.5rem 0.75rem',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        borderRadius: '6px',
+                        borderLeft: '2px solid var(--incorrect)',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        <span style={{ color: 'var(--incorrect)', marginRight: '0.25rem' }}>Actually:</span>
+                        {claim.explanation}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* AI Error Patterns */}
+          <div 
+            className="animate-in"
+            style={{
+              animationDelay: '0.3s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              marginBottom: '1.5rem'
+            }}
+          >
+            <button
+              onClick={() => setShowPatterns(!showPatterns)}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <h3 className="mono" style={{
+                fontSize: '0.875rem',
+                color: 'var(--accent-violet)'
+              }}>
+                🤖 AI ERROR PATTERNS TO REMEMBER
+              </h3>
+              <span style={{ color: 'var(--text-muted)' }}>
+                {showPatterns ? '▲' : '▼'}
+              </span>
+            </button>
+            
+            {showPatterns && (
+              <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {AI_ERROR_PATTERNS.map((pattern, i) => (
+                  <div key={i} style={{
+                    padding: '0.75rem',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '8px',
+                    borderLeft: '3px solid var(--accent-violet)'
+                  }}>
+                    <div className="mono" style={{
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {pattern.name}
+                    </div>
+                    <div style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {pattern.description}
+                    </div>
+                    <div className="mono" style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                      fontStyle: 'italic'
+                    }}>
+                      e.g., {pattern.example}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Enhanced Reflection Section */}
+          <div
+            className="animate-in"
+            style={{
+              animationDelay: '0.4s',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              marginBottom: '1.25rem'
+            }}
+          >
+            <h3 className="mono" style={{
+              fontSize: '0.875rem',
+              color: 'var(--accent-emerald)',
+              marginBottom: '1rem'
+            }}>
+              🪞 TEAM REFLECTION
+            </h3>
+
+            {/* Calibration Quick Check */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '0.75rem'
+              }}>
+                How was your confidence calibration?
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {[
+                  { label: '📈 Too high', value: 'overconfident' },
+                  { label: '✅ Just right', value: 'calibrated' },
+                  { label: '📉 Too low', value: 'underconfident' }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setSelectedReflection(option.value)}
+                    style={{
+                      padding: '0.5rem 0.875rem',
+                      background: selectedReflection === option.value
+                        ? 'var(--accent-emerald)'
+                        : 'var(--bg-elevated)',
+                      color: selectedReflection === option.value
+                        ? 'var(--bg-deep)'
+                        : 'var(--text-secondary)',
+                      border: `1px solid ${selectedReflection === option.value ? 'var(--accent-emerald)' : 'var(--border)'}`,
+                      borderRadius: '6px',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Deep Reflection Prompt */}
+            <div style={{
+              padding: '1rem',
+              background: 'var(--bg-elevated)',
+              borderRadius: '8px',
+              borderLeft: '3px solid var(--accent-emerald)'
+            }}>
+              <p style={{
+                fontSize: '0.9375rem',
+                color: 'var(--text-primary)',
+                marginBottom: '0.5rem',
+                fontWeight: 500
+              }}>
+                💭 {reflectionPrompt.question}
+              </p>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--text-muted)',
+                fontStyle: 'italic',
+                marginBottom: '0.75rem'
+              }}>
+                {reflectionPrompt.followUp}
+              </p>
+              <textarea
+                value={reflectionResponse}
+                onChange={(e) => setReflectionResponse(e.target.value)}
+                placeholder="Share your team's thoughts..."
+                rows={2}
+                style={{
+                  width: '100%',
+                  padding: '0.625rem',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.875rem',
+                  fontFamily: 'var(--font-serif)',
+                  resize: 'none'
+                }}
+              />
+            </div>
+
+            {/* Humility Tip */}
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: 'rgba(52, 211, 153, 0.1)',
+              borderRadius: '6px',
+              fontSize: '0.8125rem',
+              color: 'var(--text-secondary)'
+            }}>
+              <strong style={{ color: 'var(--accent-emerald)' }}>🌱 Growth Mindset:</strong>{' '}
+              {gameStats.totalIncorrect > gameStats.totalCorrect
+                ? "Mistakes are proof you're trying! Every wrong answer teaches us something new."
+                : gameStats.perfectGame
+                  ? "Amazing work! Stay curious — there's always more to learn."
+                  : "Great balance of confidence and caution. Keep questioning everything!"}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div 
+            className="animate-in no-print"
+            style={{
+              animationDelay: '0.5s',
+              display: 'flex',
+              gap: '1rem'
+            }}
+          >
+            <Button onClick={onRestart} fullWidth>
+              Play Again
+            </Button>
+            <Button 
+              onClick={() => window.print()} 
+              variant="secondary"
+              fullWidth
+            >
+              Print Results
+            </Button>
+          </div>
+
+          {/* Research Attribution */}
+          <div 
+            className="animate-in"
+            style={{
+              animationDelay: '0.6s',
+              marginTop: '2rem',
+              padding: '1rem',
+              background: 'var(--bg-elevated)',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)'
+            }}
+          >
+            <strong>Research Base:</strong> Johnson & Johnson (2009) cooperative learning • 
+            Wineburg et al. (2022) lateral reading • 
+            Barzilai & Chinn (2018) epistemic education • 
+            Lichtenstein et al. calibration training
+          </div>
+        </div>
+      );
+    };
+
+    /** Prediction Modal */
+    const PredictionModal = ({ onSubmit, currentScore }) => {
+      const [prediction, setPrediction] = useState(currentScore);
+
+      return (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="prediction-modal-title"
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="animate-in"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '400px',
+              width: '100%'
+            }}
+          >
+            <h2 id="prediction-modal-title" className="mono" style={{
+              fontSize: '1.25rem',
+              color: 'var(--accent-amber)',
+              marginBottom: '0.5rem'
+            }}>
+              <span aria-hidden="true">🎯</span> FINAL PREDICTION
+            </h2>
+            <p style={{
+              color: 'var(--text-secondary)',
+              marginBottom: '1.5rem'
+            }}>
+              What do you think your final score will be?
+              If you're within ±2 points, you'll earn a calibration bonus!
+            </p>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div className="mono" style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-muted)',
+                marginBottom: '0.5rem'
+              }}>
+                Current Score: {currentScore}
+              </div>
+              <input
+                type="number"
+                value={prediction}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 0;
+                  // Bound prediction to reasonable range (-100 to 100)
+                  const bounded = Math.max(-100, Math.min(100, val));
+                  setPrediction(bounded);
+                }}
+                min="-100"
+                max="100"
+                autoFocus
+                aria-label="Predicted final score"
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  fontSize: '1.5rem',
+                  fontFamily: 'var(--font-mono)',
+                  textAlign: 'center'
+                }}
+              />
+            </div>
+
+            <Button onClick={() => onSubmit(prediction)} fullWidth>
+              Lock In Prediction
+            </Button>
+          </div>
+        </div>
+      );
+    };
+
+    // ============================================================
+    // MAIN APP - Enhanced with all new features
+    // ============================================================
+
+    const App = () => {
+      const [gameState, setGameState] = useState({
+        phase: 'setup',
+        currentRound: 0,
+        totalRounds: 5,
+        claims: [],
+        currentClaim: null,
+        difficulty: 'mixed',
+        team: {
+          name: '',
+          score: 0,
+          predictedScore: 0,
+          results: [],
+          avatar: TEAM_AVATARS[0],
+          players: []
+        }
+      });
+
+      const [showPrediction, setShowPrediction] = useState(false);
+      const [currentStreak, setCurrentStreak] = useState(0);
+      const [hintsUsed, setHintsUsed] = useState(0);
+      const [showTip, setShowTip] = useState(false);
+      const [currentTip, setCurrentTip] = useState(null);
+
+      // Ref for sound timeout cleanup
+      const streakSoundTimeoutRef = useRef(null);
+
+      // Cleanup sound timeouts on unmount
+      useEffect(() => {
+        return () => {
+          if (streakSoundTimeoutRef.current) {
+            clearTimeout(streakSoundTimeoutRef.current);
+          }
+        };
+      }, []);
+
+      // Network status detection for offline indicator
+      const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+      useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+      }, []);
+
+      // Start game with new settings object
+      const startGame = useCallback((settings) => {
+        const { teamName, rounds, difficulty, avatar, soundEnabled, players } = settings;
+
+        // Select claims based on difficulty
+        const selectedClaims = selectClaimsByDifficulty(difficulty, rounds);
+
+        // Initialize sound manager with user preference
+        SoundManager.enabled = soundEnabled;
+
+        setGameState({
+          phase: 'playing',
+          currentRound: 1,
+          totalRounds: rounds,
+          claims: selectedClaims,
+          currentClaim: selectedClaims[0],
+          difficulty: difficulty,
+          team: {
+            name: teamName,
+            score: 0,
+            predictedScore: 0,
+            results: [],
+            avatar: avatar,
+            players: players || []
+          }
+        });
+
+        setCurrentStreak(0);
+        setHintsUsed(0);
+      }, []);
+
+      const [playPhase, setPlayPhase] = useState('discuss');
+
+      // Handle hint usage (deduct points)
+      const handleUseHint = useCallback((cost) => {
+        setHintsUsed(prev => prev + 1);
+        setGameState(prev => ({
+          ...prev,
+          team: {
+            ...prev.team,
+            score: prev.team.score - cost
+          }
+        }));
+      }, []);
+
+      const handleRoundSubmit = useCallback((result) => {
+        // Update streak
+        if (result.correct) {
+          setCurrentStreak(prev => prev + 1);
+          // Play streak sound if this will be 3+ in a row (currentStreak is 2+ before increment)
+          if (currentStreak >= 2) {
+            // Clear any pending streak sound timeout
+            if (streakSoundTimeoutRef.current) {
+              clearTimeout(streakSoundTimeoutRef.current);
+            }
+            streakSoundTimeoutRef.current = setTimeout(() => {
+              SoundManager.play('streak');
+              streakSoundTimeoutRef.current = null;
+            }, 300);
+          }
+        } else {
+          setCurrentStreak(0);
+        }
+
+        setGameState(prev => {
+          const newResults = [...prev.team.results, { ...result, round: prev.currentRound }];
+          const newScore = prev.team.score + result.points;
+
+          const isLastRound = prev.currentRound >= prev.totalRounds;
+
+          if (isLastRound) {
+            setShowPrediction(true);
+          } else {
+            // Show educational tip between rounds (50% chance)
+            if (Math.random() > 0.5) {
+              setCurrentTip(getRandomItem(EDUCATIONAL_TIPS));
+              setShowTip(true);
+            }
+          }
+
+          // Get next claim with bounds checking
+          const nextRound = prev.currentRound + 1;
+          const nextClaimIndex = prev.currentRound; // 0-indexed, current round just completed
+          const nextClaim = !isLastRound && nextClaimIndex < prev.claims.length
+            ? prev.claims[nextClaimIndex]
+            : null;
+
+          return {
+            ...prev,
+            currentRound: isLastRound ? prev.currentRound : nextRound,
+            currentClaim: nextClaim,
+            team: {
+              ...prev.team,
+              score: newScore,
+              results: newResults
+            }
+          };
+        });
+        setPlayPhase('discuss');
+      }, [currentStreak]);
+
+      const handlePrediction = useCallback((prediction) => {
+        setShowPrediction(false);
+        setGameState(prev => {
+          // Calculate final score with calibration bonus
+          const calibrationBonus = Math.abs(prev.team.score - prediction) <= 2 ? 3 : 0;
+          const finalScore = prev.team.score + calibrationBonus;
+
+          // Calculate accuracy percentage
+          const correctCount = prev.team.results.filter(r => r.correct).length;
+          const totalRounds = prev.team.results.length;
+          const accuracy = totalRounds > 0 ? Math.round((correctCount / totalRounds) * 100) : 0;
+
+          // Calculate achievements earned
+          const gameStats = calculateGameStats(prev.team.results, prev.claims, prev.team.score, prediction);
+          const earnedAchievementIds = ACHIEVEMENTS
+            .filter(a => a.condition(gameStats))
+            .map(a => a.id);
+
+          // Save to leaderboard (local + Firebase if configured)
+          const gameRecord = {
+            teamName: prev.team.name,
+            teamAvatar: prev.team.avatar?.emoji || '🔍',
+            players: prev.team.players || [],
+            score: finalScore,
+            accuracy: accuracy,
+            difficulty: prev.difficulty,
+            rounds: prev.totalRounds,
+            achievements: earnedAchievementIds
+          };
+
+          LeaderboardManager.save(gameRecord);
+
+          // Also save to Firebase for class-wide leaderboard
+          if (FirebaseBackend.initialized) {
+            FirebaseBackend.save(gameRecord).catch(e => {
+              console.warn('Firebase save failed:', e);
+            });
+          }
+
+          return {
+            ...prev,
+            phase: 'debrief',
+            team: {
+              ...prev.team,
+              predictedScore: prediction
+            }
+          };
+        });
+      }, []);
+
+      const handleDismissTip = useCallback(() => {
+        setShowTip(false);
+        setCurrentTip(null);
+      }, []);
+
+      const restartGame = useCallback(() => {
+        setGameState({
+          phase: 'setup',
+          currentRound: 0,
+          totalRounds: 5,
+          claims: [],
+          currentClaim: null,
+          difficulty: 'mixed',
+          team: {
+            name: '',
+            score: 0,
+            predictedScore: 0,
+            results: [],
+            avatar: TEAM_AVATARS[0],
+            players: []
+          }
+        });
+        setPlayPhase('discuss');
+        setCurrentStreak(0);
+        setHintsUsed(0);
+        setShowTip(false);
+      }, []);
+
+      return (
+        <>
+          <Header
+            score={gameState.team.score}
+            round={gameState.currentRound}
+            totalRounds={gameState.totalRounds}
+            phase={gameState.phase}
+          />
+
+          {/* Offline indicator banner */}
+          {!isOnline && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              style={{
+                background: 'var(--accent-amber)',
+                color: 'var(--bg-deep)',
+                padding: '0.5rem 1rem',
+                textAlign: 'center',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                fontFamily: 'var(--font-mono)'
+              }}
+            >
+              ⚠️ You're offline — Game works, but cloud leaderboard unavailable
+            </div>
+          )}
+
+          <main role="main" style={{ flex: 1 }}>
+            {gameState.phase === 'setup' && (
+              <SetupScreen onStart={startGame} />
+            )}
+
+            {gameState.phase === 'playing' && gameState.currentClaim && (
+              <PlayingScreen
+                claim={gameState.currentClaim}
+                round={gameState.currentRound}
+                totalRounds={gameState.totalRounds}
+                onSubmit={handleRoundSubmit}
+                phase={playPhase}
+                setPhase={setPlayPhase}
+                difficulty={gameState.difficulty}
+                currentStreak={currentStreak}
+                hintsUsed={hintsUsed}
+                onUseHint={handleUseHint}
+                teamAvatar={gameState.team.avatar}
+              />
+            )}
+
+            {gameState.phase === 'debrief' && (
+              <DebriefScreen
+                team={gameState.team}
+                claims={gameState.claims}
+                onRestart={restartGame}
+                difficulty={gameState.difficulty}
+                teamAvatar={gameState.team.avatar}
+              />
+            )}
+          </main>
+
+          {/* Prediction Modal */}
+          {showPrediction && (
+            <PredictionModal
+              onSubmit={handlePrediction}
+              currentScore={gameState.team.score}
+            />
+          )}
+
+          {/* Educational Tip Modal (between rounds) */}
+          {showTip && currentTip && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="tip-modal-title"
+              style={{
+                position: 'fixed',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                background: 'rgba(0, 0, 0, 0.75)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '1rem'
+              }}
+            >
+              <div
+                className="animate-in"
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '16px',
+                  padding: '1.75rem',
+                  maxWidth: '400px',
+                  width: '100%',
+                  textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>
+                  {currentTip.icon}
+                </div>
+                <div id="tip-modal-title" className="mono" style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-violet)',
+                  marginBottom: '0.5rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <span aria-hidden="true">💡</span> {currentTip.category}
+                </div>
+                <p style={{
+                  fontSize: '1rem',
+                  color: 'var(--text-primary)',
+                  lineHeight: 1.6,
+                  marginBottom: '1.25rem'
+                }}>
+                  {currentTip.tip}
+                </p>
+                <Button onClick={handleDismissTip} fullWidth>
+                  Got it! Next Round →
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <footer className="no-print" style={{
+            padding: '0.875rem',
+            borderTop: '1px solid var(--border)',
+            textAlign: 'center'
+          }}>
+            <p className="mono" style={{
+              fontSize: '0.6875rem',
+              color: 'var(--text-muted)'
+            }}>
+              Truth Hunters • Research-based epistemic training for middle schoolers • {gameState.team.avatar?.emoji || '🔍'}
+            </p>
+          </footer>
+        </>
+      );
+    };
+
+    // Mount
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      React.createElement(ErrorBoundary, null,
+        React.createElement(App)
+      )
+    );
+  </script>
+</body>
+</html>
