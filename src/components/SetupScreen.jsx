@@ -6,7 +6,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { LeaderboardView } from './LeaderboardView';
-import { TeacherSetup } from './TeacherSetup';
 import { TEAM_AVATARS, DIFFICULTY_CONFIG, EDUCATIONAL_TIPS } from '../data/constants';
 import { SoundManager } from '../services/sound';
 import { validateName, isContentAppropriate, sanitizeInput } from '../utils/moderation';
@@ -21,7 +20,6 @@ export function SetupScreen({ onStart }) {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const [showTeacherSetup, setShowTeacherSetup] = useState(false);
 
   // Player inputs (up to 4 players per group)
   const [players, setPlayers] = useState([
@@ -103,11 +101,6 @@ export function SetupScreen({ onStart }) {
     return <LeaderboardView onBack={() => setShowLeaderboard(false)} />;
   }
 
-  // Delegate to TeacherSetup component
-  if (showTeacherSetup) {
-    return <TeacherSetup onBack={() => setShowTeacherSetup(false)} />;
-  }
-
   // Main Setup View
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '1.5rem' }}>
@@ -131,8 +124,8 @@ export function SetupScreen({ onStart }) {
         </p>
       </div>
 
-      {/* Leaderboard & Teacher Setup Buttons */}
-      <div className="animate-in" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+      {/* Leaderboard Button */}
+      <div className="animate-in" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
         <button
           onClick={() => setShowLeaderboard(true)}
           className="mono"
@@ -146,22 +139,7 @@ export function SetupScreen({ onStart }) {
             cursor: 'pointer'
           }}
         >
-          🏆 Leaderboard
-        </button>
-        <button
-          onClick={() => setShowTeacherSetup(true)}
-          className="mono"
-          style={{
-            padding: '0.5rem 1rem',
-            background: 'rgba(167, 139, 250, 0.15)',
-            border: '1px solid var(--accent-violet)',
-            borderRadius: '6px',
-            color: 'var(--accent-violet)',
-            fontSize: '0.75rem',
-            cursor: 'pointer'
-          }}
-        >
-          ⚙️ Teacher Setup
+          🏆 View Leaderboard
         </button>
       </div>
 

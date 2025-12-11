@@ -18,8 +18,17 @@ import {
 import { sanitizeInput } from '../utils/moderation';
 import { formatPlayerName } from '../utils/helpers';
 
-const FIREBASE_CONFIG_KEY = 'truthHunters_firebaseConfig';
 const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
+
+// Hardcoded Firebase config - no setup needed
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC26tRrNxPR2CPshuXG91k6vNWGXpo-NYk",
+  authDomain: "truth-hunters-classroom.firebaseapp.com",
+  projectId: "truth-hunters-classroom",
+  storageBucket: "truth-hunters-classroom.firebasestorage.app",
+  messagingSenderId: "694501248854",
+  appId: "1:694501248854:web:e7a183e2cae3323b8e10f7"
+};
 
 /**
  * Firebase Backend Manager for class-wide leaderboards
@@ -35,12 +44,7 @@ export const FirebaseBackend = {
    * Check if Firebase is available and configured
    */
   isConfigured() {
-    try {
-      const config = localStorage.getItem(FIREBASE_CONFIG_KEY);
-      return !!config;
-    } catch (e) {
-      return false;
-    }
+    return true; // Always configured now
   },
 
   /**
@@ -71,10 +75,9 @@ export const FirebaseBackend = {
   },
 
   /**
-   * Initialize Firebase with config
-   * @param {Object} config - Firebase configuration object
+   * Initialize Firebase with hardcoded config
    */
-  init(config) {
+  init() {
     try {
       // Don't reinitialize if already done
       if (this.initialized && this.db) {
@@ -84,7 +87,7 @@ export const FirebaseBackend = {
       // Initialize Firebase app if not already initialized
       const apps = getApps();
       if (apps.length === 0) {
-        this.app = initializeApp(config);
+        this.app = initializeApp(FIREBASE_CONFIG);
       } else {
         this.app = apps[0];
       }
@@ -92,13 +95,6 @@ export const FirebaseBackend = {
       this.db = getFirestore(this.app);
       this.initialized = true;
       this.classCode = this.getClassCode();
-
-      // Save config for future sessions
-      try {
-        localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
-      } catch (e) {
-        // Ignore storage errors
-      }
 
       console.log('Firebase backend initialized successfully');
       return true;
@@ -109,19 +105,10 @@ export const FirebaseBackend = {
   },
 
   /**
-   * Try to initialize from stored config
+   * Auto-initialize on load
    */
   tryAutoInit() {
-    try {
-      const storedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
-      if (storedConfig) {
-        const config = JSON.parse(storedConfig);
-        return this.init(config);
-      }
-    } catch (e) {
-      console.warn('Auto-init failed:', e);
-    }
-    return false;
+    return this.init();
   },
 
   /**
@@ -261,15 +248,11 @@ export const FirebaseBackend = {
   },
 
   /**
-   * Disconnect and clear config
+   * Clear class code (config is hardcoded, can't be cleared)
    */
   disconnect() {
     try {
-      localStorage.removeItem(FIREBASE_CONFIG_KEY);
       localStorage.removeItem(FIREBASE_CLASS_KEY);
-      this.initialized = false;
-      this.db = null;
-      this.app = null;
       this.classCode = null;
     } catch (e) {
       // Ignore
