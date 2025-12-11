@@ -9,10 +9,11 @@ import { shuffleArray } from './generic';
 
 /**
  * Select claims based on difficulty and optional subject filter
+ * GUARANTEES no duplicate claims within a session
  * @param {string} difficulty - 'easy' | 'medium' | 'hard' | 'mixed'
  * @param {number} count - Number of claims to select
  * @param {Array<string>} subjects - Optional array of subjects to include (empty = all)
- * @returns {Array} Selected claims
+ * @returns {Array} Selected claims (unique, no repeats)
  */
 export function selectClaimsByDifficulty(difficulty, count, subjects = []) {
   // Filter by subjects if specified
@@ -21,22 +22,71 @@ export function selectClaimsByDifficulty(difficulty, count, subjects = []) {
     pool = CLAIMS_DATABASE.filter(c => subjects.includes(c.subject));
   }
 
+  // Track used claim IDs to prevent any duplicates
+  const usedIds = new Set();
+  const selectedClaims = [];
+
+  const selectUnique = (sourcePool, maxCount) => {
+    const shuffled = shuffleArray([...sourcePool]);
+    const result = [];
+    for (const claim of shuffled) {
+      if (result.length >= maxCount) break;
+      if (!usedIds.has(claim.id)) {
+        usedIds.add(claim.id);
+        result.push(claim);
+      }
+    }
+    return result;
+  };
+
   if (difficulty === 'mixed') {
     // Progressive: distribute claims across difficulties
     const easyCount = Math.ceil(count * 0.3);
     const medCount = Math.ceil(count * 0.4);
     const hardCount = count - easyCount - medCount;
 
-    const easy = shuffleArray(pool.filter(c => c.difficulty === 'easy')).slice(0, easyCount);
-    const med = shuffleArray(pool.filter(c => c.difficulty === 'medium')).slice(0, medCount);
-    const hard = shuffleArray(pool.filter(c => c.difficulty === 'hard')).slice(0, hardCount);
+    const easyPool = pool.filter(c => c.difficulty === 'easy');
+    const medPool = pool.filter(c => c.difficulty === 'medium');
+    const hardPool = pool.filter(c => c.difficulty === 'hard');
+
+    const easy = selectUnique(easyPool, easyCount);
+    const med = selectUnique(medPool, medCount);
+    const hard = selectUnique(hardPool, hardCount);
 
     // Order: easy first, then medium, then hard
-    return [...easy, ...med, ...hard];
+    selectedClaims.push(...easy, ...med, ...hard);
+
+    // If we didn't get enough claims, fill from remaining pool
+    if (selectedClaims.length < count) {
+      const remaining = pool.filter(c => !usedIds.has(c.id));
+      const additional = selectUnique(remaining, count - selectedClaims.length);
+      selectedClaims.push(...additional);
+    }
+  } else {
+    // Single difficulty mode
+    const filtered = pool.filter(c => c.difficulty === difficulty);
+    const selected = selectUnique(filtered, count);
+    selectedClaims.push(...selected);
+
+    // If we didn't get enough claims of this difficulty, fill from others
+    if (selectedClaims.length < count) {
+      const remaining = pool.filter(c => !usedIds.has(c.id));
+      const additional = selectUnique(remaining, count - selectedClaims.length);
+      selectedClaims.push(...additional);
+    }
   }
 
-  const filtered = pool.filter(c => c.difficulty === difficulty);
-  return shuffleArray(filtered).slice(0, count);
+  // Final safety check: ensure absolutely no duplicates
+  const uniqueClaims = [];
+  const seenIds = new Set();
+  for (const claim of selectedClaims) {
+    if (!seenIds.has(claim.id)) {
+      seenIds.add(claim.id);
+      uniqueClaims.push(claim);
+    }
+  }
+
+  return uniqueClaims.slice(0, count);
 }
 
 /**

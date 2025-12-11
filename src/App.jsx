@@ -7,18 +7,16 @@ import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react'
 import {
   ErrorBoundary,
   Header,
-  Button,
-  PredictionModal,
-  MetacognitiveCheckpoint
+  PredictionModal
 } from './components';
 
 // Lazy load screen components for code-splitting
 const SetupScreen = lazy(() => import('./components/SetupScreen').then(m => ({ default: m.SetupScreen })));
 const PlayingScreen = lazy(() => import('./components/PlayingScreen').then(m => ({ default: m.PlayingScreen })));
 const DebriefScreen = lazy(() => import('./components/DebriefScreen').then(m => ({ default: m.DebriefScreen })));
-import { TEAM_AVATARS, EDUCATIONAL_TIPS } from './data/constants';
+import { TEAM_AVATARS } from './data/constants';
 import { ACHIEVEMENTS } from './data/achievements';
-import { selectClaimsByDifficulty, getRandomItem } from './utils/helpers';
+import { selectClaimsByDifficulty } from './utils/helpers';
 import { calculateGameStats } from './utils/scoring';
 import { SoundManager } from './services/sound';
 import { LeaderboardManager } from './services/leaderboard';
@@ -44,12 +42,6 @@ export function App() {
 
   const [showPrediction, setShowPrediction] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [showTip, setShowTip] = useState(false);
-  const [currentTip, setCurrentTip] = useState(null);
-  const [playPhase, setPlayPhase] = useState('discuss');
-  const [showCheckpoint, setShowCheckpoint] = useState(false);
-  const [checkpointShown, setCheckpointShown] = useState(false);
 
   // Ref for sound timeout cleanup
   const streakSoundTimeoutRef = useRef(null);
@@ -91,13 +83,10 @@ export function App() {
     });
 
     setCurrentStreak(0);
-    setHintsUsed(0);
-    setPlayPhase('discuss');
   }, []);
 
   // Handle hint usage (deduct points)
   const handleUseHint = useCallback((cost) => {
-    setHintsUsed((prev) => prev + 1);
     setGameState((prev) => ({
       ...prev,
       team: {
@@ -133,16 +122,6 @@ export function App() {
 
         if (isLastRound) {
           setShowPrediction(true);
-        } else {
-          // Show metacognitive checkpoint after round 3 (for games with 5+ rounds)
-          if (prev.currentRound === 3 && prev.totalRounds >= 5 && !checkpointShown) {
-            setShowCheckpoint(true);
-            setCheckpointShown(true);
-          } else if (Math.random() > 0.5) {
-            // Show educational tip between rounds (50% chance)
-            setCurrentTip(getRandomItem(EDUCATIONAL_TIPS));
-            setShowTip(true);
-          }
         }
 
         // Get next claim with bounds checking
@@ -162,9 +141,8 @@ export function App() {
           }
         };
       });
-      setPlayPhase('discuss');
     },
-    [currentStreak, checkpointShown]
+    [currentStreak]
   );
 
   const handlePrediction = useCallback((prediction) => {
@@ -215,15 +193,6 @@ export function App() {
     });
   }, []);
 
-  const handleDismissTip = useCallback(() => {
-    setShowTip(false);
-    setCurrentTip(null);
-  }, []);
-
-  const handleCheckpointContinue = useCallback(() => {
-    setShowCheckpoint(false);
-  }, []);
-
   const restartGame = useCallback(() => {
     setGameState({
       phase: 'setup',
@@ -241,12 +210,7 @@ export function App() {
         players: []
       }
     });
-    setPlayPhase('discuss');
     setCurrentStreak(0);
-    setHintsUsed(0);
-    setShowTip(false);
-    setShowCheckpoint(false);
-    setCheckpointShown(false);
   }, []);
 
   return (
@@ -298,11 +262,8 @@ export function App() {
               round={gameState.currentRound}
               totalRounds={gameState.totalRounds}
               onSubmit={handleRoundSubmit}
-              phase={playPhase}
-              setPhase={setPlayPhase}
               difficulty={gameState.difficulty}
               currentStreak={currentStreak}
-              hintsUsed={hintsUsed}
               onUseHint={handleUseHint}
               teamAvatar={gameState.team.avatar}
             />
@@ -323,79 +284,6 @@ export function App() {
       {/* Prediction Modal */}
       {showPrediction && (
         <PredictionModal onSubmit={handlePrediction} currentScore={gameState.team.score} />
-      )}
-
-      {/* Mid-game Metacognitive Checkpoint */}
-      {showCheckpoint && (
-        <MetacognitiveCheckpoint
-          onContinue={handleCheckpointContinue}
-          currentScore={gameState.team.score}
-          correctCount={gameState.team.results.filter(r => r.correct).length}
-          totalRounds={gameState.totalRounds}
-        />
-      )}
-
-      {/* Educational Tip Modal (between rounds) */}
-      {showTip && currentTip && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="tip-modal-title"
-          style={{
-            position: 'fixed',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-        >
-          <div
-            className="animate-in"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '16px',
-              padding: '1.75rem',
-              maxWidth: '400px',
-              width: '100%',
-              textAlign: 'center'
-            }}
-          >
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>{currentTip.icon}</div>
-            <div
-              id="tip-modal-title"
-              className="mono"
-              style={{
-                fontSize: '0.75rem',
-                color: 'var(--accent-violet)',
-                marginBottom: '0.5rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}
-            >
-              💡 {currentTip.category}
-            </div>
-            <p
-              style={{
-                fontSize: '1rem',
-                color: 'var(--text-primary)',
-                lineHeight: 1.6,
-                marginBottom: '1.25rem'
-              }}
-            >
-              {currentTip.tip}
-            </p>
-            <Button onClick={handleDismissTip} fullWidth>
-              Got it! Next Round →
-            </Button>
-          </div>
-        </div>
       )}
 
       <footer
