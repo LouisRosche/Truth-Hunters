@@ -75,16 +75,17 @@ export function ClaimCard({ claim, showAnswer = false }) {
         )}
       </div>
 
-      {/* Claim text */}
+      {/* Claim text - uses claim-text class for presentation mode scaling */}
       <blockquote
+        className="claim-text"
         style={{
-          fontSize: '1.125rem',
-          lineHeight: 1.7,
+          fontSize: '1.25rem',
+          lineHeight: 1.75,
           color: 'var(--text-primary)',
           fontStyle: 'italic',
-          borderLeft: '3px solid var(--accent-cyan)',
-          paddingLeft: '1rem',
-          margin: '1rem 0'
+          borderLeft: '4px solid var(--accent-cyan)',
+          paddingLeft: '1.25rem',
+          margin: '1.25rem 0'
         }}
       >
         &ldquo;{claim.text}&rdquo;

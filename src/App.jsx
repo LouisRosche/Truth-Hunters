@@ -43,6 +43,38 @@ export function App() {
   const [showPrediction, setShowPrediction] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
 
+  // Presentation mode for group viewing (larger text for 4 scholars sharing 1 screen)
+  const [presentationMode, setPresentationMode] = useState(() => {
+    // Load from localStorage if available
+    try {
+      return localStorage.getItem('presentationMode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Toggle presentation mode and persist preference
+  const togglePresentationMode = useCallback(() => {
+    setPresentationMode((prev) => {
+      const newValue = !prev;
+      try {
+        localStorage.setItem('presentationMode', String(newValue));
+      } catch {
+        // Ignore localStorage errors
+      }
+      return newValue;
+    });
+  }, []);
+
+  // Apply presentation mode class to document
+  useEffect(() => {
+    if (presentationMode) {
+      document.documentElement.classList.add('presentation-mode');
+    } else {
+      document.documentElement.classList.remove('presentation-mode');
+    }
+  }, [presentationMode]);
+
   // Ref for sound timeout cleanup
   const streakSoundTimeoutRef = useRef(null);
 
@@ -240,6 +272,8 @@ export function App() {
         round={gameState.currentRound}
         totalRounds={gameState.totalRounds}
         phase={gameState.phase}
+        presentationMode={presentationMode}
+        onTogglePresentationMode={togglePresentationMode}
       />
 
       <main id="main-content" role="main" style={{ flex: 1 }}>

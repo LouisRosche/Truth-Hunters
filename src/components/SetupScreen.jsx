@@ -289,6 +289,10 @@ export function SetupScreen({ onStart }) {
         <label className="mono" style={{ display: 'block', fontSize: '0.6875rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
           👥 TEAM MEMBERS (for leaderboard)
         </label>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.375rem', paddingLeft: '1.5rem' }}>
+          <span className="mono" style={{ flex: 1, fontSize: '0.625rem', color: 'var(--text-muted)' }}>Name</span>
+          <span className="mono" style={{ width: '2.5rem', fontSize: '0.625rem', color: 'var(--text-muted)', textAlign: 'center' }}>Initial</span>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {players.map((player, index) => (
             <div key={index} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -302,14 +306,15 @@ export function SetupScreen({ onStart }) {
                 placeholder="First Name"
                 maxLength={15}
                 autoComplete="off"
+                aria-label={`Player ${index + 1} first name`}
                 style={{
                   flex: 1,
-                  padding: '0.5rem 0.625rem',
+                  padding: '0.625rem 0.75rem',
                   background: 'var(--bg-elevated)',
                   border: '1px solid var(--border)',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
+                  fontSize: '1rem',
                   fontFamily: 'var(--font-serif)'
                 }}
               />
@@ -317,17 +322,19 @@ export function SetupScreen({ onStart }) {
                 type="text"
                 value={player.lastInitial}
                 onChange={(e) => updatePlayer(index, 'lastInitial', e.target.value.charAt(0).toUpperCase())}
-                placeholder="L"
+                placeholder="?"
+                title="Last name initial (e.g., S for Smith)"
                 maxLength={1}
                 autoComplete="off"
+                aria-label={`Player ${index + 1} last initial`}
                 style={{
-                  width: '2.5rem',
-                  padding: '0.5rem',
+                  width: '3rem',
+                  padding: '0.625rem',
                   background: 'var(--bg-elevated)',
                   border: '1px solid var(--border)',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
+                  fontSize: '1rem',
                   fontFamily: 'var(--font-mono)',
                   textAlign: 'center',
                   textTransform: 'uppercase'

@@ -27,6 +27,7 @@ export function VerdictSelector({ value, onChange, disabled }) {
     <div
       role="radiogroup"
       aria-label="Verdict selection"
+      className="verdict-grid"
       style={{ display: 'flex', gap: '0.75rem' }}
     >
       {verdicts.map((v, i) => (
@@ -39,12 +40,14 @@ export function VerdictSelector({ value, onChange, disabled }) {
           onClick={() => onChange(v.value)}
           onKeyDown={(e) => handleKeyDown(e, i)}
           disabled={disabled}
+          className="verdict-option"
           style={{
             flex: 1,
-            padding: '1.25rem 1rem',
+            padding: '1.5rem 1.25rem',
+            minHeight: '5.5rem',
             background: value === v.value ? `${v.color}20` : 'var(--bg-elevated)',
             border: `2px solid ${value === v.value ? v.color : 'var(--border)'}`,
-            borderRadius: '8px',
+            borderRadius: '10px',
             cursor: disabled ? 'not-allowed' : 'pointer',
             opacity: disabled ? 0.5 : 1,
             transition: 'all 0.2s ease'
@@ -52,8 +55,8 @@ export function VerdictSelector({ value, onChange, disabled }) {
         >
           <div
             style={{
-              fontSize: '1.75rem',
-              marginBottom: '0.25rem',
+              fontSize: '2rem',
+              marginBottom: '0.375rem',
               color: v.color
             }}
           >
@@ -62,7 +65,7 @@ export function VerdictSelector({ value, onChange, disabled }) {
           <div
             className="mono"
             style={{
-              fontSize: '0.875rem',
+              fontSize: '1rem',
               fontWeight: 600,
               color: value === v.value ? v.color : 'var(--text-secondary)'
             }}

@@ -1,11 +1,11 @@
 /**
  * HEADER COMPONENT
- * Displays game title, score, round information, and connection status
+ * Displays game title, score, round information, connection status, and presentation mode toggle
  */
 
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
-export function Header({ score, round, totalRounds, phase }) {
+export function Header({ score, round, totalRounds, phase, presentationMode, onTogglePresentationMode }) {
   const isOnline = useOnlineStatus();
 
   return (
@@ -57,38 +57,65 @@ export function Header({ score, round, totalRounds, phase }) {
         )}
       </div>
 
-      {phase !== 'setup' && phase !== 'debrief' && (
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          <div
-            className="mono"
-            style={{
-              fontSize: '0.875rem',
-              color: 'var(--text-secondary)'
-            }}
-          >
-            ROUND{' '}
-            <span style={{ color: 'var(--accent-amber)', fontWeight: 700 }}>
-              {round}
-            </span>
-            /{totalRounds}
-          </div>
-          <div
-            className="mono"
-            style={{
-              padding: '0.375rem 0.75rem',
-              background: score >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-              border: `1px solid ${score >= 0 ? 'var(--correct)' : 'var(--incorrect)'}`,
-              borderRadius: '4px',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: score >= 0 ? 'var(--correct)' : 'var(--incorrect)'
-            }}
-          >
-            {score >= 0 ? '+' : ''}
-            {score} PTS
-          </div>
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        {/* Presentation Mode Toggle - for group viewing */}
+        <button
+          onClick={onTogglePresentationMode}
+          aria-pressed={presentationMode}
+          title={presentationMode ? 'Switch to normal view' : 'Switch to large text for group viewing (4 scholars, 1 screen)'}
+          className="mono"
+          style={{
+            padding: '0.5rem 0.75rem',
+            background: presentationMode ? 'rgba(34, 211, 238, 0.2)' : 'transparent',
+            border: `1px solid ${presentationMode ? 'var(--accent-cyan)' : 'var(--border)'}`,
+            borderRadius: '6px',
+            fontSize: '0.75rem',
+            color: presentationMode ? 'var(--accent-cyan)' : 'var(--text-muted)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.375rem',
+            transition: 'all 0.2s ease',
+            minHeight: '36px'
+          }}
+        >
+          <span style={{ fontSize: '1.125rem' }}>{presentationMode ? '📺' : '👓'}</span>
+          <span style={{ display: 'none' }} className="show-on-wide">{presentationMode ? 'Large' : 'Normal'}</span>
+        </button>
+
+        {phase !== 'setup' && phase !== 'debrief' && (
+          <>
+            <div
+              className="mono"
+              style={{
+                fontSize: '0.875rem',
+                color: 'var(--text-secondary)'
+              }}
+            >
+              ROUND{' '}
+              <span style={{ color: 'var(--accent-amber)', fontWeight: 700 }}>
+                {round}
+              </span>
+              /{totalRounds}
+            </div>
+            <div
+              className="mono"
+              style={{
+                padding: '0.375rem 0.75rem',
+                background: score >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                border: `1px solid ${score >= 0 ? 'var(--correct)' : 'var(--incorrect)'}`,
+                borderRadius: '4px',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: score >= 0 ? 'var(--correct)' : 'var(--incorrect)'
+              }}
+            >
+              {score >= 0 ? '+' : ''}
+              {score} PTS
+            </div>
+          </>
+        )}
+      </div>
     </header>
   );
 }

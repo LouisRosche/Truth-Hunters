@@ -27,6 +27,7 @@ export function ConfidenceSelector({ value, onChange, disabled }) {
     <div
       role="radiogroup"
       aria-label="Confidence level"
+      className="confidence-grid"
       style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}
     >
       {levels.map((level) => (
@@ -39,13 +40,15 @@ export function ConfidenceSelector({ value, onChange, disabled }) {
           onClick={() => onChange(level.value)}
           onKeyDown={(e) => handleKeyDown(e, level.value)}
           disabled={disabled}
+          className="confidence-option"
           style={{
             flex: '1 1 auto',
             minWidth: '140px',
-            padding: '1rem',
+            minHeight: '5rem',
+            padding: '1.25rem 1rem',
             background: value === level.value ? `${level.color}20` : 'var(--bg-elevated)',
             border: `2px solid ${value === level.value ? level.color : 'var(--border)'}`,
-            borderRadius: '8px',
+            borderRadius: '10px',
             cursor: disabled ? 'not-allowed' : 'pointer',
             opacity: disabled ? 0.5 : 1,
             transition: 'all 0.2s ease'
@@ -54,10 +57,10 @@ export function ConfidenceSelector({ value, onChange, disabled }) {
           <div
             className="mono"
             style={{
-              fontSize: '1.5rem',
+              fontSize: '1.75rem',
               fontWeight: 700,
               color: level.color,
-              marginBottom: '0.25rem'
+              marginBottom: '0.375rem'
             }}
           >
             {'●'.repeat(level.value)}
@@ -65,7 +68,7 @@ export function ConfidenceSelector({ value, onChange, disabled }) {
           </div>
           <div
             style={{
-              fontSize: '0.875rem',
+              fontSize: '1rem',
               fontWeight: 600,
               color: 'var(--text-primary)',
               marginBottom: '0.25rem'
@@ -76,7 +79,7 @@ export function ConfidenceSelector({ value, onChange, disabled }) {
           <div
             className="mono"
             style={{
-              fontSize: '0.75rem',
+              fontSize: '0.875rem',
               color: 'var(--text-muted)'
             }}
           >
