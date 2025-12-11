@@ -7,6 +7,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunk for React
+          'vendor-react': ['react', 'react-dom'],
+          // Firebase in its own chunk (large dependency)
+          'vendor-firebase': ['firebase/app', 'firebase/firestore'],
+        },
+      },
+    },
   },
   server: {
     port: 3000,
@@ -17,5 +27,18 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     include: ['src/**/*.{test,spec}.{js,jsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.test.{js,jsx}',
+        '**/*.spec.{js,jsx}',
+        'cms/',
+        'vite.config.js',
+        'vite.cms.config.js',
+      ],
+    },
   },
 });

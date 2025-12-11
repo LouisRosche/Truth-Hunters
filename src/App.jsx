@@ -3,16 +3,18 @@
  * Research-based epistemic training game for middle schoolers
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import {
   ErrorBoundary,
   Header,
   Button,
-  SetupScreen,
-  PlayingScreen,
-  DebriefScreen,
   PredictionModal
 } from './components';
+
+// Lazy load screen components for code-splitting
+const SetupScreen = lazy(() => import('./components/SetupScreen').then(m => ({ default: m.SetupScreen })));
+const PlayingScreen = lazy(() => import('./components/PlayingScreen').then(m => ({ default: m.PlayingScreen })));
+const DebriefScreen = lazy(() => import('./components/DebriefScreen').then(m => ({ default: m.DebriefScreen })));
 import { TEAM_AVATARS, EDUCATIONAL_TIPS } from './data/constants';
 import { ACHIEVEMENTS } from './data/achievements';
 import { selectClaimsByDifficulty, getRandomItem } from './utils/helpers';
@@ -244,33 +246,45 @@ export function App() {
       />
 
       <main role="main" style={{ flex: 1 }}>
-        {gameState.phase === 'setup' && <SetupScreen onStart={startGame} />}
+        <Suspense fallback={
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '50vh',
+            color: 'var(--text-muted)'
+          }}>
+            Loading...
+          </div>
+        }>
+          {gameState.phase === 'setup' && <SetupScreen onStart={startGame} />}
 
-        {gameState.phase === 'playing' && gameState.currentClaim && (
-          <PlayingScreen
-            claim={gameState.currentClaim}
-            round={gameState.currentRound}
-            totalRounds={gameState.totalRounds}
-            onSubmit={handleRoundSubmit}
-            phase={playPhase}
-            setPhase={setPlayPhase}
-            difficulty={gameState.difficulty}
-            currentStreak={currentStreak}
-            hintsUsed={hintsUsed}
-            onUseHint={handleUseHint}
-            teamAvatar={gameState.team.avatar}
-          />
-        )}
+          {gameState.phase === 'playing' && gameState.currentClaim && (
+            <PlayingScreen
+              claim={gameState.currentClaim}
+              round={gameState.currentRound}
+              totalRounds={gameState.totalRounds}
+              onSubmit={handleRoundSubmit}
+              phase={playPhase}
+              setPhase={setPlayPhase}
+              difficulty={gameState.difficulty}
+              currentStreak={currentStreak}
+              hintsUsed={hintsUsed}
+              onUseHint={handleUseHint}
+              teamAvatar={gameState.team.avatar}
+            />
+          )}
 
-        {gameState.phase === 'debrief' && (
-          <DebriefScreen
-            team={gameState.team}
-            claims={gameState.claims}
-            onRestart={restartGame}
-            difficulty={gameState.difficulty}
-            teamAvatar={gameState.team.avatar}
-          />
-        )}
+          {gameState.phase === 'debrief' && (
+            <DebriefScreen
+              team={gameState.team}
+              claims={gameState.claims}
+              onRestart={restartGame}
+              difficulty={gameState.difficulty}
+              teamAvatar={gameState.team.avatar}
+            />
+          )}
+        </Suspense>
       </main>
 
       {/* Prediction Modal */}
