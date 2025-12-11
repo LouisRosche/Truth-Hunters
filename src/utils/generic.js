@@ -25,6 +25,9 @@ export function shuffleArray(array) {
  * @returns {T} Random item
  */
 export function getRandomItem(array) {
+  if (!Array.isArray(array) || array.length === 0) {
+    return null;
+  }
   return array[Math.floor(Math.random() * array.length)];
 }
 

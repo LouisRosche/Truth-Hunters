@@ -46,8 +46,11 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
     };
   }, [earnedAchievements.length]);
 
-  // Get random reflection prompt
-  const reflectionPrompt = useMemo(() => getRandomItem(REFLECTION_PROMPTS), []);
+  // Get random reflection prompt (with fallback)
+  const reflectionPrompt = useMemo(() => {
+    const prompt = getRandomItem(REFLECTION_PROMPTS);
+    return prompt || { question: 'What did you learn today?', followUp: 'Discuss with your team.' };
+  }, []);
 
   // Save reflection to Firebase for teacher insights
   const handleSaveReflection = useCallback(async () => {
@@ -298,7 +301,7 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
                         textOverflow: 'ellipsis'
                       }}
                     >
-                      {claim?.text.substring(0, 50)}...
+                      {claim?.text ? `${claim.text.substring(0, 50)}...` : 'Unknown claim'}
                     </div>
                     <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {result.teamVerdict} • {'●'.repeat(result.confidence)}

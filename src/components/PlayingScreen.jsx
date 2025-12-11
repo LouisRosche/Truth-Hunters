@@ -60,7 +60,7 @@ export function PlayingScreen({
     SoundManager.play(correct ? 'correct' : 'incorrect');
 
     const msgs = correct ? ENCOURAGEMENTS.correct : ENCOURAGEMENTS.incorrect;
-    setEncouragement(getRandomItem(msgs));
+    setEncouragement(getRandomItem(msgs) || (correct ? 'Nice work!' : 'Keep trying!'));
 
     // Determine calibration and show relevant tip
     let calibrationType = 'calibrated';
@@ -69,7 +69,7 @@ export function PlayingScreen({
     else if (correct && confidence === 3) calibrationType = 'calibrated';
     else if (!correct && confidence === 1) calibrationType = 'calibrated';
 
-    setCalibrationTip(getRandomItem(CALIBRATION_TIPS[calibrationType]));
+    setCalibrationTip(getRandomItem(CALIBRATION_TIPS[calibrationType]) || null);
     setResultData({ correct, points, confidence, verdict });
     setShowResult(true);
   }, [verdict, confidence, claim]);
@@ -377,8 +377,8 @@ export function PlayingScreen({
                 }}
               >
                 {currentStreak >= 5 && '⭐ '}
-                {ENCOURAGEMENTS.streak[Math.min(currentStreak, ENCOURAGEMENTS.streak.length) - 1] ||
-                  `${currentStreak + 1} in a row!`}
+                {ENCOURAGEMENTS.streak[Math.min(currentStreak - 1, ENCOURAGEMENTS.streak.length - 1)] ||
+                  `${currentStreak} in a row!`}
                 {currentStreak >= 5 && ' ⭐'}
               </span>
             </div>

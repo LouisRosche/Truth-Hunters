@@ -10,20 +10,21 @@ Truth Hunters helps students learn to:
 - Identify AI-generated misinformation vs expert-sourced facts
 - Recognize common AI error patterns (confident specificity, myth perpetuation, etc.)
 - Calibrate confidence in their knowledge
-- Work collaboratively using rotating team roles
+- Work collaboratively as a team
 - Think critically about claims before accepting them
 
 ## Features
 
-- **36+ curated claims** across multiple subjects and difficulty levels
+- **94 curated claims** across 11 subjects (Biology, History, Physics, and more)
 - **Progressive difficulty** system (easy, medium, hard, or mixed)
-- **Team roles** that rotate each round (Reader, Skeptic, Researcher, Decider)
+- **Calibration-based tips** that help students learn from their confidence patterns
 - **Confidence staking** with risk/reward scoring (+1/-1, +3/-3, +5/-6)
 - **Hints system** that costs points but helps learning
 - **Achievements** for various accomplishments
 - **Local leaderboards** with optional Firebase class-wide support
 - **Chromebook-optimized** for school environments
 - **Content moderation** for appropriate team names
+- **Accessible design** with screen reader support and keyboard navigation
 
 ## Research Foundation
 
@@ -80,7 +81,7 @@ TruthDetector/
 │   │   ├── DebriefScreen.jsx
 │   │   └── ...
 │   ├── data/           # Game data
-│   │   ├── claims.js   # Claims database (36+ claims)
+│   │   ├── claims.js   # Claims database (94 claims)
 │   │   ├── achievements.js
 │   │   └── constants.js
 │   ├── hooks/          # Custom React hooks
@@ -161,13 +162,12 @@ For class-wide leaderboards:
 
 ## Gameplay
 
-1. **Setup**: Enter team name, select players (up to 4), choose difficulty and rounds
-2. **Discuss Phase**: Read the claim, use team roles, discuss as a group
-3. **Stake Phase**: Vote TRUE/FALSE/MIXED and stake confidence (1-3)
-4. **Result**: See if you were correct, learn from the explanation
-5. **Repeat** for all rounds
-6. **Prediction**: Guess your final score for calibration bonus
-7. **Debrief**: Review achievements, stats, and reflect
+1. **Setup**: Enter team name, select players (up to 4), choose difficulty, subjects, and rounds
+2. **Play**: Read each claim, discuss with your team, vote TRUE/FALSE/MIXED, and set confidence (1-3)
+3. **Learn**: See results with explanations and calibration tips based on your confidence accuracy
+4. **Repeat**: Click "Next Round" to continue through all claims
+5. **Prediction**: Guess your final score for calibration bonus (+3 if within ±2)
+6. **Debrief**: Review achievements, stats, round-by-round breakdown, and team reflection
 
 ## Scoring
 
