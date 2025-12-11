@@ -257,6 +257,80 @@ export const FirebaseBackend = {
     } catch (e) {
       // Ignore
     }
+  },
+
+  /**
+   * Save team reflection data for teacher insights
+   * @param {Object} reflectionData - Reflection data to save
+   */
+  async saveReflection(reflectionData) {
+    if (!this.initialized || !this.db) {
+      return false;
+    }
+
+    try {
+      const classCode = this.getClassCode() || 'PUBLIC';
+
+      const docData = {
+        ...reflectionData,
+        classCode: classCode,
+        createdAt: serverTimestamp(),
+        teamName: sanitizeInput(reflectionData.teamName || 'Team'),
+        calibrationSelfAssessment: reflectionData.calibrationSelfAssessment || null,
+        reflectionResponse: sanitizeInput(reflectionData.reflectionResponse || ''),
+        reflectionPrompt: reflectionData.reflectionPrompt || '',
+        gameScore: typeof reflectionData.gameScore === 'number' ? reflectionData.gameScore : 0,
+        accuracy: typeof reflectionData.accuracy === 'number' ? reflectionData.accuracy : 0
+      };
+
+      const reflectionsRef = collection(this.db, 'reflections');
+      await addDoc(reflectionsRef, docData);
+      return true;
+    } catch (e) {
+      console.warn('Failed to save reflection to Firebase:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Get class reflections for teacher dashboard
+   * @param {string} classFilter - Optional class code filter
+   */
+  async getClassReflections(classFilter = null) {
+    if (!this.initialized || !this.db) {
+      return [];
+    }
+
+    try {
+      const filterClass = classFilter || this.getClassCode();
+      const reflectionsRef = collection(this.db, 'reflections');
+
+      let q;
+      if (filterClass) {
+        q = query(
+          reflectionsRef,
+          where('classCode', '==', filterClass),
+          orderBy('createdAt', 'desc'),
+          limit(50)
+        );
+      } else {
+        q = query(
+          reflectionsRef,
+          orderBy('createdAt', 'desc'),
+          limit(50)
+        );
+      }
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().createdAt?.toMillis() || Date.now()
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch reflections from Firebase:', e);
+      return [];
+    }
   }
 };
 

@@ -3,7 +3,7 @@
  * End-of-game summary with achievements and reflection
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from './Button';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { AI_ERROR_PATTERNS } from '../data/claims';
@@ -11,12 +11,14 @@ import { REFLECTION_PROMPTS } from '../data/constants';
 import { calculateGameStats } from '../utils/scoring';
 import { getRandomItem } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
+import { FirebaseBackend } from '../services/firebase';
 
 export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty, teamAvatar: _teamAvatar }) {
   const [showPatterns, setShowPatterns] = useState(false);
   const [showAchievements, setShowAchievements] = useState(true);
   const [selectedReflection, setSelectedReflection] = useState(null);
   const [reflectionResponse, setReflectionResponse] = useState('');
+  const [reflectionSaved, setReflectionSaved] = useState(false);
 
   const calibrationBonus = Math.abs(team.score - team.predictedScore) <= 2 ? 3 : 0;
   const finalScore = team.score + calibrationBonus;
@@ -46,6 +48,33 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
 
   // Get random reflection prompt
   const reflectionPrompt = useMemo(() => getRandomItem(REFLECTION_PROMPTS), []);
+
+  // Save reflection to Firebase for teacher insights
+  const handleSaveReflection = useCallback(async () => {
+    if (reflectionSaved) return;
+
+    const correctCount = team.results.filter((r) => r.correct).length;
+    const accuracy = team.results.length > 0
+      ? Math.round((correctCount / team.results.length) * 100)
+      : 0;
+
+    const reflectionData = {
+      teamName: team.name,
+      calibrationSelfAssessment: selectedReflection,
+      reflectionResponse: reflectionResponse,
+      reflectionPrompt: reflectionPrompt?.question || '',
+      gameScore: finalScore,
+      accuracy: accuracy,
+      predictedScore: team.predictedScore,
+      actualScore: team.score
+    };
+
+    const saved = await FirebaseBackend.saveReflection(reflectionData);
+    if (saved) {
+      setReflectionSaved(true);
+      SoundManager.play('tick');
+    }
+  }, [team, selectedReflection, reflectionResponse, reflectionPrompt, finalScore, reflectionSaved]);
 
   const correctCount = team.results.filter((r) => r.correct).length;
   const aiClaims = claims.filter((c) => c.source === 'ai-generated');
@@ -452,13 +481,15 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {[
-              { label: '📈 Too high', value: 'overconfident' },
-              { label: '✅ Just right', value: 'calibrated' },
-              { label: '📉 Too low', value: 'underconfident' }
+              { label: '📈 Too high', value: 'overconfident', description: 'I was more confident than I should have been' },
+              { label: '✅ Just right', value: 'calibrated', description: 'My confidence matched my accuracy' },
+              { label: '📉 Too low', value: 'underconfident', description: 'I was less confident than I should have been' }
             ].map((option) => (
               <button
                 key={option.value}
                 onClick={() => setSelectedReflection(option.value)}
+                aria-pressed={selectedReflection === option.value}
+                aria-label={`${option.label} - ${option.description}`}
                 style={{
                   padding: '0.5rem 0.875rem',
                   background: selectedReflection === option.value ? 'var(--accent-emerald)' : 'var(--bg-elevated)',
@@ -502,6 +533,7 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
             onChange={(e) => setReflectionResponse(e.target.value)}
             placeholder="Share your team's thoughts..."
             rows={2}
+            aria-label="Team reflection response"
             style={{
               width: '100%',
               padding: '0.625rem',
@@ -514,6 +546,44 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
               resize: 'none'
             }}
           />
+          {(selectedReflection || reflectionResponse.trim()) && !reflectionSaved && (
+            <button
+              onClick={handleSaveReflection}
+              style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem 1rem',
+                background: 'var(--accent-emerald)',
+                color: 'var(--bg-deep)',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              💾 Save Reflection
+            </button>
+          )}
+          {reflectionSaved && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem 0.75rem',
+                background: 'rgba(52, 211, 153, 0.15)',
+                borderRadius: '6px',
+                fontSize: '0.8125rem',
+                color: 'var(--accent-emerald)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              ✓ Reflection saved for your teacher
+            </div>
+          )}
         </div>
 
         <div

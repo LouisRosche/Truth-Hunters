@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTimer } from '../hooks/useTimer';
+import { usePhaseTimer } from '../hooks/usePhaseTimer';
 import { Button } from './Button';
 import { TimerDisplay } from './TimerDisplay';
 import { ClaimCard } from './ClaimCard';
@@ -37,6 +38,7 @@ export function PlayingScreen({
   const [activeHint, setActiveHint] = useState(null);
   const [encouragement, setEncouragement] = useState('');
   const submitRef = useRef(null);
+  const phaseTimer = usePhaseTimer();
 
   // Get timing based on difficulty
   const diffConfig = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.medium;
@@ -56,6 +58,10 @@ export function PlayingScreen({
   const roles = useMemo(() => getRotatingRoles(round), [round]);
 
   useEffect(() => {
+    // Track phase transitions for analytics
+    phaseTimer.endPhase();
+    phaseTimer.startPhase(phase);
+
     if (phase === 'discuss') {
       discussTimer.reset(discussTime);
       discussTimer.start();
@@ -97,14 +103,22 @@ export function PlayingScreen({
     if (!showResult || !resultData || !claim) return;
 
     const timeoutId = setTimeout(() => {
+      // Get phase timing stats for this round
+      phaseTimer.endPhase();
+      const phaseTiming = phaseTimer.getStats();
+
       onSubmit({
         claimId: claim.id,
         teamVerdict: resultData.verdict,
         confidence: resultData.confidence,
         correct: resultData.correct,
         points: resultData.points,
-        reasoning
+        reasoning,
+        phaseTiming
       });
+
+      // Reset phase timer for next round
+      phaseTimer.reset();
 
       setConfidence(1);
       setVerdict(null);
@@ -112,10 +126,10 @@ export function PlayingScreen({
       setShowResult(false);
       setResultData(null);
       setActiveHint(null);
-    }, 4500);
+    }, 5500);
 
     return () => clearTimeout(timeoutId);
-  }, [showResult, resultData, claim, reasoning, onSubmit]);
+  }, [showResult, resultData, claim, reasoning, onSubmit, phaseTimer]);
 
   const handleHintRequest = (hintType) => {
     const hint = HINT_TYPES.find((h) => h.id === hintType);
@@ -159,17 +173,24 @@ export function PlayingScreen({
 
         {currentStreak >= 2 && (
           <div
-            className="mono animate-pulse"
+            className={`mono ${currentStreak >= 5 ? 'animate-celebrate' : 'animate-pulse'}`}
+            role="status"
+            aria-live="polite"
+            aria-label={`${currentStreak} correct answers in a row`}
             style={{
-              padding: '0.25rem 0.625rem',
-              background: 'rgba(251, 191, 36, 0.15)',
-              border: '1px solid var(--accent-amber)',
+              padding: currentStreak >= 5 ? '0.375rem 0.875rem' : '0.25rem 0.625rem',
+              background: currentStreak >= 5
+                ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(239, 68, 68, 0.2) 100%)'
+                : 'rgba(251, 191, 36, 0.15)',
+              border: `1px solid ${currentStreak >= 5 ? 'var(--accent-rose)' : 'var(--accent-amber)'}`,
               borderRadius: '4px',
-              fontSize: '0.75rem',
-              color: 'var(--accent-amber)'
+              fontSize: currentStreak >= 5 ? '0.875rem' : '0.75rem',
+              color: currentStreak >= 5 ? 'var(--accent-rose)' : 'var(--accent-amber)',
+              fontWeight: currentStreak >= 5 ? 700 : 400,
+              boxShadow: currentStreak >= 5 ? '0 0 12px rgba(251, 191, 36, 0.4)' : 'none'
             }}
           >
-            🔥 {currentStreak} streak
+            {currentStreak >= 5 ? '🔥🔥🔥' : '🔥'} {currentStreak} streak{currentStreak >= 5 ? '!' : ''}
           </div>
         )}
       </div>
@@ -463,18 +484,43 @@ export function PlayingScreen({
 
           {resultData.correct && currentStreak >= 2 && (
             <div
+              className={currentStreak >= 5 ? 'animate-celebrate' : ''}
               style={{
                 marginTop: '0.5rem',
-                padding: '0.375rem 0.75rem',
-                background: 'rgba(251, 191, 36, 0.15)',
-                borderRadius: '4px',
-                display: 'inline-block'
+                padding: currentStreak >= 5 ? '0.625rem 1rem' : '0.375rem 0.75rem',
+                background: currentStreak >= 5
+                  ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(167, 139, 250, 0.2) 100%)'
+                  : 'rgba(251, 191, 36, 0.15)',
+                borderRadius: currentStreak >= 5 ? '8px' : '4px',
+                display: 'inline-block',
+                border: currentStreak >= 5 ? '2px solid var(--accent-amber)' : 'none',
+                boxShadow: currentStreak >= 5 ? '0 0 20px rgba(251, 191, 36, 0.3)' : 'none'
               }}
             >
-              <span className="mono" style={{ fontSize: '0.8125rem', color: 'var(--accent-amber)' }}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: currentStreak >= 5 ? '1rem' : '0.8125rem',
+                  color: 'var(--accent-amber)',
+                  fontWeight: currentStreak >= 5 ? 700 : 400
+                }}
+              >
+                {currentStreak >= 5 && '⭐ '}
                 {ENCOURAGEMENTS.streak[Math.min(currentStreak, ENCOURAGEMENTS.streak.length) - 1] ||
                   `${currentStreak + 1} in a row!`}
+                {currentStreak >= 5 && ' ⭐'}
               </span>
+              {currentStreak >= 5 && (
+                <div
+                  style={{
+                    marginTop: '0.25rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--accent-violet)'
+                  }}
+                >
+                  Legendary streak! Your team is unstoppable!
+                </div>
+              )}
             </div>
           )}
 

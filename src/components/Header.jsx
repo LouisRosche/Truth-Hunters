@@ -1,9 +1,13 @@
 /**
  * HEADER COMPONENT
- * Displays game title, score, and round information
+ * Displays game title, score, round information, and connection status
  */
 
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
+
 export function Header({ score, round, totalRounds, phase }) {
+  const isOnline = useOnlineStatus();
+
   return (
     <header
       role="banner"
@@ -34,6 +38,23 @@ export function Header({ score, round, totalRounds, phase }) {
         >
           TRUTH HUNTERS
         </h1>
+        {!isOnline && (
+          <span
+            role="status"
+            aria-live="polite"
+            className="mono"
+            style={{
+              fontSize: '0.625rem',
+              padding: '0.25rem 0.5rem',
+              background: 'rgba(251, 191, 36, 0.2)',
+              border: '1px solid var(--accent-amber)',
+              borderRadius: '4px',
+              color: 'var(--accent-amber)'
+            }}
+          >
+            📡 OFFLINE
+          </span>
+        )}
       </div>
 
       {phase !== 'setup' && phase !== 'debrief' && (

@@ -5,9 +5,11 @@
 
 import { useState } from 'react';
 import { Button } from './Button';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export function PredictionModal({ onSubmit, currentScore }) {
   const [prediction, setPrediction] = useState(currentScore);
+  const focusTrapRef = useFocusTrap(true);
 
   return (
     <div
@@ -29,6 +31,7 @@ export function PredictionModal({ onSubmit, currentScore }) {
       }}
     >
       <div
+        ref={focusTrapRef}
         className="animate-in"
         style={{
           background: 'var(--bg-card)',

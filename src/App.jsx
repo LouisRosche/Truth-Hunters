@@ -8,7 +8,8 @@ import {
   ErrorBoundary,
   Header,
   Button,
-  PredictionModal
+  PredictionModal,
+  MetacognitiveCheckpoint
 } from './components';
 
 // Lazy load screen components for code-splitting
@@ -47,6 +48,8 @@ export function App() {
   const [showTip, setShowTip] = useState(false);
   const [currentTip, setCurrentTip] = useState(null);
   const [playPhase, setPlayPhase] = useState('discuss');
+  const [showCheckpoint, setShowCheckpoint] = useState(false);
+  const [checkpointShown, setCheckpointShown] = useState(false);
 
   // Ref for sound timeout cleanup
   const streakSoundTimeoutRef = useRef(null);
@@ -131,8 +134,12 @@ export function App() {
         if (isLastRound) {
           setShowPrediction(true);
         } else {
-          // Show educational tip between rounds (50% chance)
-          if (Math.random() > 0.5) {
+          // Show metacognitive checkpoint after round 3 (for games with 5+ rounds)
+          if (prev.currentRound === 3 && prev.totalRounds >= 5 && !checkpointShown) {
+            setShowCheckpoint(true);
+            setCheckpointShown(true);
+          } else if (Math.random() > 0.5) {
+            // Show educational tip between rounds (50% chance)
             setCurrentTip(getRandomItem(EDUCATIONAL_TIPS));
             setShowTip(true);
           }
@@ -213,6 +220,10 @@ export function App() {
     setCurrentTip(null);
   }, []);
 
+  const handleCheckpointContinue = useCallback(() => {
+    setShowCheckpoint(false);
+  }, []);
+
   const restartGame = useCallback(() => {
     setGameState({
       phase: 'setup',
@@ -234,10 +245,32 @@ export function App() {
     setCurrentStreak(0);
     setHintsUsed(0);
     setShowTip(false);
+    setShowCheckpoint(false);
+    setCheckpointShown(false);
   }, []);
 
   return (
     <ErrorBoundary>
+      {/* Skip to main content link for screen reader users */}
+      <a
+        href="#main-content"
+        className="sr-only"
+        style={{
+          position: 'absolute',
+          top: '-40px',
+          left: 0,
+          background: 'var(--accent-cyan)',
+          color: 'var(--bg-deep)',
+          padding: '0.5rem 1rem',
+          zIndex: 9999,
+          transition: 'top 0.2s ease'
+        }}
+        onFocus={(e) => { e.target.style.top = '0'; }}
+        onBlur={(e) => { e.target.style.top = '-40px'; }}
+      >
+        Skip to main content
+      </a>
+
       <Header
         score={gameState.team.score}
         round={gameState.currentRound}
@@ -245,7 +278,7 @@ export function App() {
         phase={gameState.phase}
       />
 
-      <main role="main" style={{ flex: 1 }}>
+      <main id="main-content" role="main" style={{ flex: 1 }}>
         <Suspense fallback={
           <div style={{
             display: 'flex',
@@ -290,6 +323,16 @@ export function App() {
       {/* Prediction Modal */}
       {showPrediction && (
         <PredictionModal onSubmit={handlePrediction} currentScore={gameState.team.score} />
+      )}
+
+      {/* Mid-game Metacognitive Checkpoint */}
+      {showCheckpoint && (
+        <MetacognitiveCheckpoint
+          onContinue={handleCheckpointContinue}
+          currentScore={gameState.team.score}
+          correctCount={gameState.team.results.filter(r => r.correct).length}
+          totalRounds={gameState.totalRounds}
+        />
       )}
 
       {/* Educational Tip Modal (between rounds) */}
