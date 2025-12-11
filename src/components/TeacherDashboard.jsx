@@ -205,7 +205,7 @@ export function TeacherDashboard({ onBack }) {
         >
           <span>📡</span>
           <span style={{ color: 'var(--accent-amber)', fontSize: '0.875rem' }}>
-            You're offline. Showing local data only.
+            You&apos;re offline. Showing local data only.
           </span>
         </div>
       )}
@@ -583,7 +583,7 @@ export function TeacherDashboard({ onBack }) {
                             fontStyle: 'italic'
                           }}
                         >
-                          "{reflection.reflectionResponse}"
+                          &ldquo;{reflection.reflectionResponse}&rdquo;
                         </div>
                       ) : (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
