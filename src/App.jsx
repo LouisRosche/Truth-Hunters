@@ -52,6 +52,18 @@ export function App() {
   const [showPrediction, setShowPrediction] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [savedGameSummary, setSavedGameSummary] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+
+  // Sound state - synced with SoundManager
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('soundEnabled');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
 
   // Check for saved game on mount
   useEffect(() => {
@@ -82,6 +94,25 @@ export function App() {
       }
       return newValue;
     });
+  }, []);
+
+  // Toggle sound and persist preference
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const newValue = !prev;
+      SoundManager.enabled = newValue;
+      try {
+        localStorage.setItem('soundEnabled', String(newValue));
+      } catch {
+        // Ignore localStorage errors
+      }
+      return newValue;
+    });
+  }, []);
+
+  // Toggle pause state
+  const togglePause = useCallback(() => {
+    setIsPaused((prev) => !prev);
   }, []);
 
   // Apply presentation mode class to document
@@ -374,6 +405,11 @@ export function App() {
         presentationMode={presentationMode}
         onTogglePresentationMode={togglePresentationMode}
         onExitGame={restartGame}
+        soundEnabled={soundEnabled}
+        onToggleSound={toggleSound}
+        isPaused={isPaused}
+        onTogglePause={togglePause}
+        onShowHelp={() => setShowHelp(true)}
       />
 
       <main id="main-content" role="main" style={{ flex: 1 }}>
@@ -400,6 +436,9 @@ export function App() {
               currentStreak={currentStreak}
               onUseHint={handleUseHint}
               teamAvatar={gameState.team.avatar}
+              isPaused={isPaused}
+              previousResults={gameState.team.results}
+              claims={gameState.claims}
             />
           )}
 
@@ -422,6 +461,197 @@ export function App() {
           totalRounds={pendingGameSettings.rounds}
           difficulty={pendingGameSettings.difficulty}
         />
+      )}
+
+      {/* Help Modal */}
+      {showHelp && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="help-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowHelp(false);
+          }}
+        >
+          <div
+            className="animate-in"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2
+                id="help-title"
+                className="mono"
+                style={{ fontSize: '1.25rem', color: 'var(--accent-cyan)' }}
+              >
+                🔍 How to Play
+              </h2>
+              <button
+                onClick={() => setShowHelp(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
+                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
+                  🎯 Goal
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  Evaluate claims and determine if they are TRUE, FALSE, or MIXED (partially true). Score points for correct answers!
+                </p>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
+                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-emerald)', marginBottom: '0.5rem' }}>
+                  📊 Scoring
+                </h3>
+                <ul style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', margin: 0 }}>
+                  <li>High confidence correct: +3 points</li>
+                  <li>Medium confidence correct: +2 points</li>
+                  <li>Low confidence correct: +1 point</li>
+                  <li>High confidence wrong: -2 points</li>
+                  <li>Medium/Low confidence wrong: -1 point</li>
+                  <li>Calibration bonus: +3 pts if prediction is within 2 of actual!</li>
+                </ul>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
+                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-violet)', marginBottom: '0.5rem' }}>
+                  ⌨️ Keyboard Shortcuts
+                </h3>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.25rem 0.75rem' }}>
+                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>T/F/M</span>
+                  <span>Select TRUE/FALSE/MIXED</span>
+                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>1/2/3</span>
+                  <span>Set confidence level</span>
+                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>Enter</span>
+                  <span>Submit answer / Next round</span>
+                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>?</span>
+                  <span>Toggle shortcut hints</span>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
+                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-rose)', marginBottom: '0.5rem' }}>
+                  💡 Tips
+                </h3>
+                <ul style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', margin: 0 }}>
+                  <li>Use hints if stuck (costs points)</li>
+                  <li>Discuss with your team before answering</li>
+                  <li>Watch for AI-generated misinformation patterns</li>
+                  <li>Calibrate your confidence - it affects scoring!</li>
+                </ul>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowHelp(false)}
+              className="mono"
+              style={{
+                width: '100%',
+                marginTop: '1rem',
+                padding: '0.75rem',
+                background: 'var(--accent-cyan)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'var(--bg-deep)',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pause Overlay */}
+      {isPaused && gameState.phase === 'playing' && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pause-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem'
+          }}
+        >
+          <div
+            className="animate-in"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--accent-amber)',
+              borderRadius: '16px',
+              padding: '2rem',
+              textAlign: 'center',
+              maxWidth: '400px',
+              width: '100%'
+            }}
+          >
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏸️</div>
+            <h2
+              id="pause-title"
+              className="mono"
+              style={{ fontSize: '1.5rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}
+            >
+              GAME PAUSED
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              Round {gameState.currentRound} of {gameState.totalRounds} • {gameState.team.score} points
+            </p>
+            <button
+              onClick={togglePause}
+              className="mono"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: 'var(--accent-cyan)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'var(--bg-deep)',
+                fontSize: '1rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              ▶️ Resume Game
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Saved Game Recovery Modal */}

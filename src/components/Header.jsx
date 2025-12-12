@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
-export function Header({ score, round, totalRounds, phase, presentationMode, onTogglePresentationMode, onExitGame }) {
+export function Header({ score, round, totalRounds, phase, presentationMode, onTogglePresentationMode, onExitGame, soundEnabled, onToggleSound, onTogglePause, isPaused, onShowHelp }) {
   const isOnline = useOnlineStatus();
   const [showExitModal, setShowExitModal] = useState(false);
 
@@ -95,7 +95,84 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {/* Help Button */}
+        {onShowHelp && (
+          <button
+            onClick={onShowHelp}
+            title="Game rules & help"
+            className="mono"
+            style={{
+              padding: '0.5rem 0.75rem',
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              transition: 'all 0.2s ease',
+              minHeight: '36px'
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>❓</span>
+          </button>
+        )}
+
+        {/* Sound Toggle */}
+        {onToggleSound && (
+          <button
+            onClick={onToggleSound}
+            aria-pressed={soundEnabled}
+            title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+            className="mono"
+            style={{
+              padding: '0.5rem 0.75rem',
+              background: soundEnabled ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+              border: `1px solid ${soundEnabled ? 'var(--correct)' : 'var(--border)'}`,
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              color: soundEnabled ? 'var(--correct)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              transition: 'all 0.2s ease',
+              minHeight: '36px'
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>{soundEnabled ? '🔊' : '🔇'}</span>
+          </button>
+        )}
+
+        {/* Pause Button - shown during gameplay */}
+        {phase === 'playing' && onTogglePause && (
+          <button
+            onClick={onTogglePause}
+            aria-pressed={isPaused}
+            title={isPaused ? 'Resume game' : 'Pause game'}
+            className="mono"
+            style={{
+              padding: '0.5rem 0.75rem',
+              background: isPaused ? 'rgba(251, 191, 36, 0.2)' : 'transparent',
+              border: `1px solid ${isPaused ? 'var(--accent-amber)' : 'var(--border)'}`,
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              color: isPaused ? 'var(--accent-amber)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              transition: 'all 0.2s ease',
+              minHeight: '36px'
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>{isPaused ? '▶️' : '⏸️'}</span>
+          </button>
+        )}
+
         {/* Exit Game Button - shown during gameplay */}
         {phase === 'playing' && onExitGame && (
           <button
