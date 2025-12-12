@@ -3,7 +3,7 @@
  * Main gameplay component - single unified screen for claim evaluation
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from './Button';
 import { ClaimCard } from './ClaimCard';
 import { ConfidenceSelector } from './ConfidenceSelector';
@@ -52,6 +52,103 @@ export function PlayingScreen({
   const [hintCostTotal, setHintCostTotal] = useState(0); // Running total of hint costs
   const [encouragement, setEncouragement] = useState('');
   const [calibrationTip, setCalibrationTip] = useState(null);
+  const [showKeyboardHint, setShowKeyboardHint] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+  const [pendingNext, setPendingNext] = useState(false);
+
+  // Keyboard shortcuts for faster gameplay
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't trigger if user is typing in textarea
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+
+      if (!showResult) {
+        // Verdict shortcuts
+        if (e.key === 't' || e.key === 'T') {
+          setVerdict('TRUE');
+          SoundManager.play('tick');
+        } else if (e.key === 'f' || e.key === 'F') {
+          setVerdict('FALSE');
+          SoundManager.play('tick');
+        } else if (e.key === 'm' || e.key === 'M') {
+          setVerdict('MIXED');
+          SoundManager.play('tick');
+        }
+        // Confidence shortcuts
+        else if (e.key === '1') {
+          setConfidence(1);
+          SoundManager.play('tick');
+        } else if (e.key === '2') {
+          setConfidence(2);
+          SoundManager.play('tick');
+        } else if (e.key === '3') {
+          setConfidence(3);
+          SoundManager.play('tick');
+        }
+        // Submit with Enter when verdict is selected
+        else if (e.key === 'Enter' && verdict) {
+          e.preventDefault();
+          setPendingSubmit(true);
+        }
+        // Show keyboard hint with ?
+        else if (e.key === '?') {
+          setShowKeyboardHint(prev => !prev);
+        }
+      } else {
+        // In result view, Enter advances to next round
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setPendingNext(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showResult, verdict]);
+
+  // Handle pending keyboard actions (to avoid circular dependencies)
+  useEffect(() => {
+    if (pendingSubmit && verdict && claim) {
+      setPendingSubmit(false);
+      // Trigger submit logic inline
+      const correct = verdict === claim.answer;
+      const points = calculatePoints(correct, confidence);
+      SoundManager.play(correct ? 'correct' : 'incorrect');
+      const msgs = correct ? ENCOURAGEMENTS.correct : ENCOURAGEMENTS.incorrect;
+      setEncouragement(getRandomItem(msgs) || (correct ? 'Nice work!' : 'Keep trying!'));
+      let calibrationType = 'calibrated';
+      if (correct && confidence === 1) calibrationType = 'underconfident';
+      else if (!correct && confidence === 3) calibrationType = 'overconfident';
+      setCalibrationTip(getRandomItem(CALIBRATION_TIPS[calibrationType]) || null);
+      setResultData({ correct, points, confidence, verdict });
+      setShowResult(true);
+    }
+  }, [pendingSubmit, verdict, claim, confidence]);
+
+  useEffect(() => {
+    if (pendingNext && resultData) {
+      setPendingNext(false);
+      onSubmit({
+        claimId: claim.id,
+        teamVerdict: resultData.verdict,
+        confidence: resultData.confidence,
+        correct: resultData.correct,
+        points: resultData.points,
+        reasoning
+      });
+      // Reset for next round
+      setConfidence(2);
+      setVerdict(null);
+      setReasoning('');
+      setShowResult(false);
+      setResultData(null);
+      setActiveHint(null);
+      setUsedHints([]);
+      setHintCostTotal(0);
+      setCalibrationTip(null);
+    }
+  }, [pendingNext, resultData, claim, reasoning, onSubmit]);
 
   const handleSubmitVerdict = useCallback(() => {
     if (!verdict || !claim) return;
@@ -114,6 +211,28 @@ export function PlayingScreen({
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1.25rem' }}>
+      {/* Progress Bar */}
+      <div
+        style={{
+          width: '100%',
+          height: '4px',
+          background: 'var(--bg-elevated)',
+          borderRadius: '2px',
+          marginBottom: '0.75rem',
+          overflow: 'hidden'
+        }}
+      >
+        <div
+          style={{
+            width: `${(round / totalRounds) * 100}%`,
+            height: '100%',
+            background: 'linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-violet) 100%)',
+            borderRadius: '2px',
+            transition: 'width 0.3s ease'
+          }}
+        />
+      </div>
+
       {/* Top Bar: Round + Streak */}
       <div
         style={{
@@ -123,17 +242,36 @@ export function PlayingScreen({
           marginBottom: '1rem'
         }}
       >
-        <div
-          className="mono"
-          style={{
-            padding: '0.25rem 0.75rem',
-            fontSize: '0.75rem',
-            background: 'var(--bg-elevated)',
-            borderRadius: '4px',
-            color: 'var(--text-secondary)'
-          }}
-        >
-          Round {round} of {totalRounds}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div
+            className="mono"
+            style={{
+              padding: '0.25rem 0.75rem',
+              fontSize: '0.75rem',
+              background: 'var(--bg-elevated)',
+              borderRadius: '4px',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            Round {round} of {totalRounds}
+          </div>
+          {/* Keyboard shortcut hint toggle */}
+          <button
+            onClick={() => setShowKeyboardHint(prev => !prev)}
+            title="Keyboard shortcuts (press ? to toggle)"
+            className="mono"
+            style={{
+              padding: '0.25rem 0.5rem',
+              fontSize: '0.625rem',
+              background: showKeyboardHint ? 'var(--accent-violet)' : 'var(--bg-elevated)',
+              color: showKeyboardHint ? 'white' : 'var(--text-muted)',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            ⌨️
+          </button>
         </div>
 
         {currentStreak >= 2 && (
@@ -159,6 +297,43 @@ export function PlayingScreen({
           </div>
         )}
       </div>
+
+      {/* Keyboard Shortcuts Panel */}
+      {showKeyboardHint && (
+        <div
+          className="animate-in"
+          style={{
+            marginBottom: '0.75rem',
+            padding: '0.75rem 1rem',
+            background: 'rgba(167, 139, 250, 0.1)',
+            border: '1px solid var(--accent-violet)',
+            borderRadius: '8px'
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.75rem' }}>
+            <div>
+              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>T</span>
+              <span style={{ color: 'var(--text-muted)' }}> TRUE</span>
+            </div>
+            <div>
+              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>F</span>
+              <span style={{ color: 'var(--text-muted)' }}> FALSE</span>
+            </div>
+            <div>
+              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>M</span>
+              <span style={{ color: 'var(--text-muted)' }}> MIXED</span>
+            </div>
+            <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1rem' }}>
+              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>1-3</span>
+              <span style={{ color: 'var(--text-muted)' }}> Confidence</span>
+            </div>
+            <div>
+              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>Enter</span>
+              <span style={{ color: 'var(--text-muted)' }}> Submit/Next</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Difficulty Badge */}
       {claim.difficulty && (
