@@ -95,6 +95,20 @@ export function App() {
     };
   }, []);
 
+  // Warn before leaving during active gameplay
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (gameState.phase === 'playing') {
+        e.preventDefault();
+        e.returnValue = 'You have an active game in progress. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [gameState.phase]);
+
   // Pending game settings (waiting for prediction)
   const [pendingGameSettings, setPendingGameSettings] = useState(null);
 

@@ -64,11 +64,23 @@ describe('SetupScreen', () => {
     expect(screen.getByText('MASCOT')).toBeInTheDocument();
   });
 
-  it('renders player name inputs', () => {
+  it('renders player name inputs with dynamic add functionality', () => {
     render(<SetupScreen onStart={mockOnStart} />);
+    // Initially only shows 1 player slot (dynamic player slots feature)
     expect(screen.getByLabelText(/player 1 first name/i)).toBeInTheDocument();
+
+    // Should have "Add another player" button
+    const addButton = screen.getByRole('button', { name: /add another player/i });
+    expect(addButton).toBeInTheDocument();
+
+    // Add more players
+    fireEvent.click(addButton);
     expect(screen.getByLabelText(/player 2 first name/i)).toBeInTheDocument();
+
+    fireEvent.click(addButton);
     expect(screen.getByLabelText(/player 3 first name/i)).toBeInTheDocument();
+
+    fireEvent.click(addButton);
     expect(screen.getByLabelText(/player 4 first name/i)).toBeInTheDocument();
   });
 

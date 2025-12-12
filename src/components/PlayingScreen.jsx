@@ -48,6 +48,8 @@ export function PlayingScreen({
   const [showResult, setShowResult] = useState(false);
   const [resultData, setResultData] = useState(null);
   const [activeHint, setActiveHint] = useState(null);
+  const [usedHints, setUsedHints] = useState([]); // Track all hints used this round
+  const [hintCostTotal, setHintCostTotal] = useState(0); // Running total of hint costs
   const [encouragement, setEncouragement] = useState('');
   const [calibrationTip, setCalibrationTip] = useState(null);
 
@@ -91,15 +93,19 @@ export function PlayingScreen({
     setShowResult(false);
     setResultData(null);
     setActiveHint(null);
+    setUsedHints([]);
+    setHintCostTotal(0);
     setCalibrationTip(null);
   }, [claim, resultData, reasoning, onSubmit]);
 
   const handleHintRequest = (hintType) => {
     const hint = HINT_TYPES.find((h) => h.id === hintType);
-    if (!hint) return;
+    if (!hint || usedHints.includes(hintType)) return;
 
     const content = getHintContent(claim, hintType);
     setActiveHint({ ...hint, content });
+    setUsedHints(prev => [...prev, hintType]);
+    setHintCostTotal(prev => prev + hint.cost);
     onUseHint(hint.cost);
     SoundManager.play('tick');
   };
@@ -280,33 +286,53 @@ export function PlayingScreen({
               marginBottom: '1rem'
             }}
           >
-            <h3
-              className="mono"
-              style={{ fontSize: '0.8125rem', color: 'var(--accent-violet)', marginBottom: '0.75rem' }}
-            >
-              💡 NEED A HINT? (costs points)
-            </h3>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {HINT_TYPES.map((hint) => (
-                <button
-                  key={hint.id}
-                  onClick={() => handleHintRequest(hint.id)}
-                  disabled={activeHint?.id === hint.id}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3
+                className="mono"
+                style={{ fontSize: '0.8125rem', color: 'var(--accent-violet)', margin: 0 }}
+              >
+                💡 NEED A HINT? (costs points)
+              </h3>
+              {hintCostTotal > 0 && (
+                <span
                   className="mono"
                   style={{
-                    padding: '0.5rem 0.75rem',
-                    background: activeHint?.id === hint.id ? 'var(--accent-violet)' : 'var(--bg-elevated)',
-                    color: activeHint?.id === hint.id ? 'white' : 'var(--text-secondary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '6px',
                     fontSize: '0.75rem',
-                    cursor: activeHint?.id === hint.id ? 'default' : 'pointer',
-                    opacity: activeHint?.id === hint.id ? 0.7 : 1
+                    color: 'var(--incorrect)',
+                    padding: '0.25rem 0.5rem',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    borderRadius: '4px'
                   }}
                 >
-                  {hint.icon} {hint.name} (-{hint.cost}pts)
-                </button>
-              ))}
+                  Hints used: -{hintCostTotal} pts
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {HINT_TYPES.map((hint) => {
+                const isUsed = usedHints.includes(hint.id);
+                return (
+                  <button
+                    key={hint.id}
+                    onClick={() => handleHintRequest(hint.id)}
+                    disabled={isUsed}
+                    className="mono"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      background: isUsed ? 'var(--accent-violet)' : 'var(--bg-elevated)',
+                      color: isUsed ? 'white' : 'var(--text-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      cursor: isUsed ? 'default' : 'pointer',
+                      opacity: isUsed ? 0.7 : 1,
+                      textDecoration: isUsed ? 'line-through' : 'none'
+                    }}
+                  >
+                    {hint.icon} {hint.name} (-{hint.cost}pts)
+                  </button>
+                );
+              })}
             </div>
           </div>
 
