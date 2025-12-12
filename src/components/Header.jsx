@@ -28,18 +28,54 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <span style={{ fontSize: '1.5rem' }}>🔍</span>
-        <h1
-          className="mono"
+        <button
+          onClick={() => {
+            if (phase === 'playing') {
+              // During gameplay, show confirmation modal
+              setShowExitModal(true);
+            } else if (phase === 'debrief' && onExitGame) {
+              // During debrief, go directly to setup
+              onExitGame();
+            }
+            // During setup, do nothing (already home)
+          }}
+          aria-label="Return to home screen"
+          title={phase === 'setup' ? 'Truth Hunters' : 'Return to home screen'}
           style={{
-            fontSize: '1.125rem',
-            fontWeight: 700,
-            letterSpacing: '-0.025em',
-            color: 'var(--accent-cyan)'
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            background: 'transparent',
+            border: 'none',
+            padding: '0.25rem 0.5rem',
+            margin: '-0.25rem -0.5rem',
+            borderRadius: '8px',
+            cursor: phase === 'setup' ? 'default' : 'pointer',
+            transition: 'all 0.2s ease',
+            opacity: phase === 'setup' ? 1 : undefined
+          }}
+          onMouseEnter={(e) => {
+            if (phase !== 'setup') {
+              e.currentTarget.style.background = 'rgba(34, 211, 238, 0.1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
           }}
         >
-          TRUTH HUNTERS
-        </h1>
+          <span style={{ fontSize: '1.5rem' }}>🔍</span>
+          <h1
+            className="mono"
+            style={{
+              fontSize: '1.125rem',
+              fontWeight: 700,
+              letterSpacing: '-0.025em',
+              color: 'var(--accent-cyan)'
+            }}
+          >
+            TRUTH HUNTERS
+          </h1>
+        </button>
         {!isOnline && (
           <span
             role="status"
