@@ -111,11 +111,6 @@ describe('SetupScreen', () => {
     expect(screen.getByRole('button', { name: /leaderboard/i })).toBeInTheDocument();
   });
 
-  it('renders teacher dashboard button', () => {
-    render(<SetupScreen onStart={mockOnStart} />);
-    expect(screen.getByText(/Teacher Dashboard/i)).toBeInTheDocument();
-  });
-
   it('renders how to play section', () => {
     render(<SetupScreen onStart={mockOnStart} />);
     expect(screen.getByText(/HOW TO PLAY/i)).toBeInTheDocument();

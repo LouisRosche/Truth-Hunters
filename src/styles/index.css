@@ -406,3 +406,29 @@ textarea:focus-visible,
     gap: 0.5rem;
   }
 }
+
+/* ============================================================
+   LEADERBOARD SIDEBAR
+   ============================================================ */
+
+/* Show leaderboard sidebar on large screens */
+@media (min-width: 1200px) {
+  .leaderboard-sidebar {
+    display: block !important;
+  }
+
+  .leaderboard-mobile-btn {
+    display: none !important;
+  }
+}
+
+/* Ensure mobile button is visible on smaller screens */
+@media (max-width: 1199px) {
+  .leaderboard-sidebar {
+    display: none !important;
+  }
+
+  .leaderboard-mobile-btn {
+    display: flex !important;
+  }
+}

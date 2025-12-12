@@ -13,3 +13,4 @@ export { SetupScreen } from './SetupScreen';
 export { PlayingScreen } from './PlayingScreen';
 export { DebriefScreen } from './DebriefScreen';
 export { TeacherDashboard } from './TeacherDashboard';
+export { ScrollingLeaderboard } from './ScrollingLeaderboard';

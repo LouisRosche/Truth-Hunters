@@ -14,6 +14,7 @@ import {
 const SetupScreen = lazy(() => import('./components/SetupScreen').then(m => ({ default: m.SetupScreen })));
 const PlayingScreen = lazy(() => import('./components/PlayingScreen').then(m => ({ default: m.PlayingScreen })));
 const DebriefScreen = lazy(() => import('./components/DebriefScreen').then(m => ({ default: m.DebriefScreen })));
+const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 import { TEAM_AVATARS } from './data/constants';
 import { ACHIEVEMENTS } from './data/achievements';
 import { selectClaimsByDifficulty } from './utils/helpers';
@@ -23,6 +24,13 @@ import { LeaderboardManager } from './services/leaderboard';
 import { FirebaseBackend } from './services/firebase';
 
 export function App() {
+  // Check for teacher mode via URL parameter (?teacher=true or #teacher)
+  const [isTeacherMode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hashTeacher = window.location.hash === '#teacher';
+    return params.get('teacher') === 'true' || hashTeacher;
+  });
+
   const [gameState, setGameState] = useState({
     phase: 'setup',
     currentRound: 0,
@@ -244,6 +252,30 @@ export function App() {
     });
     setCurrentStreak(0);
   }, []);
+
+  // Teacher mode - render dashboard only
+  if (isTeacherMode) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            color: 'var(--text-muted)'
+          }}>
+            Loading Teacher Dashboard...
+          </div>
+        }>
+          <TeacherDashboard onBack={() => {
+            // Navigate back to student app by removing teacher param
+            window.location.href = window.location.pathname;
+          }} />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>
