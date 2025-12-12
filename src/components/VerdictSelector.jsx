@@ -81,11 +81,19 @@ export function VerdictSelector({ value, onChange, disabled }) {
               {v.value}
             </div>
             {v.hasExplainer && (
-              <button
-                type="button"
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowMixedHelp(!showMixedHelp);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowMixedHelp(!showMixedHelp);
+                  }
                 }}
                 aria-label="What does MIXED mean?"
                 title="What does MIXED mean?"
@@ -108,7 +116,7 @@ export function VerdictSelector({ value, onChange, disabled }) {
                 }}
               >
                 ?
-              </button>
+              </span>
             )}
           </button>
         ))}

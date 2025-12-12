@@ -22,6 +22,7 @@ import { calculateGameStats } from './utils/scoring';
 import { SoundManager } from './services/sound';
 import { LeaderboardManager } from './services/leaderboard';
 import { FirebaseBackend } from './services/firebase';
+import { GameStateManager } from './services/gameState';
 
 export function App() {
   // Check for teacher mode via URL parameter (?teacher=true or #teacher)
@@ -50,6 +51,15 @@ export function App() {
 
   const [showPrediction, setShowPrediction] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [savedGameSummary, setSavedGameSummary] = useState(null);
+
+  // Check for saved game on mount
+  useEffect(() => {
+    const summary = GameStateManager.getSummary();
+    if (summary) {
+      setSavedGameSummary(summary);
+    }
+  }, []);
 
   // Presentation mode for group viewing (larger text for 4 scholars sharing 1 screen)
   const [presentationMode, setPresentationMode] = useState(() => {
@@ -109,8 +119,34 @@ export function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [gameState.phase]);
 
+  // Auto-save game state during gameplay
+  useEffect(() => {
+    if (gameState.phase === 'playing') {
+      GameStateManager.save(gameState, currentStreak);
+    } else if (gameState.phase === 'debrief' || gameState.phase === 'setup') {
+      // Clear saved game when game ends normally or returns to setup
+      GameStateManager.clear();
+    }
+  }, [gameState, currentStreak]);
+
   // Pending game settings (waiting for prediction)
   const [pendingGameSettings, setPendingGameSettings] = useState(null);
+
+  // Resume saved game
+  const resumeSavedGame = useCallback(() => {
+    const saved = GameStateManager.load();
+    if (saved) {
+      setGameState(saved.gameState);
+      setCurrentStreak(saved.currentStreak || 0);
+      setSavedGameSummary(null);
+    }
+  }, []);
+
+  // Discard saved game and start fresh
+  const discardSavedGame = useCallback(() => {
+    GameStateManager.clear();
+    setSavedGameSummary(null);
+  }, []);
 
   // Start game with new settings object - but show prediction modal first
   const startGame = useCallback((settings) => {
@@ -386,6 +422,113 @@ export function App() {
           totalRounds={pendingGameSettings.rounds}
           difficulty={pendingGameSettings.difficulty}
         />
+      )}
+
+      {/* Saved Game Recovery Modal */}
+      {savedGameSummary && gameState.phase === 'setup' && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="recovery-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem'
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '400px',
+              width: '100%',
+              textAlign: 'center'
+            }}
+          >
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💾</div>
+            <h2
+              id="recovery-title"
+              className="mono"
+              style={{
+                fontSize: '1.125rem',
+                marginBottom: '0.5rem',
+                color: 'var(--accent-cyan)'
+              }}
+            >
+              Game in Progress Found
+            </h2>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              You have an unfinished game from {savedGameSummary.timeAgoText}.
+            </p>
+            <div
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Team</span>
+                <span className="mono" style={{ fontSize: '0.875rem' }}>{savedGameSummary.teamName}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Progress</span>
+                <span className="mono" style={{ fontSize: '0.875rem' }}>
+                  Round {savedGameSummary.currentRound} of {savedGameSummary.totalRounds}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Score</span>
+                <span className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-cyan)' }}>
+                  {savedGameSummary.score} pts
+                </span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={discardSavedGame}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                Start Fresh
+              </button>
+              <button
+                onClick={resumeSavedGame}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--accent-cyan)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'var(--bg-deep)',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: 600
+                }}
+              >
+                Resume Game
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <footer
