@@ -10,26 +10,46 @@ import { shuffleArray } from './generic';
 /**
  * Select claims based on difficulty and optional subject filter
  * GUARANTEES no duplicate claims within a session
+ * For solo players: prioritizes unseen claims until all have been seen
+ *
  * @param {string} difficulty - 'easy' | 'medium' | 'hard' | 'mixed'
  * @param {number} count - Number of claims to select
  * @param {Array<string>} subjects - Optional array of subjects to include (empty = all)
- * @returns {Array} Selected claims (unique, no repeats)
+ * @param {Array<string>} previouslySeenIds - Claim IDs the player has already seen (for solo mode)
+ * @returns {Array} Selected claims (unique, no repeats, prioritizing unseen)
  */
-export function selectClaimsByDifficulty(difficulty, count, subjects = []) {
+export function selectClaimsByDifficulty(difficulty, count, subjects = [], previouslySeenIds = []) {
   // Filter by subjects if specified
   let pool = CLAIMS_DATABASE;
   if (subjects && subjects.length > 0) {
     pool = CLAIMS_DATABASE.filter(c => subjects.includes(c.subject));
   }
 
-  // Track used claim IDs to prevent any duplicates
+  // Convert previouslySeenIds to a Set for O(1) lookup
+  const seenSet = new Set(previouslySeenIds);
+
+  // Partition pool into unseen and seen claims
+  const unseenPool = pool.filter(c => !seenSet.has(c.id));
+  const seenPool = pool.filter(c => seenSet.has(c.id));
+
+  // Track used claim IDs to prevent any duplicates within this game
   const usedIds = new Set();
   const selectedClaims = [];
 
-  const selectUnique = (sourcePool, maxCount) => {
-    const shuffled = shuffleArray([...sourcePool]);
+  // Helper to select unique claims, prioritizing unseen
+  const selectUnique = (sourcePool, maxCount, preferUnseen = true) => {
+    // Split source into unseen and seen
+    const unseen = preferUnseen ? sourcePool.filter(c => !seenSet.has(c.id)) : [];
+    const seen = preferUnseen ? sourcePool.filter(c => seenSet.has(c.id)) : sourcePool;
+
+    const shuffledUnseen = shuffleArray([...unseen]);
+    const shuffledSeen = shuffleArray([...seen]);
+
+    // Prioritize unseen claims, then fill with seen if needed
+    const combined = [...shuffledUnseen, ...shuffledSeen];
+
     const result = [];
-    for (const claim of shuffled) {
+    for (const claim of combined) {
       if (result.length >= maxCount) break;
       if (!usedIds.has(claim.id)) {
         usedIds.add(claim.id);
@@ -78,15 +98,38 @@ export function selectClaimsByDifficulty(difficulty, count, subjects = []) {
 
   // Final safety check: ensure absolutely no duplicates
   const uniqueClaims = [];
-  const seenIds = new Set();
+  const finalSeenIds = new Set();
   for (const claim of selectedClaims) {
-    if (!seenIds.has(claim.id)) {
-      seenIds.add(claim.id);
+    if (!finalSeenIds.has(claim.id)) {
+      finalSeenIds.add(claim.id);
       uniqueClaims.push(claim);
     }
   }
 
   return uniqueClaims.slice(0, count);
+}
+
+/**
+ * Get count of unseen claims available for a player
+ * @param {Array<string>} previouslySeenIds - Claim IDs the player has already seen
+ * @param {Array<string>} subjects - Optional array of subjects to filter by
+ * @returns {Object} { total, unseen, percentSeen }
+ */
+export function getUnseenClaimStats(previouslySeenIds = [], subjects = []) {
+  let pool = CLAIMS_DATABASE;
+  if (subjects && subjects.length > 0) {
+    pool = CLAIMS_DATABASE.filter(c => subjects.includes(c.subject));
+  }
+
+  const seenSet = new Set(previouslySeenIds);
+  const unseen = pool.filter(c => !seenSet.has(c.id)).length;
+
+  return {
+    total: pool.length,
+    unseen,
+    seen: pool.length - unseen,
+    percentSeen: pool.length > 0 ? Math.round(((pool.length - unseen) / pool.length) * 100) : 0
+  };
 }
 
 /**

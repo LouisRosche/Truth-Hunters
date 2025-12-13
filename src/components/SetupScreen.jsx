@@ -13,7 +13,7 @@ import { getSubjects } from '../data/claims';
 import { SoundManager } from '../services/sound';
 import { PlayerProfile } from '../services/playerProfile';
 import { validateName, isContentAppropriate, sanitizeInput } from '../utils/moderation';
-import { getRandomItem } from '../utils/helpers';
+import { getRandomItem, getUnseenClaimStats } from '../utils/helpers';
 
 // Get all available subjects
 const ALL_SUBJECTS = getSubjects();
@@ -23,6 +23,12 @@ export function SetupScreen({ onStart }) {
   const existingProfile = useMemo(() => PlayerProfile.get(), []);
   const isReturningPlayer = existingProfile.stats.totalGames > 0;
   const quickStartSettings = useMemo(() => PlayerProfile.getQuickStartSettings(), []);
+
+  // Calculate unseen claims for returning players
+  const unseenStats = useMemo(() => {
+    if (!isReturningPlayer) return null;
+    return getUnseenClaimStats(existingProfile.claimsSeen || []);
+  }, [isReturningPlayer, existingProfile.claimsSeen]);
 
   const [teamName, setTeamName] = useState(isReturningPlayer ? quickStartSettings.playerName : '');
   const [rounds, setRounds] = useState(isReturningPlayer ? quickStartSettings.rounds : 5);
@@ -251,6 +257,31 @@ export function SetupScreen({ onStart }) {
               <span style={{ color: 'var(--accent-amber)' }}> • 🔥 {existingProfile.stats.currentDayStreak} day streak</span>
             )}
           </div>
+          {/* Unseen claims indicator */}
+          {unseenStats && unseenStats.unseen > 0 && (
+            <div style={{
+              marginTop: '0.5rem',
+              padding: '0.375rem 0.75rem',
+              background: 'rgba(52, 211, 153, 0.1)',
+              borderRadius: '6px',
+              fontSize: '0.6875rem',
+              color: 'var(--accent-emerald)'
+            }}>
+              🆕 {unseenStats.unseen} new claims waiting for you!
+            </div>
+          )}
+          {unseenStats && unseenStats.unseen === 0 && (
+            <div style={{
+              marginTop: '0.5rem',
+              padding: '0.375rem 0.75rem',
+              background: 'rgba(167, 139, 250, 0.1)',
+              borderRadius: '6px',
+              fontSize: '0.6875rem',
+              color: 'var(--accent-violet)'
+            }}>
+              🌟 You've seen all {unseenStats.total} claims! Ready for a fresh challenge?
+            </div>
+          )}
         </div>
       )}
 

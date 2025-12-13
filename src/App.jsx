@@ -153,8 +153,12 @@ export function App() {
   const startGame = useCallback((settings) => {
     const { teamName, rounds, difficulty, avatar, soundEnabled, players, subjects } = settings;
 
-    // Select claims based on difficulty and subjects
-    const selectedClaims = selectClaimsByDifficulty(difficulty, rounds, subjects);
+    // Get previously seen claims for solo players to prioritize new content
+    const playerProfile = PlayerProfile.get();
+    const previouslySeenIds = playerProfile.claimsSeen || [];
+
+    // Select claims based on difficulty and subjects, prioritizing unseen claims
+    const selectedClaims = selectClaimsByDifficulty(difficulty, rounds, subjects, previouslySeenIds);
 
     // Initialize sound manager with user preference
     SoundManager.enabled = soundEnabled;

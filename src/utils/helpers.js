@@ -11,4 +11,4 @@
 export { shuffleArray, getRandomItem, debounce, preventDoubleClick } from './generic';
 
 // Game-specific utilities
-export { selectClaimsByDifficulty, formatPlayerName, getHintContent } from './game';
+export { selectClaimsByDifficulty, formatPlayerName, getHintContent, getUnseenClaimStats } from './game';
