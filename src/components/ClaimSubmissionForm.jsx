@@ -40,10 +40,10 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
 
   useEffect(() => {
     const profile = PlayerProfile.get();
-    if (profile?.firstName) {
+    if (profile?.playerName) {
       setPlayerInfo({
-        name: `${profile.firstName}${profile.lastInitial ? ' ' + profile.lastInitial + '.' : ''}`,
-        avatar: profile.avatar || '🔍'
+        name: profile.playerName,
+        avatar: profile.avatar?.emoji || '🔍'
       });
     }
   }, []);

@@ -14,20 +14,29 @@ export function StudentClaimNotifications({ onClose }) {
 
   useEffect(() => {
     const profile = PlayerProfile.get();
-    if (profile?.firstName) {
-      const name = `${profile.firstName}${profile.lastInitial ? ' ' + profile.lastInitial + '.' : ''}`;
-      setPlayerName(name);
-      loadClaims(name);
+    if (profile?.playerName) {
+      setPlayerName(profile.playerName);
+      loadClaims(profile.playerName);
     } else {
       setLoading(false);
     }
   }, []);
 
+  const [error, setError] = useState(null);
+
   const loadClaims = async (name) => {
     setLoading(true);
-    const results = await FirebaseBackend.getStudentClaims(name);
-    setClaims(results);
-    setLoading(false);
+    setError(null);
+    try {
+      const results = await FirebaseBackend.getStudentClaims(name);
+      setClaims(results);
+    } catch (e) {
+      console.warn('Failed to load claims:', e);
+      setError('Could not load your submissions. Please try again.');
+      setClaims([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -88,13 +97,22 @@ export function StudentClaimNotifications({ onClose }) {
         <p className="subtitle">Track the status of claims you've submitted for review</p>
       </div>
 
-      {claims.length === 0 ? (
+      {error && (
+        <div className="error-state">
+          <p>{error}</p>
+          <button onClick={() => loadClaims(playerName)} className="retry-button">
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {!error && claims.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📝</div>
           <p>You haven't submitted any claims yet.</p>
           <p className="hint">Submit a claim to challenge your classmates!</p>
         </div>
-      ) : (
+      ) : !error && (
         <div className="claims-list">
           {claims.map((claim) => {
             const status = getStatusBadge(claim.status);
@@ -176,6 +194,34 @@ const notificationStyles = `
   .loading-state {
     text-align: center;
     padding: 3rem;
+  }
+
+  .error-state {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(251, 113, 133, 0.1);
+    border: 1px solid var(--accent-rose);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .error-state p {
+    color: var(--accent-rose);
+    margin-bottom: 1rem;
+  }
+
+  .retry-button {
+    padding: 0.5rem 1rem;
+    background: var(--accent-rose);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .retry-button:hover {
+    filter: brightness(1.1);
   }
 
   .spinner {

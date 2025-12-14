@@ -181,21 +181,32 @@ export function TeacherDashboard({ onBack }) {
     exportToCSV(exportData, 'truthhunters_reflections');
   };
 
+  const [reviewLoading, setReviewLoading] = useState(false);
+
   // Handle claim review (approve/reject)
   const handleReviewClaim = async (claimId, approved) => {
-    const result = await FirebaseBackend.reviewClaim(claimId, approved, reviewNote);
-    if (result.success) {
-      // Move claim from pending to reviewed
-      const claim = pendingClaims.find(c => c.id === claimId);
-      if (claim) {
-        const updatedClaim = { ...claim, status: approved ? 'approved' : 'rejected', reviewerNote: reviewNote };
-        setPendingClaims(prev => prev.filter(c => c.id !== claimId));
-        setReviewedClaims(prev => [updatedClaim, ...prev]);
+    setReviewLoading(true);
+    setError(null);
+    try {
+      const result = await FirebaseBackend.reviewClaim(claimId, approved, reviewNote);
+      if (result.success) {
+        // Move claim from pending to reviewed
+        const claim = pendingClaims.find(c => c.id === claimId);
+        if (claim) {
+          const updatedClaim = { ...claim, status: approved ? 'approved' : 'rejected', reviewerNote: reviewNote };
+          setPendingClaims(prev => prev.filter(c => c.id !== claimId));
+          setReviewedClaims(prev => [updatedClaim, ...prev]);
+        }
+        setReviewingClaim(null);
+        setReviewNote('');
+      } else {
+        setError(result.error || 'Failed to review claim. Please try again.');
       }
-      setReviewingClaim(null);
-      setReviewNote('');
-    } else {
-      setError('Failed to review claim. Please try again.');
+    } catch (e) {
+      console.warn('Review claim error:', e);
+      setError('An error occurred. Please try again.');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -814,6 +825,7 @@ export function TeacherDashboard({ onBack }) {
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button
                               onClick={() => handleReviewClaim(claim.id, true)}
+                              disabled={reviewLoading}
                               style={{
                                 flex: 1,
                                 padding: '0.75rem',
@@ -822,13 +834,15 @@ export function TeacherDashboard({ onBack }) {
                                 border: 'none',
                                 borderRadius: '6px',
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: reviewLoading ? 'not-allowed' : 'pointer',
+                                opacity: reviewLoading ? 0.6 : 1
                               }}
                             >
-                              ✓ Approve
+                              {reviewLoading ? 'Saving...' : '✓ Approve'}
                             </button>
                             <button
                               onClick={() => handleReviewClaim(claim.id, false)}
+                              disabled={reviewLoading}
                               style={{
                                 flex: 1,
                                 padding: '0.75rem',
@@ -837,20 +851,22 @@ export function TeacherDashboard({ onBack }) {
                                 border: 'none',
                                 borderRadius: '6px',
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: reviewLoading ? 'not-allowed' : 'pointer',
+                                opacity: reviewLoading ? 0.6 : 1
                               }}
                             >
-                              ✎ Needs Work
+                              {reviewLoading ? 'Saving...' : '✎ Needs Work'}
                             </button>
                             <button
                               onClick={() => { setReviewingClaim(null); setReviewNote(''); }}
+                              disabled={reviewLoading}
                               style={{
                                 padding: '0.75rem 1rem',
                                 background: 'var(--bg-elevated)',
                                 color: 'var(--text-secondary)',
                                 border: '1px solid var(--border)',
                                 borderRadius: '6px',
-                                cursor: 'pointer'
+                                cursor: reviewLoading ? 'not-allowed' : 'pointer'
                               }}
                             >
                               Cancel

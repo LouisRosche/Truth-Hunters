@@ -273,11 +273,27 @@ export const FirebaseBackend = {
       return { success: false, error: 'Firebase not initialized' };
     }
 
+    // Validate required fields
+    if (!claimData.claimText || claimData.claimText.trim().length < 10) {
+      return { success: false, error: 'Claim text is too short' };
+    }
+
+    // Validate answer field
+    const validAnswers = ['TRUE', 'FALSE', 'MIXED'];
+    if (!validAnswers.includes(claimData.answer)) {
+      return { success: false, error: 'Invalid answer type' };
+    }
+
+    // Validate difficulty
+    const validDifficulties = ['easy', 'medium', 'hard'];
+    const difficulty = validDifficulties.includes(claimData.difficulty)
+      ? claimData.difficulty
+      : 'medium';
+
     try {
       const classCode = this.getClassCode() || 'PUBLIC';
 
       const docData = {
-        ...claimData,
         classCode: classCode,
         status: 'pending', // pending, approved, rejected
         submittedAt: serverTimestamp(),
@@ -288,10 +304,10 @@ export const FirebaseBackend = {
         submitterAvatar: claimData.submitterAvatar || '🔍',
         // Claim content
         claimText: sanitizeInput(claimData.claimText || ''),
-        answer: claimData.answer, // TRUE, FALSE, or MIXED
+        answer: claimData.answer,
         explanation: sanitizeInput(claimData.explanation || ''),
         subject: claimData.subject || 'General',
-        difficulty: claimData.difficulty || 'medium',
+        difficulty: difficulty,
         source: 'student-contributed',
         citation: sanitizeInput(claimData.citation || ''),
         // If it's a FALSE claim, optionally include error pattern
@@ -438,8 +454,9 @@ export const FirebaseBackend = {
   /**
    * Get approved claims to add to game pool
    * @param {string} classFilter - Optional class code filter
+   * @param {number} maxClaims - Maximum claims to return (default 50)
    */
-  async getApprovedClaims(classFilter = null) {
+  async getApprovedClaims(classFilter = null, maxClaims = 50) {
     if (!this.initialized || !this.db) {
       return [];
     }
@@ -453,32 +470,43 @@ export const FirebaseBackend = {
         q = query(
           claimsRef,
           where('classCode', '==', filterClass),
-          where('status', '==', 'approved')
+          where('status', '==', 'approved'),
+          limit(maxClaims)
         );
       } else {
         q = query(
           claimsRef,
-          where('status', '==', 'approved')
+          where('status', '==', 'approved'),
+          limit(maxClaims)
         );
       }
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: `student-${doc.id}`,
-          text: data.claimText,
-          answer: data.answer,
-          explanation: data.explanation,
-          subject: data.subject,
-          difficulty: data.difficulty,
-          source: 'student-contributed',
-          citation: data.citation || null,
-          errorPattern: data.errorPattern || null,
-          contributor: data.submitterName,
-          contributorAvatar: data.submitterAvatar
-        };
-      });
+      const validAnswers = ['TRUE', 'FALSE', 'MIXED'];
+      const validDifficulties = ['easy', 'medium', 'hard'];
+
+      return snapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          // Skip claims with invalid data
+          if (!data.claimText || !validAnswers.includes(data.answer)) {
+            return null;
+          }
+          return {
+            id: `student-${doc.id}`,
+            text: data.claimText,
+            answer: data.answer,
+            explanation: data.explanation || 'No explanation provided.',
+            subject: data.subject || 'General',
+            difficulty: validDifficulties.includes(data.difficulty) ? data.difficulty : 'medium',
+            source: 'student-contributed',
+            citation: data.citation || null,
+            errorPattern: data.errorPattern || null,
+            contributor: data.submitterName || 'Classmate',
+            contributorAvatar: data.submitterAvatar || '🔍'
+          };
+        })
+        .filter(claim => claim !== null);
     } catch (e) {
       console.warn('Failed to fetch approved claims:', e);
       return [];
