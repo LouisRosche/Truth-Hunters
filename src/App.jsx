@@ -53,6 +53,7 @@ export function App() {
   const [showPrediction, setShowPrediction] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [savedGameSummary, setSavedGameSummary] = useState(null);
+  const [isPreparingGame, setIsPreparingGame] = useState(false);
 
   // Check for saved game on mount
   useEffect(() => {
@@ -153,36 +154,42 @@ export function App() {
   const startGame = useCallback(async (settings) => {
     const { teamName, rounds, difficulty, avatar, soundEnabled, players, subjects } = settings;
 
-    // Get previously seen claims for solo players to prioritize new content
-    const playerProfile = PlayerProfile.get();
-    const previouslySeenIds = playerProfile.claimsSeen || [];
+    setIsPreparingGame(true);
 
-    // Fetch approved student-contributed claims from Firebase
-    let studentClaims = [];
     try {
-      if (FirebaseBackend.initialized) {
-        studentClaims = await FirebaseBackend.getApprovedClaims();
+      // Get previously seen claims for solo players to prioritize new content
+      const playerProfile = PlayerProfile.get();
+      const previouslySeenIds = playerProfile.claimsSeen || [];
+
+      // Fetch approved student-contributed claims from Firebase
+      let studentClaims = [];
+      try {
+        if (FirebaseBackend.initialized) {
+          studentClaims = await FirebaseBackend.getApprovedClaims();
+        }
+      } catch (e) {
+        console.warn('Could not fetch student claims:', e);
       }
-    } catch (e) {
-      console.warn('Could not fetch student claims:', e);
+
+      // Select claims based on difficulty and subjects, including student contributions
+      const selectedClaims = selectClaimsByDifficulty(difficulty, rounds, subjects, previouslySeenIds, studentClaims);
+
+      // Initialize sound manager with user preference
+      SoundManager.enabled = soundEnabled;
+
+      // Store pending settings and show prediction modal
+      setPendingGameSettings({
+        claims: selectedClaims,
+        rounds,
+        difficulty,
+        teamName,
+        avatar,
+        players: players || []
+      });
+      setShowPrediction(true);
+    } finally {
+      setIsPreparingGame(false);
     }
-
-    // Select claims based on difficulty and subjects, including student contributions
-    const selectedClaims = selectClaimsByDifficulty(difficulty, rounds, subjects, previouslySeenIds, studentClaims);
-
-    // Initialize sound manager with user preference
-    SoundManager.enabled = soundEnabled;
-
-    // Store pending settings and show prediction modal
-    setPendingGameSettings({
-      claims: selectedClaims,
-      rounds,
-      difficulty,
-      teamName,
-      avatar,
-      players: players || []
-    });
-    setShowPrediction(true);
   }, []);
 
   // After prediction is submitted, actually start the game
@@ -449,7 +456,7 @@ export function App() {
             Loading...
           </div>
         }>
-          {gameState.phase === 'setup' && <SetupScreen onStart={startGame} />}
+          {gameState.phase === 'setup' && <SetupScreen onStart={startGame} isLoading={isPreparingGame} />}
 
           {gameState.phase === 'playing' && gameState.currentClaim && (
             <PlayingScreen
