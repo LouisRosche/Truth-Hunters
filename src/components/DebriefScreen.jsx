@@ -19,6 +19,7 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
   const [selectedReflection, setSelectedReflection] = useState(null);
   const [reflectionResponse, setReflectionResponse] = useState('');
   const [reflectionSaved, setReflectionSaved] = useState(false);
+  const [shareStatus, setShareStatus] = useState(null); // 'copied' | 'error' | null
 
   const calibrationBonus = Math.abs(team.score - team.predictedScore) <= 2 ? 3 : 0;
   const finalScore = team.score + calibrationBonus;
@@ -78,6 +79,55 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
       SoundManager.play('tick');
     }
   }, [team, selectedReflection, reflectionResponse, reflectionPrompt, finalScore, reflectionSaved]);
+
+  // Share results handler
+  const handleShare = useCallback(async () => {
+    const correctCount = team.results.filter((r) => r.correct).length;
+    const accuracy = team.results.length > 0
+      ? Math.round((correctCount / team.results.length) * 100)
+      : 0;
+
+    const shareText = `🔍 Truth Hunters Results
+
+Team: ${team.name}
+Score: ${finalScore} points${calibrationBonus > 0 ? ' (+3 calibration bonus!)' : ''}
+Accuracy: ${correctCount}/${team.results.length} (${accuracy}%)
+Best Streak: ${gameStats.maxStreak} in a row
+${earnedAchievements.length > 0 ? `Achievements: ${earnedAchievements.map(a => a.icon + ' ' + a.name).join(', ')}` : ''}
+
+Play Truth Hunters and test your fact-checking skills!`;
+
+    try {
+      // Try native share first (mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Truth Hunters Results',
+          text: shareText
+        });
+        setShareStatus('shared');
+      } else {
+        // Fall back to clipboard
+        await navigator.clipboard.writeText(shareText);
+        setShareStatus('copied');
+        SoundManager.play('tick');
+      }
+      // Clear status after 3 seconds
+      setTimeout(() => setShareStatus(null), 3000);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        // Try clipboard as fallback
+        try {
+          await navigator.clipboard.writeText(shareText);
+          setShareStatus('copied');
+          SoundManager.play('tick');
+          setTimeout(() => setShareStatus(null), 3000);
+        } catch {
+          setShareStatus('error');
+          setTimeout(() => setShareStatus(null), 3000);
+        }
+      }
+    }
+  }, [team, finalScore, calibrationBonus, gameStats.maxStreak, earnedAchievements]);
 
   const correctCount = team.results.filter((r) => r.correct).length;
   const aiClaims = claims.filter((c) => c.source === 'ai-generated');
@@ -616,12 +666,17 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
       </div>
 
       {/* Actions */}
-      <div className="animate-in no-print" style={{ display: 'flex', gap: '1rem' }}>
-        <Button onClick={onRestart} fullWidth>
-          Play Again
-        </Button>
+      <div className="animate-in no-print" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Button onClick={onRestart} fullWidth>
+            Play Again
+          </Button>
+          <Button onClick={handleShare} variant="secondary" fullWidth>
+            {shareStatus === 'copied' ? '✓ Copied!' : shareStatus === 'shared' ? '✓ Shared!' : shareStatus === 'error' ? '✕ Failed' : '📤 Share'}
+          </Button>
+        </div>
         <Button onClick={() => window.print()} variant="secondary" fullWidth>
-          Print Results
+          🖨️ Print Results
         </Button>
       </div>
 

@@ -40,7 +40,10 @@ export function PlayingScreen({
   difficulty: _difficulty,
   currentStreak,
   onUseHint,
-  teamAvatar
+  teamAvatar,
+  isPaused,
+  previousResults = [],
+  claims = []
 }) {
   const [confidence, setConfidence] = useState(2);
   const [verdict, setVerdict] = useState(null);
@@ -55,6 +58,7 @@ export function PlayingScreen({
   const [showKeyboardHint, setShowKeyboardHint] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const [pendingNext, setPendingNext] = useState(false);
+  const [showPreviousRounds, setShowPreviousRounds] = useState(false);
 
   // Keyboard shortcuts for faster gameplay
   useEffect(() => {
@@ -255,6 +259,25 @@ export function PlayingScreen({
           >
             Round {round} of {totalRounds}
           </div>
+          {/* Previous Rounds Button */}
+          {previousResults.length > 0 && (
+            <button
+              onClick={() => setShowPreviousRounds(!showPreviousRounds)}
+              title="Review previous rounds"
+              className="mono"
+              style={{
+                padding: '0.25rem 0.5rem',
+                fontSize: '0.625rem',
+                background: showPreviousRounds ? 'var(--accent-emerald)' : 'var(--bg-elevated)',
+                color: showPreviousRounds ? 'white' : 'var(--text-muted)',
+                border: '1px solid var(--border)',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              📋 {previousResults.length}
+            </button>
+          )}
           {/* Keyboard shortcut hint toggle */}
           <button
             onClick={() => setShowKeyboardHint(prev => !prev)}
@@ -331,6 +354,91 @@ export function PlayingScreen({
               <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>Enter</span>
               <span style={{ color: 'var(--text-muted)' }}> Submit/Next</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Previous Rounds Review Panel */}
+      {showPreviousRounds && previousResults.length > 0 && (
+        <div
+          className="animate-in"
+          style={{
+            marginBottom: '0.75rem',
+            padding: '0.75rem 1rem',
+            background: 'rgba(52, 211, 153, 0.1)',
+            border: '1px solid var(--accent-emerald)',
+            borderRadius: '8px',
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+              📋 Previous Rounds
+            </span>
+            <button
+              onClick={() => setShowPreviousRounds(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {previousResults.map((result, i) => {
+              const prevClaim = claims.find(c => c.id === result.claimId);
+              return (
+                <div
+                  key={i}
+                  style={{
+                    padding: '0.5rem',
+                    background: 'var(--bg-card)',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: result.correct ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                      color: result.correct ? 'var(--correct)' : 'var(--incorrect)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      flexShrink: 0
+                    }}
+                  >
+                    {result.correct ? '✓' : '✗'}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-primary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {prevClaim?.text?.substring(0, 40) || 'Round ' + result.round}...
+                    </div>
+                    <div className="mono" style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                      {result.teamVerdict} • {'●'.repeat(result.confidence)} • {result.points >= 0 ? '+' : ''}{result.points}pts
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
