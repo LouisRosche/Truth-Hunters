@@ -20,7 +20,7 @@ import { getRandomItem, getUnseenClaimStats } from '../utils/helpers';
 // Get all available subjects
 const ALL_SUBJECTS = getSubjects();
 
-export function SetupScreen({ onStart }) {
+export function SetupScreen({ onStart, isLoading = false }) {
   // Check if returning solo player
   const existingProfile = useMemo(() => PlayerProfile.get(), []);
   const isReturningPlayer = existingProfile.stats.totalGames > 0;
@@ -292,8 +292,8 @@ export function SetupScreen({ onStart }) {
             Welcome back, <strong style={{ color: 'var(--accent-cyan)' }}>{quickStartSettings.playerName || 'Hunter'}</strong>!
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button onClick={handleQuickSoloStart} size="sm">
-              Quick Solo Play
+            <Button onClick={handleQuickSoloStart} size="sm" disabled={isLoading}>
+              {isLoading ? 'Preparing...' : 'Quick Solo Play'}
             </Button>
             <button
               onClick={() => setShowSoloStats(true)}
@@ -818,8 +818,8 @@ export function SetupScreen({ onStart }) {
         >
           {soundEnabled ? '🔊' : '🔇'}
         </button>
-        <Button onClick={handleStartGame} fullWidth size="lg" disabled={!teamName.trim()}>
-          {selectedAvatar.emoji} START MISSION →
+        <Button onClick={handleStartGame} fullWidth size="lg" disabled={!teamName.trim() || isLoading}>
+          {isLoading ? '⏳ Preparing Mission...' : `${selectedAvatar.emoji} START MISSION →`}
         </Button>
       </div>
 

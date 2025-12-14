@@ -264,6 +264,11 @@ export const FirebaseBackend = {
    * Students can submit claims for teacher review
    */
 
+  // Track recent submissions for rate limiting (in-memory, per session)
+  _recentSubmissions: [],
+  _RATE_LIMIT_WINDOW_MS: 60000, // 1 minute
+  _RATE_LIMIT_MAX: 3, // Max 3 submissions per minute
+
   /**
    * Submit a new claim for teacher review
    * @param {Object} claimData - The claim submission
@@ -290,8 +295,42 @@ export const FirebaseBackend = {
       ? claimData.difficulty
       : 'medium';
 
+    // Rate limiting check
+    const now = Date.now();
+    this._recentSubmissions = this._recentSubmissions.filter(
+      ts => now - ts < this._RATE_LIMIT_WINDOW_MS
+    );
+    if (this._recentSubmissions.length >= this._RATE_LIMIT_MAX) {
+      return { success: false, error: 'Too many submissions. Please wait a minute before submitting again.' };
+    }
+
     try {
       const classCode = this.getClassCode() || 'PUBLIC';
+      const sanitizedClaimText = sanitizeInput(claimData.claimText || '');
+      const submitterName = sanitizeInput(claimData.submitterName || 'Anonymous');
+
+      // Check for duplicate claims by same student (simple text similarity)
+      const existingClaims = await this.getStudentClaims(submitterName);
+      const normalizedNewText = sanitizedClaimText.toLowerCase().replace(/\s+/g, ' ').trim();
+      const isDuplicate = existingClaims.some(existing => {
+        const normalizedExisting = (existing.claimText || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        // Check for exact match or very high similarity (>90% same)
+        if (normalizedExisting === normalizedNewText) return true;
+        // Simple length-based similarity check
+        const shorter = Math.min(normalizedExisting.length, normalizedNewText.length);
+        const longer = Math.max(normalizedExisting.length, normalizedNewText.length);
+        if (shorter / longer > 0.9) {
+          // Check if one contains the other
+          if (normalizedExisting.includes(normalizedNewText) || normalizedNewText.includes(normalizedExisting)) {
+            return true;
+          }
+        }
+        return false;
+      });
+
+      if (isDuplicate) {
+        return { success: false, error: 'You have already submitted a similar claim.' };
+      }
 
       const docData = {
         classCode: classCode,
@@ -300,10 +339,10 @@ export const FirebaseBackend = {
         reviewedAt: null,
         reviewerNote: null,
         // Student info
-        submitterName: sanitizeInput(claimData.submitterName || 'Anonymous'),
+        submitterName: submitterName,
         submitterAvatar: claimData.submitterAvatar || '🔍',
         // Claim content
-        claimText: sanitizeInput(claimData.claimText || ''),
+        claimText: sanitizedClaimText,
         answer: claimData.answer,
         explanation: sanitizeInput(claimData.explanation || ''),
         subject: claimData.subject || 'General',
@@ -316,6 +355,10 @@ export const FirebaseBackend = {
 
       const claimsRef = collection(this.db, 'pendingClaims');
       const docRef = await addDoc(claimsRef, docData);
+
+      // Record this submission for rate limiting
+      this._recentSubmissions.push(now);
+
       return { success: true, id: docRef.id };
     } catch (e) {
       console.warn('Failed to submit claim:', e);
