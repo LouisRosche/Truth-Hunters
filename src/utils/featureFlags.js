@@ -279,29 +279,10 @@ export const enableFeature = (featureName, persist) => FeatureFlags.enable(featu
 export const disableFeature = (featureName, persist) => FeatureFlags.disable(featureName, persist);
 export const toggleFeature = (featureName, persist) => FeatureFlags.toggle(featureName, persist);
 
-/**
- * React hook for feature flags (optional)
- * Usage: const isEnabled = useFeatureFlag('enableSound');
- */
-export function useFeatureFlag(featureName) {
-  if (typeof window === 'undefined') return false;
-
-  const [isEnabled, setIsEnabled] = React.useState(() =>
-    FeatureFlags.isEnabled(featureName)
-  );
-
-  React.useEffect(() => {
-    const unsubscribe = FeatureFlags.subscribe((name, value) => {
-      if (name === featureName) {
-        setIsEnabled(value);
-      }
-    });
-
-    return unsubscribe;
-  }, [featureName]);
-
-  return isEnabled;
-}
+// Note: useFeatureFlag hook removed to avoid React dependency in utils
+// If needed, create a separate hooks/useFeatureFlag.js file with:
+// import { useState, useEffect } from 'react';
+// import { FeatureFlags } from '../utils/featureFlags';
 
 /**
  * Debug helper - print all flags to console

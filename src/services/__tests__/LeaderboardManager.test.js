@@ -15,7 +15,7 @@ const localStorageMock = (() => {
   };
 })();
 
-global.localStorage = localStorageMock;
+globalThis.localStorage = localStorageMock;
 
 // Import after mocking localStorage
 const { LeaderboardManager } = await import('../LeaderboardManager.js');

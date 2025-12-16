@@ -25,8 +25,8 @@ const localStorageMock = (() => {
   };
 })();
 
-global.sessionStorage = sessionStorageMock;
-global.localStorage = localStorageMock;
+globalThis.sessionStorage = sessionStorageMock;
+globalThis.localStorage = localStorageMock;
 
 const { SecureStorage, migrateAllToEncrypted } = await import('../encryption.js');
 

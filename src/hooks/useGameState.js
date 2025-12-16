@@ -20,7 +20,6 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { TEAM_AVATARS } from '../data/constants';
-import { ACHIEVEMENTS, getNewLifetimeAchievements } from '../data/achievements';
 import { selectClaimsByDifficulty } from '../utils/helpers';
 import { calculateGameStats } from '../utils/scoring';
 import { GameStateManager } from '../services/gameState';
@@ -287,14 +286,13 @@ async function saveGameRecord(gameState) {
   LeaderboardManager.save(record);
 
   // Save to Firebase (async, may fail)
-  FirebaseBackend.save(record).catch(err => {
+  FirebaseBackend.save(record).catch(() => {
     // If Firebase fails, queue for later
     OfflineQueue.enqueue('saveGame', record);
   });
 
   // Update player profile if solo player
   if (team.players.length === 1) {
-    const player = team.players[0];
     PlayerProfile.recordGame({
       score: team.score,
       accuracy: stats.accuracy,
