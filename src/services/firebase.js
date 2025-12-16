@@ -11,7 +11,6 @@ import {
   getDocs,
   getDoc,
   setDoc,
-  updateDoc,
   query,
   where,
   orderBy,
@@ -91,13 +90,23 @@ export const FirebaseBackend = {
 
   /**
    * Initialize Firebase with environment config
+   * Uses a flag to prevent race conditions from concurrent initialization
    */
+  _initializing: false,
+
   init() {
+    // Return cached result if already initialized
+    if (this.initialized && this.db) {
+      return true;
+    }
+
+    // Prevent concurrent initialization (race condition guard)
+    if (this._initializing) {
+      return false;
+    }
+    this._initializing = true;
+
     try {
-      // Don't reinitialize if already done
-      if (this.initialized && this.db) {
-        return true;
-      }
 
       // Check if Firebase is properly configured
       if (!this.isConfigured()) {
@@ -122,6 +131,8 @@ export const FirebaseBackend = {
     } catch (e) {
       console.warn('Failed to initialize Firebase:', e);
       return false;
+    } finally {
+      this._initializing = false;
     }
   },
 

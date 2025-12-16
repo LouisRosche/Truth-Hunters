@@ -2,31 +2,25 @@
  * Tests for encryption utilities
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock storage
-const sessionStorageMock = (() => {
+// Mock storage using vi.stubGlobal
+const createStorageMock = () => {
   let store = {};
   return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = value.toString(); },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
+    getItem: vi.fn((key) => store[key] || null),
+    setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
+    removeItem: vi.fn((key) => { delete store[key]; }),
+    clear: vi.fn(() => { store = {}; }),
+    get length() { return Object.keys(store).length; },
+    key: vi.fn((i) => Object.keys(store)[i] || null)
   };
-})();
+};
 
-const localStorageMock = (() => {
-  let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = value.toString(); },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
-  };
-})();
-
-globalThis.sessionStorage = sessionStorageMock;
-globalThis.localStorage = localStorageMock;
+const sessionStorageMock = createStorageMock();
+const localStorageMock = createStorageMock();
+vi.stubGlobal('sessionStorage', sessionStorageMock);
+vi.stubGlobal('localStorage', localStorageMock);
 
 const { SecureStorage, migrateAllToEncrypted } = await import('../encryption.js');
 

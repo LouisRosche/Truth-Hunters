@@ -110,7 +110,8 @@ describe('PlayingScreen', () => {
     const sourceHintButton = screen.getByText(/Source Check/i);
     fireEvent.click(sourceHintButton);
 
-    expect(defaultProps.onUseHint).toHaveBeenCalledWith(2); // Source check costs 2 points
+    // Source check costs 2 points and hint type is 'source-hint'
+    expect(defaultProps.onUseHint).toHaveBeenCalledWith(2, 'source-hint');
   });
 
   it('renders reasoning textarea', () => {

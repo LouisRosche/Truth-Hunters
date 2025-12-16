@@ -41,7 +41,7 @@ export function PlayingScreen({
   currentStreak,
   onUseHint,
   teamAvatar,
-  isPaused,
+  isPaused: _isPaused,
   previousResults = [],
   claims = []
 }) {
@@ -686,7 +686,7 @@ export function PlayingScreen({
                 }}
               >
                 {currentStreak >= 5 && '⭐ '}
-                {ENCOURAGEMENTS.streak[Math.min(currentStreak - 1, ENCOURAGEMENTS.streak.length - 1)] ||
+                {ENCOURAGEMENTS?.streak?.[Math.min(currentStreak - 1, (ENCOURAGEMENTS?.streak?.length || 1) - 1)] ||
                   `${currentStreak} in a row!`}
                 {currentStreak >= 5 && ' ⭐'}
               </span>

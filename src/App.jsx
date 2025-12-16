@@ -251,6 +251,13 @@ export function App() {
   // After prediction is submitted, actually start the game
   const handleStartPrediction = useCallback((prediction) => {
     if (!pendingGameSettings) return;
+    // Validate claims exist before starting
+    if (!pendingGameSettings.claims?.length) {
+      console.error('No claims available to start game');
+      setShowPrediction(false);
+      setPendingGameSettings(null);
+      return;
+    }
 
     setShowPrediction(false);
     setGameState({
@@ -366,7 +373,6 @@ export function App() {
           }
 
           // Record to player profile for solo stats tracking
-          const profileData = PlayerProfile.get();
           const maxStreak = Math.max(
             ...newResults.map((_, i) => {
               let streak = 0;
@@ -482,7 +488,7 @@ export function App() {
         };
       });
     },
-    [currentStreak]
+    [currentStreak, gameState.currentClaim?.subject]
   );
 
 

@@ -47,10 +47,6 @@ export function selectClaimsByDifficulty(difficulty, count, subjects = [], previ
     ...(classSettings?.classSeenIds || [])
   ]);
 
-  // Partition pool into unseen and seen claims
-  const unseenPool = pool.filter(c => !allSeenIds.has(c.id));
-  const seenPool = pool.filter(c => allSeenIds.has(c.id));
-
   // Track used claim IDs to prevent any duplicates within this game
   const usedIds = new Set();
   const selectedClaims = [];

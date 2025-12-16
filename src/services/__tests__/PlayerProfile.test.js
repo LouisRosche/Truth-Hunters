@@ -4,18 +4,21 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock localStorage
-const localStorageMock = (() => {
+// Mock localStorage using vi.stubGlobal
+const createStorageMock = () => {
   let store = {};
   return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = value.toString(); },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
+    getItem: vi.fn((key) => store[key] || null),
+    setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
+    removeItem: vi.fn((key) => { delete store[key]; }),
+    clear: vi.fn(() => { store = {}; }),
+    get length() { return Object.keys(store).length; },
+    key: vi.fn((i) => Object.keys(store)[i] || null)
   };
-})();
+};
 
-globalThis.localStorage = localStorageMock;
+const localStorageMock = createStorageMock();
+vi.stubGlobal('localStorage', localStorageMock);
 
 // Import after mocking
 const { PlayerProfile } = await import('../playerProfile.js');
@@ -112,135 +115,167 @@ describe('PlayerProfile', () => {
   });
 
   describe('recordGame()', () => {
-    it('should update totalGames counter', () => {
-      const gameData = {
-        rounds: [{}, {}, {}],
-        finalScore: 15,
-        maxStreak: 2
-      };
+    const createGameData = (overrides = {}) => ({
+      rounds: [
+        { correct: true, confidence: 2, points: 3 },
+        { correct: false, confidence: 3, points: -6 },
+        { correct: true, confidence: 1, points: 1 }
+      ],
+      claims: [
+        { id: 'claim1', subject: 'Biology' },
+        { id: 'claim2', subject: 'History' },
+        { id: 'claim3', subject: 'Biology' }
+      ],
+      finalScore: 15,
+      maxStreak: 2,
+      difficulty: 'medium',
+      predictedScore: 12,
+      ...overrides
+    });
 
-      PlayerProfile.recordGame(gameData);
+    it('should update totalGames counter', () => {
+      PlayerProfile.recordGame(createGameData());
 
       const profile = PlayerProfile.get();
       expect(profile.stats.totalGames).toBe(1);
     });
 
     it('should update totalRounds counter', () => {
-      const gameData = {
-        rounds: [{}, {}, {}, {}, {}],
-        finalScore: 20,
-        maxStreak: 3
-      };
-
-      PlayerProfile.recordGame(gameData);
+      PlayerProfile.recordGame(createGameData());
 
       const profile = PlayerProfile.get();
-      expect(profile.stats.totalRounds).toBe(5);
+      expect(profile.stats.totalRounds).toBe(3);
     });
 
     it('should track best score', () => {
-      PlayerProfile.recordGame({ rounds: [], finalScore: 10, maxStreak: 0 });
-      PlayerProfile.recordGame({ rounds: [], finalScore: 20, maxStreak: 0 });
-      PlayerProfile.recordGame({ rounds: [], finalScore: 15, maxStreak: 0 });
+      PlayerProfile.recordGame(createGameData({ finalScore: 10 }));
+      PlayerProfile.recordGame(createGameData({ finalScore: 20 }));
+      PlayerProfile.recordGame(createGameData({ finalScore: 15 }));
 
       const profile = PlayerProfile.get();
       expect(profile.stats.bestScore).toBe(20);
     });
 
     it('should track best streak', () => {
-      PlayerProfile.recordGame({ rounds: [], finalScore: 10, maxStreak: 2 });
-      PlayerProfile.recordGame({ rounds: [], finalScore: 10, maxStreak: 5 });
-      PlayerProfile.recordGame({ rounds: [], finalScore: 10, maxStreak: 3 });
+      PlayerProfile.recordGame(createGameData({ maxStreak: 2 }));
+      PlayerProfile.recordGame(createGameData({ maxStreak: 5 }));
+      PlayerProfile.recordGame(createGameData({ maxStreak: 3 }));
 
       const profile = PlayerProfile.get();
       expect(profile.stats.bestStreak).toBe(5);
     });
 
-    it('should increment day streak for consecutive days', () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+    it('should track correct and incorrect counts', () => {
+      PlayerProfile.recordGame(createGameData());
 
       const profile = PlayerProfile.get();
-      profile.stats.lastPlayDate = yesterday.toDateString();
-      profile.stats.currentDayStreak = 1;
-      PlayerProfile.save(profile);
-
-      PlayerProfile.recordGame({ rounds: [], finalScore: 10, maxStreak: 0 });
-
-      const updated = PlayerProfile.get();
-      expect(updated.stats.currentDayStreak).toBe(2);
+      expect(profile.stats.totalCorrect).toBe(2);
+      expect(profile.stats.totalIncorrect).toBe(1);
     });
 
-    it('should reset day streak for non-consecutive days', () => {
-      const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    it('should track claims seen', () => {
+      PlayerProfile.recordGame(createGameData());
 
       const profile = PlayerProfile.get();
-      profile.stats.lastPlayDate = threeDaysAgo.toDateString();
-      profile.stats.currentDayStreak = 5;
-      PlayerProfile.save(profile);
-
-      PlayerProfile.recordGame({ rounds: [], finalScore: 10, maxStreak: 0 });
-
-      const updated = PlayerProfile.get();
-      expect(updated.stats.currentDayStreak).toBe(1);
+      expect(profile.claimsSeen).toContain('claim1');
+      expect(profile.claimsSeen).toContain('claim2');
+      expect(profile.claimsSeen).toContain('claim3');
     });
 
     it('should update lastPlayedAt timestamp', () => {
       const before = Date.now();
-      PlayerProfile.recordGame({ rounds: [], finalScore: 10, maxStreak: 0 });
+      PlayerProfile.recordGame(createGameData());
       const after = Date.now();
 
       const profile = PlayerProfile.get();
       expect(profile.lastPlayedAt).toBeGreaterThanOrEqual(before);
       expect(profile.lastPlayedAt).toBeLessThanOrEqual(after);
     });
-  });
 
-  describe('recordClaim()', () => {
-    it('should add claim ID to claimsSeen', () => {
-      PlayerProfile.recordClaim('claim-1');
-      PlayerProfile.recordClaim('claim-2');
+    it('should track calibration stats', () => {
+      // Calibrated prediction (within +/- 2)
+      PlayerProfile.recordGame(createGameData({ finalScore: 12, predictedScore: 10 }));
 
       const profile = PlayerProfile.get();
-      expect(profile.claimsSeen).toContain('claim-1');
-      expect(profile.claimsSeen).toContain('claim-2');
-      expect(profile.claimsSeen.length).toBe(2);
+      expect(profile.stats.totalPredictions).toBe(1);
+      expect(profile.stats.calibratedPredictions).toBe(1);
     });
 
-    it('should not duplicate claim IDs', () => {
-      PlayerProfile.recordClaim('claim-1');
-      PlayerProfile.recordClaim('claim-1');
-      PlayerProfile.recordClaim('claim-1');
+    it('should update subject stats', () => {
+      PlayerProfile.recordGame(createGameData());
 
       const profile = PlayerProfile.get();
-      expect(profile.claimsSeen.length).toBe(1);
+      expect(profile.subjectStats.Biology).toBeDefined();
+      expect(profile.subjectStats.Biology.correct).toBe(2);
+      expect(profile.subjectStats.History).toBeDefined();
+      expect(profile.subjectStats.History.incorrect).toBe(1);
     });
   });
 
-  describe('hasSeenClaim()', () => {
-    it('should return false for unseen claims', () => {
-      expect(PlayerProfile.hasSeenClaim('claim-new')).toBe(false);
+  describe('awardAchievement()', () => {
+    it('should add achievement to lifetimeAchievements', () => {
+      PlayerProfile.awardAchievement('first-game');
+      PlayerProfile.awardAchievement('perfect-round');
+
+      const profile = PlayerProfile.get();
+      expect(profile.lifetimeAchievements).toContain('first-game');
+      expect(profile.lifetimeAchievements).toContain('perfect-round');
     });
 
-    it('should return true for seen claims', () => {
-      PlayerProfile.recordClaim('claim-1');
-      expect(PlayerProfile.hasSeenClaim('claim-1')).toBe(true);
+    it('should not duplicate achievements', () => {
+      PlayerProfile.awardAchievement('first-game');
+      PlayerProfile.awardAchievement('first-game');
+
+      const profile = PlayerProfile.get();
+      const count = profile.lifetimeAchievements.filter(a => a === 'first-game').length;
+      expect(count).toBe(1);
     });
   });
 
-  describe('getUnseenClaimCount()', () => {
-    it('should return total count when no claims seen', () => {
-      const count = PlayerProfile.getUnseenClaimCount(['claim-1', 'claim-2', 'claim-3']);
-      expect(count).toBe(3);
+  describe('getDisplayStats()', () => {
+    it('should return computed stats', () => {
+      const profile = PlayerProfile.get();
+      profile.stats.totalGames = 5;
+      profile.stats.totalCorrect = 8;
+      profile.stats.totalIncorrect = 2;
+      profile.stats.bestScore = 25;
+      PlayerProfile.save(profile);
+
+      const stats = PlayerProfile.getDisplayStats();
+      expect(stats.totalGames).toBe(5);
+      expect(stats.accuracy).toBe(80); // 8/10 = 80%
+      expect(stats.bestScore).toBe(25);
     });
 
-    it('should return correct unseen count', () => {
-      PlayerProfile.recordClaim('claim-1');
-      PlayerProfile.recordClaim('claim-2');
+    it('should handle zero rounds gracefully', () => {
+      const stats = PlayerProfile.getDisplayStats();
+      expect(stats.accuracy).toBe(0);
+      expect(stats.calibrationRate).toBe(0);
+    });
+  });
 
-      const count = PlayerProfile.getUnseenClaimCount(['claim-1', 'claim-2', 'claim-3', 'claim-4']);
-      expect(count).toBe(2);
+  describe('getQuickStartSettings()', () => {
+    it('should return last used settings', () => {
+      const profile = PlayerProfile.get();
+      profile.playerName = 'TestPlayer';
+      profile.avatar = { emoji: '🦊' };
+      profile.preferences.defaultDifficulty = 'hard';
+      profile.preferences.defaultRounds = 10;
+      PlayerProfile.save(profile);
+
+      const settings = PlayerProfile.getQuickStartSettings();
+      expect(settings.playerName).toBe('TestPlayer');
+      expect(settings.difficulty).toBe('hard');
+      expect(settings.rounds).toBe(10);
+    });
+  });
+
+  describe('setSoundEnabled()', () => {
+    it('should update sound preference', () => {
+      PlayerProfile.setSoundEnabled(false);
+
+      const profile = PlayerProfile.get();
+      expect(profile.preferences.soundEnabled).toBe(false);
     });
   });
 
@@ -254,121 +289,6 @@ describe('PlayerProfile', () => {
 
       PlayerProfile.clear();
       expect(PlayerProfile.exists()).toBe(false);
-    });
-  });
-
-  describe('export() and import()', () => {
-    it('should export profile as JSON', () => {
-      const profile = PlayerProfile.get();
-      profile.playerName = 'Eve';
-      profile.stats.totalGames = 10;
-      PlayerProfile.save(profile);
-
-      const exported = PlayerProfile.export();
-      expect(exported).toContain('"playerName":"Eve"');
-      expect(exported).toContain('"totalGames":10');
-    });
-
-    it('should import profile from JSON', () => {
-      const profile = PlayerProfile.get();
-      profile.playerName = 'Frank';
-      profile.stats.totalGames = 20;
-      const json = JSON.stringify(profile);
-
-      PlayerProfile.clear();
-      expect(PlayerProfile.exists()).toBe(false);
-
-      const result = PlayerProfile.import(json);
-      expect(result).toBe(true);
-
-      const imported = PlayerProfile.get();
-      expect(imported.playerName).toBe('Frank');
-      expect(imported.stats.totalGames).toBe(20);
-    });
-
-    it('should reject invalid JSON on import', () => {
-      const result = PlayerProfile.import('invalid{json}');
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('getStats()', () => {
-    it('should return current stats', () => {
-      const profile = PlayerProfile.get();
-      profile.stats.totalGames = 5;
-      profile.stats.totalPoints = 100;
-      profile.stats.bestScore = 25;
-      PlayerProfile.save(profile);
-
-      const stats = PlayerProfile.getStats();
-      expect(stats.totalGames).toBe(5);
-      expect(stats.totalPoints).toBe(100);
-      expect(stats.bestScore).toBe(25);
-    });
-
-    it('should calculate accuracy', () => {
-      const profile = PlayerProfile.get();
-      profile.stats.totalCorrect = 8;
-      profile.stats.totalIncorrect = 2;
-      PlayerProfile.save(profile);
-
-      const stats = PlayerProfile.getStats();
-      expect(stats.accuracy).toBe(0.8);
-    });
-
-    it('should handle zero rounds gracefully', () => {
-      const stats = PlayerProfile.getStats();
-      expect(stats.accuracy).toBe(0);
-    });
-  });
-
-  describe('achievement tracking', () => {
-    it('should add lifetime achievements', () => {
-      PlayerProfile.addLifetimeAchievement('first-game');
-      PlayerProfile.addLifetimeAchievement('perfect-round');
-
-      const profile = PlayerProfile.get();
-      expect(profile.lifetimeAchievements).toContain('first-game');
-      expect(profile.lifetimeAchievements).toContain('perfect-round');
-    });
-
-    it('should not duplicate achievements', () => {
-      PlayerProfile.addLifetimeAchievement('first-game');
-      PlayerProfile.addLifetimeAchievement('first-game');
-
-      const profile = PlayerProfile.get();
-      const count = profile.lifetimeAchievements.filter(a => a === 'first-game').length;
-      expect(count).toBe(1);
-    });
-
-    it('should check if achievement is earned', () => {
-      PlayerProfile.addLifetimeAchievement('master');
-
-      expect(PlayerProfile.hasAchievement('master')).toBe(true);
-      expect(PlayerProfile.hasAchievement('novice')).toBe(false);
-    });
-  });
-
-  describe('preferences', () => {
-    it('should update default difficulty', () => {
-      PlayerProfile.setPreference('defaultDifficulty', 'hard');
-
-      const profile = PlayerProfile.get();
-      expect(profile.preferences.defaultDifficulty).toBe('hard');
-    });
-
-    it('should update default rounds', () => {
-      PlayerProfile.setPreference('defaultRounds', 10);
-
-      const profile = PlayerProfile.get();
-      expect(profile.preferences.defaultRounds).toBe(10);
-    });
-
-    it('should get preference value', () => {
-      PlayerProfile.setPreference('soundEnabled', false);
-
-      const value = PlayerProfile.getPreference('soundEnabled');
-      expect(value).toBe(false);
     });
   });
 });

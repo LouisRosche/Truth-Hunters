@@ -4,21 +4,24 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock localStorage
-const localStorageMock = (() => {
+// Mock localStorage using vi.stubGlobal
+const createStorageMock = () => {
   let store = {};
   return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = value.toString(); },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
+    getItem: vi.fn((key) => store[key] || null),
+    setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
+    removeItem: vi.fn((key) => { delete store[key]; }),
+    clear: vi.fn(() => { store = {}; }),
+    get length() { return Object.keys(store).length; },
+    key: vi.fn((i) => Object.keys(store)[i] || null)
   };
-})();
+};
 
-globalThis.localStorage = localStorageMock;
+const localStorageMock = createStorageMock();
+vi.stubGlobal('localStorage', localStorageMock);
 
 // Import after mocking localStorage
-const { LeaderboardManager } = await import('../LeaderboardManager.js');
+const { LeaderboardManager } = await import('../leaderboard.js');
 
 describe('LeaderboardManager', () => {
   beforeEach(() => {

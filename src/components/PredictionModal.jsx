@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Button } from './Button';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
-export function PredictionModal({ onSubmit, totalRounds, difficulty, isStartOfGame = true }) {
+export function PredictionModal({ onSubmit, totalRounds, difficulty, isStartOfGame: _isStartOfGame = true }) {
   // Default prediction based on rounds and difficulty (rough estimate)
   const defaultPrediction = Math.round(totalRounds * 2); // Assume ~2 points per round average
   const [prediction, setPrediction] = useState(defaultPrediction);

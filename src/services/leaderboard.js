@@ -239,5 +239,33 @@ export const LeaderboardManager = {
     } catch (e) {
       console.warn('Failed to clear leaderboard:', e);
     }
+  },
+
+  /**
+   * Get leaderboard statistics
+   * @returns {Object} Statistics object
+   */
+  getStats() {
+    const records = this.getAll();
+
+    if (records.length === 0) {
+      return {
+        totalGames: 0,
+        averageScore: 0,
+        highestScore: 0,
+        averageAccuracy: 0
+      };
+    }
+
+    const totalScore = records.reduce((sum, r) => sum + (r.score || 0), 0);
+    const totalAccuracy = records.reduce((sum, r) => sum + (r.accuracy || 0), 0);
+    const highestScore = Math.max(...records.map(r => r.score || 0));
+
+    return {
+      totalGames: records.length,
+      averageScore: Math.round(totalScore / records.length),
+      highestScore,
+      averageAccuracy: totalAccuracy / records.length
+    };
   }
 };

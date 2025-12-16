@@ -4,21 +4,24 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock localStorage
-const localStorageMock = (() => {
+// Mock localStorage using vi.stubGlobal
+const createStorageMock = () => {
   let store = {};
   return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = value.toString(); },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; }
+    getItem: vi.fn((key) => store[key] || null),
+    setItem: vi.fn((key, value) => { store[key] = value.toString(); }),
+    removeItem: vi.fn((key) => { delete store[key]; }),
+    clear: vi.fn(() => { store = {}; }),
+    get length() { return Object.keys(store).length; },
+    key: vi.fn((i) => Object.keys(store)[i] || null)
   };
-})();
+};
 
-globalThis.localStorage = localStorageMock;
+const localStorageMock = createStorageMock();
+vi.stubGlobal('localStorage', localStorageMock);
 
 // Import after mocking
-const { GameStateManager } = await import('../GameStateManager.js');
+const { GameStateManager } = await import('../gameState.js');
 
 describe('GameStateManager', () => {
   beforeEach(() => {
@@ -26,32 +29,43 @@ describe('GameStateManager', () => {
     vi.clearAllMocks();
   });
 
-  describe('save()', () => {
-    it('should save game state', () => {
-      const gameState = {
-        phase: 'playing',
-        currentRound: 3,
-        totalRounds: 5,
-        teamName: 'Team Alpha',
-        score: 15,
-        claimsUsed: ['claim1', 'claim2'],
-        roundHistory: [
-          { correct: true, points: 5 },
-          { correct: false, points: -3 }
-        ]
-      };
+  // Create a valid game state that passes validation
+  const createValidGameState = (overrides = {}) => ({
+    phase: 'playing',
+    currentRound: 3,
+    totalRounds: 5,
+    claims: [{ id: 'claim1' }, { id: 'claim2' }],
+    team: {
+      name: 'Team Alpha',
+      score: 15,
+      players: [{ firstName: 'Alice', lastInitial: 'A' }]
+    },
+    ...overrides
+  });
 
+  describe('save()', () => {
+    it('should save game state when phase is playing', () => {
+      const gameState = createValidGameState();
       const result = GameStateManager.save(gameState);
       expect(result).toBe(true);
 
       const loaded = GameStateManager.load();
-      expect(loaded.phase).toBe('playing');
-      expect(loaded.currentRound).toBe(3);
-      expect(loaded.score).toBe(15);
+      expect(loaded).not.toBeNull();
+      expect(loaded.gameState.phase).toBe('playing');
+      expect(loaded.gameState.currentRound).toBe(3);
+    });
+
+    it('should not save game state when phase is not playing', () => {
+      const gameState = createValidGameState({ phase: 'setup' });
+      const result = GameStateManager.save(gameState);
+      expect(result).toBe(false);
+
+      const loaded = GameStateManager.load();
+      expect(loaded).toBeNull();
     });
 
     it('should add timestamp to saved state', () => {
-      const gameState = { phase: 'playing', score: 10 };
+      const gameState = createValidGameState();
       GameStateManager.save(gameState);
 
       const loaded = GameStateManager.load();
@@ -60,11 +74,19 @@ describe('GameStateManager', () => {
     });
 
     it('should add version to saved state', () => {
-      const gameState = { phase: 'playing', score: 10 };
+      const gameState = createValidGameState();
       GameStateManager.save(gameState);
 
       const loaded = GameStateManager.load();
       expect(loaded.version).toBe(1);
+    });
+
+    it('should save currentStreak alongside gameState', () => {
+      const gameState = createValidGameState();
+      GameStateManager.save(gameState, 5);
+
+      const loaded = GameStateManager.load();
+      expect(loaded.currentStreak).toBe(5);
     });
   });
 
@@ -75,29 +97,43 @@ describe('GameStateManager', () => {
     });
 
     it('should load saved state', () => {
-      const gameState = { phase: 'playing', score: 15 };
+      const gameState = createValidGameState();
       GameStateManager.save(gameState);
 
       const loaded = GameStateManager.load();
-      expect(loaded.score).toBe(15);
-      expect(loaded.phase).toBe('playing');
+      expect(loaded.gameState.team.score).toBe(15);
+      expect(loaded.gameState.phase).toBe('playing');
     });
 
-    it('should return null if state is too old', () => {
+    it('should return null if state is too old (24+ hours)', () => {
       const oldState = {
-        phase: 'playing',
-        score: 10,
+        version: 1,
+        gameState: createValidGameState(),
+        currentStreak: 0,
         savedAt: Date.now() - (25 * 60 * 60 * 1000) // 25 hours ago
       };
 
-      localStorage.setItem('truthHunters_gameState', JSON.stringify(oldState));
+      localStorage.setItem('truthHunters_savedGame', JSON.stringify(oldState));
 
       const loaded = GameStateManager.load();
       expect(loaded).toBeNull();
     });
 
     it('should return null for corrupted data', () => {
-      localStorage.setItem('truthHunters_gameState', 'corrupted{json');
+      localStorage.setItem('truthHunters_savedGame', 'corrupted{json');
+      const loaded = GameStateManager.load();
+      expect(loaded).toBeNull();
+    });
+
+    it('should return null for wrong version', () => {
+      const state = {
+        version: 999,
+        gameState: createValidGameState(),
+        currentStreak: 0,
+        savedAt: Date.now()
+      };
+
+      localStorage.setItem('truthHunters_savedGame', JSON.stringify(state));
       const loaded = GameStateManager.load();
       expect(loaded).toBeNull();
     });
@@ -109,25 +145,26 @@ describe('GameStateManager', () => {
     });
 
     it('should return true if valid saved game exists', () => {
-      GameStateManager.save({ phase: 'playing', score: 10 });
+      GameStateManager.save(createValidGameState());
       expect(GameStateManager.hasSavedGame()).toBe(true);
     });
 
     it('should return false if saved game is too old', () => {
       const oldState = {
-        phase: 'playing',
-        score: 10,
+        version: 1,
+        gameState: createValidGameState(),
+        currentStreak: 0,
         savedAt: Date.now() - (25 * 60 * 60 * 1000)
       };
 
-      localStorage.setItem('truthHunters_gameState', JSON.stringify(oldState));
+      localStorage.setItem('truthHunters_savedGame', JSON.stringify(oldState));
       expect(GameStateManager.hasSavedGame()).toBe(false);
     });
   });
 
   describe('clear()', () => {
     it('should clear saved state', () => {
-      GameStateManager.save({ phase: 'playing', score: 10 });
+      GameStateManager.save(createValidGameState());
       expect(GameStateManager.hasSavedGame()).toBe(true);
 
       GameStateManager.clear();
@@ -141,14 +178,7 @@ describe('GameStateManager', () => {
 
   describe('getSummary()', () => {
     it('should return summary of saved game', () => {
-      const gameState = {
-        phase: 'playing',
-        currentRound: 3,
-        totalRounds: 5,
-        teamName: 'Team Alpha',
-        score: 15
-      };
-
+      const gameState = createValidGameState();
       GameStateManager.save(gameState);
 
       const summary = GameStateManager.getSummary();
@@ -156,11 +186,20 @@ describe('GameStateManager', () => {
       expect(summary.currentRound).toBe(3);
       expect(summary.totalRounds).toBe(5);
       expect(summary.score).toBe(15);
+      expect(summary.playerCount).toBe(1);
     });
 
     it('should return null if no saved game', () => {
       const summary = GameStateManager.getSummary();
       expect(summary).toBeNull();
+    });
+
+    it('should return time ago text', () => {
+      const gameState = createValidGameState();
+      GameStateManager.save(gameState);
+
+      const summary = GameStateManager.getSummary();
+      expect(summary.timeAgoText).toBeDefined();
     });
   });
 
