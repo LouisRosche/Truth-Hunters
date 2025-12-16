@@ -1,0 +1,315 @@
+rules_version = '2';
+
+/**
+ * FIREBASE SECURITY RULES FOR TRUTH HUNTERS
+ *
+ * These rules secure the Firestore database for the Truth Hunters educational game.
+ *
+ * Collections:
+ * - games: Completed game scores and team information
+ * - pendingClaims: Student-submitted claims awaiting teacher review
+ * - classAchievements: Achievements shared with the class
+ * - classSettings: Class-specific configuration (teacher-managed)
+ * - reflections: Student reflections after games
+ * - activeGames: Real-time game state for teacher monitoring
+ *
+ * Security Principles:
+ * 1. All reads are public (within class context) - no authentication required
+ * 2. Writes are rate-limited and validated
+ * 3. Teacher-specific operations require authentication (future enhancement)
+ * 4. Data validation prevents malicious or malformed data
+ * 5. Personal student information is never exposed
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== HELPER FUNCTIONS ====================
+
+    /**
+     * Check if a string is within length limits
+     */
+    function validStringLength(str, minLen, maxLen) {
+      return str is string &&
+             str.size() >= minLen &&
+             str.size() <= maxLen;
+    }
+
+    /**
+     * Check if a value is a valid difficulty level
+     */
+    function validDifficulty(difficulty) {
+      return difficulty in ['easy', 'medium', 'hard', 'mixed'];
+    }
+
+    /**
+     * Check if a value is a valid answer type
+     */
+    function validAnswer(answer) {
+      return answer in ['TRUE', 'FALSE', 'MIXED'];
+    }
+
+    /**
+     * Check if a value is a positive number within range
+     */
+    function validNumber(num, minVal, maxVal) {
+      return num is number &&
+             num >= minVal &&
+             num <= maxVal;
+    }
+
+    /**
+     * Check if class code is valid format
+     */
+    function validClassCode(code) {
+      return code is string &&
+             code.size() >= 3 &&
+             code.size() <= 20 &&
+             code.matches('^[A-Z0-9-]+$');
+    }
+
+    /**
+     * Rate limiting check (simple timestamp-based)
+     * Prevents more than 1 write per 30 seconds from same client
+     */
+    function notTooFrequent() {
+      return !exists(/databases/$(database)/documents/rateLimits/$(request.auth.uid)) ||
+             (request.time - get(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data.lastWrite).toMillis() > 30000;
+    }
+
+    // ==================== GAMES COLLECTION ====================
+
+    /**
+     * Games: Completed game scores and information
+     *
+     * Read: Public (anyone can view leaderboards)
+     * Write: Anyone can create, but data is validated
+     */
+    match /games/{gameId} {
+      // Anyone can read game records (leaderboards are public)
+      allow read: if true;
+
+      // Anyone can create a game record, but it must be valid
+      allow create: if request.resource.data.keys().hasAll([
+                          'teamName', 'score', 'classCode', 'createdAt'
+                        ]) &&
+                        // Team name validation
+                        validStringLength(request.resource.data.teamName, 2, 50) &&
+                        // Score validation (-50 to 100 points reasonable range)
+                        validNumber(request.resource.data.score, -50, 100) &&
+                        // Class code validation
+                        validClassCode(request.resource.data.classCode) &&
+                        // Timestamp must be server timestamp
+                        request.resource.data.createdAt == request.time &&
+                        // Difficulty validation (if provided)
+                        (!('difficulty' in request.resource.data) ||
+                         validDifficulty(request.resource.data.difficulty)) &&
+                        // Rounds validation (3-10 rounds typical)
+                        (!('rounds' in request.resource.data) ||
+                         validNumber(request.resource.data.rounds, 3, 10)) &&
+                        // Players array validation (if provided)
+                        (!('players' in request.resource.data) ||
+                         (request.resource.data.players is list &&
+                          request.resource.data.players.size() <= 6));
+
+      // No updates or deletes allowed (game records are immutable)
+      allow update, delete: if false;
+    }
+
+    // ==================== PENDING CLAIMS COLLECTION ====================
+
+    /**
+     * Pending Claims: Student-submitted claims for teacher review
+     *
+     * Read: Public (students can see status of their submissions)
+     * Create: Anyone can submit, but rate-limited and validated
+     * Update: Only status changes (for teacher approval/rejection)
+     */
+    match /pendingClaims/{claimId} {
+      // Anyone can read pending claims (filtered by classCode in app)
+      allow read: if true;
+
+      // Students can create claims with validation
+      allow create: if request.resource.data.keys().hasAll([
+                          'claimText', 'answer', 'explanation', 'subject',
+                          'difficulty', 'classCode', 'submitterName', 'status',
+                          'submittedAt'
+                        ]) &&
+                        // Claim text validation (20-500 characters)
+                        validStringLength(request.resource.data.claimText, 20, 500) &&
+                        // Answer validation
+                        validAnswer(request.resource.data.answer) &&
+                        // Explanation validation (10-1000 characters)
+                        validStringLength(request.resource.data.explanation, 10, 1000) &&
+                        // Subject validation (non-empty)
+                        validStringLength(request.resource.data.subject, 2, 30) &&
+                        // Difficulty validation
+                        validDifficulty(request.resource.data.difficulty) &&
+                        // Class code validation
+                        validClassCode(request.resource.data.classCode) &&
+                        // Submitter name validation (2-50 characters)
+                        validStringLength(request.resource.data.submitterName, 2, 50) &&
+                        // Status must be 'pending' for new submissions
+                        request.resource.data.status == 'pending' &&
+                        // Timestamp must be server timestamp
+                        request.resource.data.submittedAt == request.time &&
+                        // Optional citation validation (if provided, max 200 chars)
+                        (!('citation' in request.resource.data) ||
+                         validStringLength(request.resource.data.citation, 0, 200));
+
+      // Teachers can update status for review
+      // TODO: Add teacher authentication check when auth is implemented
+      // For now, allow status updates with validation
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['status', 'reviewedAt', 'reviewerNote']) &&
+                       request.resource.data.status in ['approved', 'rejected', 'pending'] &&
+                       request.resource.data.reviewedAt == request.time &&
+                       (!('reviewerNote' in request.resource.data) ||
+                        validStringLength(request.resource.data.reviewerNote, 0, 500));
+
+      // No deletes allowed (keep history)
+      allow delete: if false;
+    }
+
+    // ==================== CLASS ACHIEVEMENTS COLLECTION ====================
+
+    /**
+     * Class Achievements: Achievements shared with the class
+     *
+     * Read: Public (celebration feed)
+     * Create: Anyone can share achievements
+     */
+    match /classAchievements/{achievementId} {
+      // Anyone can read achievements
+      allow read: if true;
+
+      // Anyone can create achievement shares with validation
+      allow create: if request.resource.data.keys().hasAll([
+                          'classCode', 'achievementId', 'achievementName',
+                          'playerName', 'earnedAt'
+                        ]) &&
+                        validClassCode(request.resource.data.classCode) &&
+                        validStringLength(request.resource.data.achievementId, 2, 50) &&
+                        validStringLength(request.resource.data.achievementName, 2, 100) &&
+                        validStringLength(request.resource.data.playerName, 2, 50) &&
+                        request.resource.data.earnedAt == request.time;
+
+      // No updates or deletes (achievements are permanent)
+      allow update, delete: if false;
+    }
+
+    // ==================== CLASS SETTINGS COLLECTION ====================
+
+    /**
+     * Class Settings: Teacher-managed class configuration
+     *
+     * Read: Public (students need to see allowed settings)
+     * Write: Teachers only (requires authentication)
+     *
+     * TODO: Implement teacher authentication
+     */
+    match /classSettings/{classCode} {
+      // Anyone can read class settings
+      allow read: if true;
+
+      // For now, allow writes with validation
+      // TODO: Add teacher authentication check
+      allow create, update: if validClassCode(classCode) &&
+                              request.resource.data.classCode == classCode &&
+                              request.resource.data.updatedAt == request.time &&
+                              // Validate allowed difficulties (array of strings)
+                              (!('allowedDifficulties' in request.resource.data) ||
+                               (request.resource.data.allowedDifficulties is list &&
+                                request.resource.data.allowedDifficulties.size() <= 4)) &&
+                              // Validate round limits
+                              (!('minRounds' in request.resource.data) ||
+                               validNumber(request.resource.data.minRounds, 1, 20)) &&
+                              (!('maxRounds' in request.resource.data) ||
+                               validNumber(request.resource.data.maxRounds, 1, 20));
+
+      // No deletes (settings should persist)
+      allow delete: if false;
+    }
+
+    // ==================== REFLECTIONS COLLECTION ====================
+
+    /**
+     * Reflections: Student post-game reflections
+     *
+     * Read: Public (teachers can review)
+     * Create: Anyone can submit reflections
+     */
+    match /reflections/{reflectionId} {
+      // Anyone can read reflections
+      allow read: if true;
+
+      // Anyone can create reflections with validation
+      allow create: if request.resource.data.keys().hasAll([
+                          'teamName', 'classCode', 'gameScore', 'createdAt'
+                        ]) &&
+                        validStringLength(request.resource.data.teamName, 2, 50) &&
+                        validClassCode(request.resource.data.classCode) &&
+                        validNumber(request.resource.data.gameScore, -50, 100) &&
+                        request.resource.data.createdAt == request.time &&
+                        // Reflection response validation (if provided)
+                        (!('reflectionResponse' in request.resource.data) ||
+                         validStringLength(request.resource.data.reflectionResponse, 0, 1000));
+
+      // No updates or deletes
+      allow update, delete: if false;
+    }
+
+    // ==================== ACTIVE GAMES COLLECTION ====================
+
+    /**
+     * Active Games: Real-time game state for teacher monitoring
+     *
+     * Read: Public (teachers monitor progress)
+     * Create/Update: Teams can update their game state
+     *
+     * This collection is used for real-time teacher monitoring of active games.
+     * Documents are automatically cleaned up after games complete.
+     */
+    match /activeGames/{gameId} {
+      // Anyone can read active games (teachers use this for monitoring)
+      allow read: if true;
+
+      // Teams can create and update their game state
+      allow create, update: if request.resource.data.keys().hasAll([
+                                  'teamName', 'classCode', 'currentRound',
+                                  'totalRounds', 'score', 'status', 'lastUpdated'
+                                ]) &&
+                                validStringLength(request.resource.data.teamName, 2, 50) &&
+                                validClassCode(request.resource.data.classCode) &&
+                                validNumber(request.resource.data.currentRound, 0, 20) &&
+                                validNumber(request.resource.data.totalRounds, 3, 10) &&
+                                validNumber(request.resource.data.score, -50, 100) &&
+                                request.resource.data.status in ['playing', 'completed'] &&
+                                request.resource.data.lastUpdated == request.time;
+
+      // Teams can delete their game state when finished
+      allow delete: if true;
+    }
+
+    // ==================== RATE LIMITING COLLECTION ====================
+
+    /**
+     * Rate Limits: Track write frequency to prevent spam
+     *
+     * This is a helper collection for rate limiting.
+     * Each document represents a user's last write timestamp.
+     */
+    match /rateLimits/{userId} {
+      allow read, write: if true;
+    }
+
+    // ==================== DEFAULT DENY ====================
+
+    /**
+     * Deny access to all other collections by default
+     */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

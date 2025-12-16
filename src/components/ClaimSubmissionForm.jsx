@@ -105,7 +105,7 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
         <h3>Claim Submitted!</h3>
         <p>Your claim has been sent to your teacher for review.</p>
         <p className="success-detail">
-          You'll see a notification when it's been approved or if feedback is needed.
+          You&apos;ll see a notification when it&apos;s been approved or if feedback is needed.
         </p>
         <button className="primary-button" onClick={onClose}>
           Done
