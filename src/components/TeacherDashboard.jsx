@@ -8,6 +8,15 @@ import { Button } from './Button';
 import { FirebaseBackend } from '../services/firebase';
 import { LeaderboardManager } from '../services/leaderboard';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { getSubjects } from '../data/claims';
+
+const ALL_SUBJECTS = getSubjects();
+const GRADE_LEVELS = [
+  { id: 'elementary', label: 'Elementary (K-5)', description: 'Ages 5-11' },
+  { id: 'middle', label: 'Middle School (6-8)', description: 'Ages 11-14' },
+  { id: 'high', label: 'High School (9-12)', description: 'Ages 14-18' },
+  { id: 'college', label: 'College/University', description: 'Ages 18+' }
+];
 
 /**
  * Export data to CSV format
@@ -58,6 +67,7 @@ export function TeacherDashboard({ onBack }) {
   const [games, setGames] = useState([]);
   const [pendingClaims, setPendingClaims] = useState([]);
   const [reviewedClaims, setReviewedClaims] = useState([]);
+  const [classAchievements, setClassAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [classCode, setClassCode] = useState(FirebaseBackend.getClassCode() || '');
@@ -67,6 +77,11 @@ export function TeacherDashboard({ onBack }) {
   const [claimFilter, setClaimFilter] = useState('pending'); // pending, approved, rejected, all
   const isOnline = useOnlineStatus();
 
+  // Class settings state
+  const [classSettings, setClassSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
   // Load data from Firebase and local storage
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -75,15 +90,19 @@ export function TeacherDashboard({ onBack }) {
     try {
       // Load from Firebase if available
       if (FirebaseBackend.initialized && isOnline) {
-        const [firebaseReflections, firebaseGames, claims] = await Promise.all([
+        const [firebaseReflections, firebaseGames, claims, settings, achievements] = await Promise.all([
           FirebaseBackend.getClassReflections(),
           FirebaseBackend.getTopTeams(100),
-          FirebaseBackend.getAllSubmittedClaims()
+          FirebaseBackend.getAllSubmittedClaims(),
+          FirebaseBackend.getClassSettings(),
+          FirebaseBackend.getClassAchievements()
         ]);
         setReflections(firebaseReflections);
         setGames(firebaseGames);
         setPendingClaims(claims.filter(c => c.status === 'pending'));
         setReviewedClaims(claims.filter(c => c.status !== 'pending'));
+        setClassSettings(settings);
+        setClassAchievements(achievements);
       } else {
         // Fallback to local storage
         const localGames = LeaderboardManager.getAll();
@@ -91,6 +110,8 @@ export function TeacherDashboard({ onBack }) {
         setReflections([]);
         setPendingClaims([]);
         setReviewedClaims([]);
+        setClassSettings(FirebaseBackend._getDefaultClassSettings());
+        setClassAchievements([]);
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -98,14 +119,65 @@ export function TeacherDashboard({ onBack }) {
       // Fallback to local
       const localGames = LeaderboardManager.getAll();
       setGames(localGames);
+      setClassSettings(FirebaseBackend._getDefaultClassSettings());
     } finally {
       setLoading(false);
     }
   }, [isOnline]);
 
+  // Set up real-time listener for pending claims
+  useEffect(() => {
+    if (!isOnline || !FirebaseBackend.initialized) return;
+
+    const unsubscribe = FirebaseBackend.subscribeToPendingClaims((claims) => {
+      setPendingClaims(claims);
+    });
+
+    return () => unsubscribe();
+  }, [isOnline]);
+
+  // Set up real-time listener for class achievements
+  useEffect(() => {
+    if (!isOnline || !FirebaseBackend.initialized) return;
+
+    const unsubscribe = FirebaseBackend.subscribeToClassAchievements((achievements) => {
+      setClassAchievements(achievements);
+    });
+
+    return () => unsubscribe();
+  }, [isOnline]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Save class settings
+  const handleSaveSettings = async () => {
+    if (!classSettings) return;
+
+    setSettingsLoading(true);
+    setError(null);
+
+    try {
+      const result = await FirebaseBackend.saveClassSettings(classSettings);
+      if (result.success) {
+        setSettingsSaved(true);
+        setTimeout(() => setSettingsSaved(false), 2000);
+      } else {
+        setError(result.error || 'Failed to save settings');
+      }
+    } catch (e) {
+      setError('Failed to save settings');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // Update a specific setting
+  const updateSetting = (key, value) => {
+    setClassSettings(prev => ({ ...prev, [key]: value }));
+    setSettingsSaved(false);
+  };
 
   // Calculate class statistics
   const stats = useMemo(() => {
@@ -323,7 +395,9 @@ export function TeacherDashboard({ onBack }) {
           { id: 'overview', label: 'Overview', icon: '📊' },
           { id: 'games', label: 'Games', icon: '🎮' },
           { id: 'reflections', label: 'Reflections', icon: '🪞' },
-          { id: 'claims', label: `Claims${pendingClaims.length > 0 ? ` (${pendingClaims.length})` : ''}`, icon: '📝' }
+          { id: 'claims', label: `Claims${pendingClaims.length > 0 ? ` (${pendingClaims.length})` : ''}`, icon: '📝' },
+          { id: 'achievements', label: 'Achievements', icon: '🏆' },
+          { id: 'settings', label: 'Settings', icon: '⚙️' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -898,6 +972,272 @@ export function TeacherDashboard({ onBack }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Achievements Tab */}
+      {!loading && activeTab === 'achievements' && (
+        <div className="animate-in">
+          <div style={{ marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              {classAchievements.length} achievement{classAchievements.length !== 1 ? 's' : ''} earned by your class
+            </span>
+          </div>
+
+          {classAchievements.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              No achievements earned yet. Students earn achievements by playing games!
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {classAchievements.map((achievement, i) => (
+                <div
+                  key={achievement.id || i}
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}
+                >
+                  <div style={{ fontSize: '2rem' }}>{achievement.achievementIcon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {achievement.achievementName}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                      {achievement.achievementDescription}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                      Earned by {achievement.playerAvatar} {achievement.playerName} • {formatDate(achievement.timestamp)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {!loading && activeTab === 'settings' && classSettings && (
+        <div className="animate-in">
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              marginBottom: '1rem'
+            }}
+          >
+            <h3 className="mono" style={{ fontSize: '1rem', color: 'var(--accent-cyan)', marginBottom: '1rem' }}>
+              Class Configuration
+            </h3>
+
+            {/* Grade Level */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                Grade Level
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {GRADE_LEVELS.map(level => (
+                  <button
+                    key={level.id}
+                    onClick={() => updateSetting('gradeLevel', level.id)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: classSettings.gradeLevel === level.id ? 'var(--accent-violet)' : 'var(--bg-elevated)',
+                      color: classSettings.gradeLevel === level.id ? 'white' : 'var(--text-secondary)',
+                      border: `1px solid ${classSettings.gradeLevel === level.id ? 'var(--accent-violet)' : 'var(--border)'}`,
+                      borderRadius: '6px',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {level.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Default Difficulty */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                Default Difficulty
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {['easy', 'medium', 'hard', 'mixed'].map(diff => (
+                  <button
+                    key={diff}
+                    onClick={() => updateSetting('defaultDifficulty', diff)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: classSettings.defaultDifficulty === diff ? 'var(--accent-emerald)' : 'var(--bg-elevated)',
+                      color: classSettings.defaultDifficulty === diff ? 'white' : 'var(--text-secondary)',
+                      border: `1px solid ${classSettings.defaultDifficulty === diff ? 'var(--accent-emerald)' : 'var(--border)'}`,
+                      borderRadius: '6px',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer',
+                      textTransform: 'capitalize'
+                    }}
+                  >
+                    {diff}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Rounds Range */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                Rounds Range: {classSettings.minRounds} - {classSettings.maxRounds}
+              </label>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Min:</span>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={classSettings.minRounds}
+                  onChange={(e) => updateSetting('minRounds', parseInt(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Max:</span>
+                <input
+                  type="range"
+                  min="3"
+                  max="20"
+                  value={classSettings.maxRounds}
+                  onChange={(e) => updateSetting('maxRounds', parseInt(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+              </div>
+            </div>
+
+            {/* Subject Filters */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                Allowed Subjects {classSettings.allowedSubjects?.length > 0 ? `(${classSettings.allowedSubjects.length} selected)` : '(All)'}
+              </label>
+              <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                {ALL_SUBJECTS.map(subject => {
+                  const isSelected = classSettings.allowedSubjects?.length === 0 || classSettings.allowedSubjects?.includes(subject);
+                  return (
+                    <button
+                      key={subject}
+                      onClick={() => {
+                        const current = classSettings.allowedSubjects || [];
+                        if (current.length === 0) {
+                          // First selection - select only this one
+                          updateSetting('allowedSubjects', [subject]);
+                        } else if (current.includes(subject)) {
+                          // Deselect - if last one, clear to "all"
+                          const newSelection = current.filter(s => s !== subject);
+                          updateSetting('allowedSubjects', newSelection);
+                        } else {
+                          // Add to selection
+                          updateSetting('allowedSubjects', [...current, subject]);
+                        }
+                      }}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        background: isSelected ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+                        color: isSelected ? 'var(--bg-deep)' : 'var(--text-muted)',
+                        border: `1px solid ${isSelected ? 'var(--accent-cyan)' : 'var(--border)'}`,
+                        borderRadius: '4px',
+                        fontSize: '0.6875rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {subject}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => updateSetting('allowedSubjects', [])}
+                style={{
+                  marginTop: '0.5rem',
+                  padding: '0.25rem 0.5rem',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Reset to All Subjects
+              </button>
+            </div>
+
+            {/* Toggles */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                Features
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[
+                  { key: 'allowStudentClaims', label: 'Allow student claim submissions' },
+                  { key: 'requireClaimCitation', label: 'Require citation for student claims' },
+                  { key: 'showLeaderboard', label: 'Show class leaderboard to students' }
+                ].map(toggle => (
+                  <label key={toggle.key} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={classSettings[toggle.key]}
+                      onChange={(e) => updateSetting(toggle.key, e.target.checked)}
+                      style={{ width: '1.25rem', height: '1.25rem' }}
+                    />
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{toggle.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Message */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                Custom Welcome Message (optional)
+              </label>
+              <textarea
+                value={classSettings.customMessage || ''}
+                onChange={(e) => updateSetting('customMessage', e.target.value)}
+                placeholder="Add a message for your students..."
+                maxLength={200}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.875rem',
+                  resize: 'vertical',
+                  minHeight: '60px'
+                }}
+              />
+            </div>
+
+            {/* Save Button */}
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <Button
+                onClick={handleSaveSettings}
+                disabled={settingsLoading || !isOnline}
+              >
+                {settingsLoading ? 'Saving...' : settingsSaved ? '✓ Saved!' : 'Save Settings'}
+              </Button>
+              {!isOnline && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-amber)' }}>
+                  Settings require an internet connection to save.
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

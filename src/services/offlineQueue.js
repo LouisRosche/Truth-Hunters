@@ -5,6 +5,9 @@
 
 const QUEUE_KEY = 'truthHunters_offlineQueue';
 
+// Listeners for queue changes
+const _listeners = new Set();
+
 /**
  * Offline Queue Manager
  * Handles queuing and syncing of Firebase operations when offline
@@ -31,14 +34,26 @@ export const OfflineQueue = {
   saveQueue(queue) {
     try {
       localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      // Notify listeners
+      _listeners.forEach(cb => cb(queue));
     } catch (e) {
       console.warn('Failed to save offline queue:', e);
     }
   },
 
   /**
+   * Subscribe to queue changes
+   * @param {Function} callback - Called when queue changes
+   * @returns {Function} Unsubscribe function
+   */
+  subscribe(callback) {
+    _listeners.add(callback);
+    return () => _listeners.delete(callback);
+  },
+
+  /**
    * Add item to queue
-   * @param {string} type - Type of operation ('game' | 'reflection')
+   * @param {string} type - Type of operation ('game' | 'reflection' | 'claim' | 'achievement')
    * @param {Object} data - Data to save
    */
   enqueue(type, data) {
@@ -99,15 +114,29 @@ export const OfflineQueue = {
 
     for (const item of queue) {
       try {
-        let saved = false;
+        let result = false;
 
-        if (item.type === 'game') {
-          saved = await FirebaseBackend.save(item.data);
-        } else if (item.type === 'reflection') {
-          saved = await FirebaseBackend.saveReflection(item.data);
+        switch (item.type) {
+          case 'game':
+            result = await FirebaseBackend.save(item.data);
+            break;
+          case 'reflection':
+            result = await FirebaseBackend.saveReflection(item.data);
+            break;
+          case 'claim':
+            const claimResult = await FirebaseBackend.submitClaim(item.data);
+            result = claimResult.success;
+            break;
+          case 'achievement':
+            const achResult = await FirebaseBackend.shareAchievement(item.data.achievement, item.data.playerInfo);
+            result = achResult.success;
+            break;
+          default:
+            console.warn(`Unknown queue item type: ${item.type}`);
+            result = false;
         }
 
-        if (saved) {
+        if (result) {
           this.dequeue(item.id);
           success++;
           console.log(`Synced queued ${item.type}`);
@@ -135,6 +164,29 @@ export const OfflineQueue = {
     this.saveQueue(this.getQueue());
 
     return { success, failed };
+  },
+
+  /**
+   * Check if there are pending items of a specific type
+   * @param {string} type - The type to check for
+   * @returns {boolean} True if there are pending items of this type
+   */
+  hasPending(type = null) {
+    const queue = this.getQueue();
+    if (!type) return queue.length > 0;
+    return queue.some(item => item.type === type);
+  },
+
+  /**
+   * Get count of pending items by type
+   * @returns {Object} Counts by type
+   */
+  getCounts() {
+    const queue = this.getQueue();
+    return queue.reduce((acc, item) => {
+      acc[item.type] = (acc[item.type] || 0) + 1;
+      return acc;
+    }, {});
   }
 };
 

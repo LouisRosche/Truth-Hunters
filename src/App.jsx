@@ -341,6 +341,35 @@ export function App() {
             PlayerProfile.awardAchievement(a.id);
           });
 
+          // Share achievements with the class (if class code is set)
+          if (FirebaseBackend.initialized && FirebaseBackend.getClassCode()) {
+            const playerInfo = {
+              playerName: updatedProfile.playerName || prev.team.name,
+              avatar: prev.team.avatar,
+              gameScore: finalScore
+            };
+
+            // Share game achievements
+            earnedAchievementIds.forEach(achievementId => {
+              const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
+              if (achievement) {
+                FirebaseBackend.shareAchievement(achievement, playerInfo).catch(e => {
+                  console.warn('Failed to share achievement:', e);
+                });
+              }
+            });
+
+            // Share newly earned lifetime achievements
+            newLifetimeAchievements.forEach(achievement => {
+              FirebaseBackend.shareAchievement({
+                ...achievement,
+                description: `${achievement.description} (Lifetime)`
+              }, playerInfo).catch(e => {
+                console.warn('Failed to share lifetime achievement:', e);
+              });
+            });
+          }
+
           return {
             ...prev,
             phase: 'debrief',

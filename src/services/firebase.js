@@ -9,16 +9,22 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
+  setDoc,
+  updateDoc,
   query,
   where,
   orderBy,
   limit,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot,
+  doc
 } from 'firebase/firestore';
 import { sanitizeInput } from '../utils/moderation';
 import { formatPlayerName } from '../utils/helpers';
 
 const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
+const FIREBASE_CLASS_SETTINGS_KEY = 'truthHunters_classSettings';
 
 // Hardcoded Firebase config - no setup needed
 const FIREBASE_CONFIG = {
@@ -662,6 +668,298 @@ export const FirebaseBackend = {
       console.warn('Failed to fetch reflections from Firebase:', e);
       return [];
     }
+  },
+
+  // ==================== REAL-TIME LISTENERS ====================
+
+  // Store active listener unsubscribe functions
+  _listeners: {},
+
+  /**
+   * Subscribe to real-time pending claims updates
+   * @param {Function} callback - Called with updated claims array
+   * @param {string} classFilter - Optional class code filter
+   * @returns {Function} Unsubscribe function
+   */
+  subscribeToPendingClaims(callback, classFilter = null) {
+    if (!this.initialized || !this.db) {
+      console.warn('Firebase not initialized for real-time subscription');
+      return () => {};
+    }
+
+    try {
+      const filterClass = classFilter || this.getClassCode();
+      const claimsRef = collection(this.db, 'pendingClaims');
+
+      let q;
+      if (filterClass) {
+        q = query(
+          claimsRef,
+          where('classCode', '==', filterClass),
+          where('status', '==', 'pending'),
+          orderBy('submittedAt', 'desc'),
+          limit(50)
+        );
+      } else {
+        q = query(
+          claimsRef,
+          where('status', '==', 'pending'),
+          orderBy('submittedAt', 'desc'),
+          limit(50)
+        );
+      }
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const claims = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().submittedAt?.toMillis() || Date.now()
+        }));
+        callback(claims);
+      }, (error) => {
+        console.warn('Real-time claims subscription error:', error);
+      });
+
+      this._listeners['pendingClaims'] = unsubscribe;
+      return unsubscribe;
+    } catch (e) {
+      console.warn('Failed to set up real-time subscription:', e);
+      return () => {};
+    }
+  },
+
+  /**
+   * Subscribe to real-time class achievements
+   * @param {Function} callback - Called with updated achievements
+   * @param {string} classFilter - Optional class code filter
+   * @returns {Function} Unsubscribe function
+   */
+  subscribeToClassAchievements(callback, classFilter = null) {
+    if (!this.initialized || !this.db) {
+      return () => {};
+    }
+
+    try {
+      const filterClass = classFilter || this.getClassCode();
+      if (!filterClass) {
+        callback([]);
+        return () => {};
+      }
+
+      const achievementsRef = collection(this.db, 'classAchievements');
+      const q = query(
+        achievementsRef,
+        where('classCode', '==', filterClass),
+        orderBy('earnedAt', 'desc'),
+        limit(50)
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const achievements = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().earnedAt?.toMillis() || Date.now()
+        }));
+        callback(achievements);
+      }, (error) => {
+        console.warn('Real-time achievements subscription error:', error);
+      });
+
+      this._listeners['classAchievements'] = unsubscribe;
+      return unsubscribe;
+    } catch (e) {
+      console.warn('Failed to set up achievements subscription:', e);
+      return () => {};
+    }
+  },
+
+  /**
+   * Unsubscribe from all real-time listeners
+   */
+  unsubscribeAll() {
+    Object.values(this._listeners).forEach(unsub => {
+      if (typeof unsub === 'function') unsub();
+    });
+    this._listeners = {};
+  },
+
+  // ==================== CLASS SETTINGS ====================
+
+  /**
+   * Get class settings from Firestore
+   * @param {string} classCode - The class code
+   */
+  async getClassSettings(classCode = null) {
+    if (!this.initialized || !this.db) {
+      return this._getDefaultClassSettings();
+    }
+
+    const code = classCode || this.getClassCode();
+    if (!code) return this._getDefaultClassSettings();
+
+    try {
+      const settingsDoc = doc(this.db, 'classSettings', code);
+      const snapshot = await getDoc(settingsDoc);
+
+      if (snapshot.exists()) {
+        return { ...this._getDefaultClassSettings(), ...snapshot.data() };
+      }
+      return this._getDefaultClassSettings();
+    } catch (e) {
+      console.warn('Failed to fetch class settings:', e);
+      return this._getDefaultClassSettings();
+    }
+  },
+
+  /**
+   * Save class settings to Firestore (teacher only)
+   * @param {Object} settings - The settings to save
+   * @param {string} classCode - The class code
+   */
+  async saveClassSettings(settings, classCode = null) {
+    if (!this.initialized || !this.db) {
+      return { success: false, error: 'Firebase not initialized' };
+    }
+
+    const code = classCode || this.getClassCode();
+    if (!code) return { success: false, error: 'No class code set' };
+
+    try {
+      const settingsDoc = doc(this.db, 'classSettings', code);
+      await setDoc(settingsDoc, {
+        ...settings,
+        classCode: code,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Cache locally
+      try {
+        localStorage.setItem(FIREBASE_CLASS_SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) { /* ignore */ }
+
+      return { success: true };
+    } catch (e) {
+      console.warn('Failed to save class settings:', e);
+      return { success: false, error: e.message };
+    }
+  },
+
+  /**
+   * Get default class settings
+   */
+  _getDefaultClassSettings() {
+    return {
+      allowedDifficulties: ['easy', 'medium', 'hard', 'mixed'],
+      allowedSubjects: [], // Empty = all subjects
+      minRounds: 3,
+      maxRounds: 10,
+      defaultRounds: 5,
+      defaultDifficulty: 'mixed',
+      allowStudentClaims: true,
+      requireClaimCitation: false,
+      showLeaderboard: true,
+      gradeLevel: 'middle', // elementary, middle, high, college
+      customMessage: ''
+    };
+  },
+
+  // ==================== ACHIEVEMENT SHARING ====================
+
+  /**
+   * Share an achievement with the class
+   * @param {Object} achievement - The achievement to share
+   * @param {Object} playerInfo - Player info (name, avatar)
+   */
+  async shareAchievement(achievement, playerInfo) {
+    if (!this.initialized || !this.db) {
+      return { success: false, error: 'Firebase not initialized' };
+    }
+
+    const classCode = this.getClassCode();
+    if (!classCode) return { success: false, error: 'No class code set' };
+
+    try {
+      const achievementsRef = collection(this.db, 'classAchievements');
+      await addDoc(achievementsRef, {
+        classCode: classCode,
+        achievementId: achievement.id,
+        achievementName: achievement.name,
+        achievementIcon: achievement.icon,
+        achievementDescription: achievement.description,
+        playerName: sanitizeInput(playerInfo.playerName || 'Anonymous'),
+        playerAvatar: playerInfo.avatar?.emoji || '🔍',
+        earnedAt: serverTimestamp(),
+        gameScore: playerInfo.gameScore || 0
+      });
+
+      return { success: true };
+    } catch (e) {
+      console.warn('Failed to share achievement:', e);
+      return { success: false, error: e.message };
+    }
+  },
+
+  /**
+   * Get recent class achievements
+   * @param {string} classFilter - Optional class code filter
+   * @param {number} limitCount - Max achievements to return
+   */
+  async getClassAchievements(classFilter = null, limitCount = 20) {
+    if (!this.initialized || !this.db) {
+      return [];
+    }
+
+    const filterClass = classFilter || this.getClassCode();
+    if (!filterClass) return [];
+
+    try {
+      const achievementsRef = collection(this.db, 'classAchievements');
+      const q = query(
+        achievementsRef,
+        where('classCode', '==', filterClass),
+        orderBy('earnedAt', 'desc'),
+        limit(limitCount)
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().earnedAt?.toMillis() || Date.now()
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch class achievements:', e);
+      return [];
+    }
+  },
+
+  /**
+   * Get class achievement stats (for leaderboard)
+   */
+  async getClassAchievementStats(classFilter = null) {
+    const achievements = await this.getClassAchievements(classFilter, 100);
+
+    // Aggregate by player
+    const playerStats = {};
+    achievements.forEach(a => {
+      const key = a.playerName.toLowerCase();
+      if (!playerStats[key]) {
+        playerStats[key] = {
+          playerName: a.playerName,
+          playerAvatar: a.playerAvatar,
+          achievementCount: 0,
+          achievements: []
+        };
+      }
+      playerStats[key].achievementCount++;
+      if (!playerStats[key].achievements.includes(a.achievementId)) {
+        playerStats[key].achievements.push(a.achievementId);
+      }
+    });
+
+    return Object.values(playerStats)
+      .sort((a, b) => b.achievements.length - a.achievements.length)
+      .slice(0, 10);
   }
 };
 
