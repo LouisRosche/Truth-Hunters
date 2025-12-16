@@ -12,6 +12,7 @@ import { calculateGameStats } from '../utils/scoring';
 import { getRandomItem } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
 import { FirebaseBackend } from '../services/firebase';
+import { Analytics, AnalyticsEvents } from '../services/analytics';
 
 export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty, teamAvatar: _teamAvatar }) {
   const [showPatterns, setShowPatterns] = useState(false);
@@ -77,6 +78,8 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
     if (saved) {
       setReflectionSaved(true);
       SoundManager.play('tick');
+      // Track reflection submission in analytics
+      Analytics.track(AnalyticsEvents.REFLECTION_SUBMITTED);
     }
   }, [team, selectedReflection, reflectionResponse, reflectionPrompt, finalScore, reflectionSaved]);
 

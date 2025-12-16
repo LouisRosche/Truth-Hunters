@@ -863,6 +863,188 @@ export const FirebaseBackend = {
     };
   },
 
+  // ==================== CLASS SEEN CLAIMS TRACKING ====================
+
+  /**
+   * Get claims that have been seen by any group in this class today
+   * Prevents different groups from getting the same claims in the same session
+   * @param {string} classCode - The class code
+   * @returns {Promise<Array<string>>} Array of claim IDs seen today
+   */
+  async getClassSeenClaims(classCode = null) {
+    if (!this.initialized || !this.db) {
+      return [];
+    }
+
+    const code = classCode || this.getClassCode();
+    if (!code) return [];
+
+    try {
+      // Get today's date as string for partitioning (resets daily)
+      const today = new Date().toISOString().split('T')[0];
+      const docId = `${code}_${today}`;
+
+      const seenDoc = doc(this.db, 'classSeenClaims', docId);
+      const snapshot = await getDoc(seenDoc);
+
+      if (snapshot.exists()) {
+        return snapshot.data().claimIds || [];
+      }
+      return [];
+    } catch (e) {
+      console.warn('Failed to fetch class seen claims:', e);
+      return [];
+    }
+  },
+
+  /**
+   * Record claims as seen by this class
+   * @param {Array<string>} claimIds - Array of claim IDs that were just played
+   * @param {string} classCode - The class code
+   */
+  async recordClassSeenClaims(claimIds, classCode = null) {
+    if (!this.initialized || !this.db) {
+      return { success: false, error: 'Firebase not initialized' };
+    }
+
+    const code = classCode || this.getClassCode();
+    if (!code || !claimIds?.length) return { success: false, error: 'Missing data' };
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const docId = `${code}_${today}`;
+
+      const seenDoc = doc(this.db, 'classSeenClaims', docId);
+      const snapshot = await getDoc(seenDoc);
+
+      let existingIds = [];
+      if (snapshot.exists()) {
+        existingIds = snapshot.data().claimIds || [];
+      }
+
+      // Merge new IDs (avoid duplicates)
+      const allIds = [...new Set([...existingIds, ...claimIds])];
+
+      await setDoc(seenDoc, {
+        classCode: code,
+        date: today,
+        claimIds: allIds,
+        updatedAt: serverTimestamp()
+      });
+
+      return { success: true };
+    } catch (e) {
+      console.warn('Failed to record class seen claims:', e);
+      return { success: false, error: e.message };
+    }
+  },
+
+  /**
+   * Clear class seen claims (for teacher to reset)
+   * @param {string} classCode - The class code
+   */
+  async clearClassSeenClaims(classCode = null) {
+    if (!this.initialized || !this.db) {
+      return { success: false, error: 'Firebase not initialized' };
+    }
+
+    const code = classCode || this.getClassCode();
+    if (!code) return { success: false, error: 'No class code' };
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const docId = `${code}_${today}`;
+      const seenDoc = doc(this.db, 'classSeenClaims', docId);
+      await setDoc(seenDoc, { classCode: code, date: today, claimIds: [], updatedAt: serverTimestamp() });
+      return { success: true };
+    } catch (e) {
+      console.warn('Failed to clear class seen claims:', e);
+      return { success: false, error: e.message };
+    }
+  },
+
+  // ==================== DATA EXPORT ====================
+
+  /**
+   * Export class game data as CSV-friendly format
+   * @param {string} classFilter - Class code to filter by
+   * @param {number} days - Number of days to include (default 30)
+   */
+  async exportClassData(classFilter = null, days = 30) {
+    if (!this.initialized || !this.db) {
+      return { success: false, error: 'Firebase not initialized', data: null };
+    }
+
+    const filterClass = classFilter || this.getClassCode();
+    if (!filterClass) return { success: false, error: 'No class code', data: null };
+
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+
+      // Fetch game records
+      const gamesRef = collection(this.db, 'games');
+      const q = query(
+        gamesRef,
+        where('classCode', '==', filterClass),
+        orderBy('timestamp', 'desc'),
+        limit(500)
+      );
+
+      const snapshot = await getDocs(q);
+      const games = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          teamName: data.teamName || 'Unknown',
+          players: (data.players || []).join(', '),
+          score: data.score || 0,
+          accuracy: data.accuracy || 0,
+          rounds: data.rounds || 0,
+          difficulty: data.difficulty || 'mixed',
+          maxStreak: data.maxStreak || 0,
+          timestamp: data.timestamp?.toDate?.()?.toISOString() || new Date().toISOString(),
+          subjects: (data.subjects || []).join(', ')
+        };
+      });
+
+      // Generate CSV content
+      const headers = ['Date', 'Team', 'Players', 'Score', 'Accuracy %', 'Rounds', 'Difficulty', 'Max Streak', 'Subjects'];
+      const rows = games.map(g => [
+        g.timestamp.split('T')[0],
+        g.teamName,
+        g.players,
+        g.score,
+        g.accuracy,
+        g.rounds,
+        g.difficulty,
+        g.maxStreak,
+        g.subjects
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      return {
+        success: true,
+        data: {
+          games,
+          csv: csvContent,
+          summary: {
+            totalGames: games.length,
+            avgScore: games.length > 0 ? Math.round(games.reduce((s, g) => s + g.score, 0) / games.length) : 0,
+            avgAccuracy: games.length > 0 ? Math.round(games.reduce((s, g) => s + g.accuracy, 0) / games.length) : 0
+          }
+        }
+      };
+    } catch (e) {
+      console.warn('Failed to export class data:', e);
+      return { success: false, error: e.message, data: null };
+    }
+  },
+
   // ==================== ACHIEVEMENT SHARING ====================
 
   /**

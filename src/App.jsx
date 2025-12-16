@@ -24,6 +24,7 @@ import { LeaderboardManager } from './services/leaderboard';
 import { FirebaseBackend } from './services/firebase';
 import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
+import { Analytics, AnalyticsEvents } from './services/analytics';
 
 export function App() {
   // Check for teacher mode via URL parameter (?teacher=true or #teacher)
@@ -192,6 +193,20 @@ export function App() {
       const playerProfile = PlayerProfile.get();
       const previouslySeenIds = playerProfile.claimsSeen || [];
 
+      // Fetch class settings and class-level seen claims for group play
+      let classSettings = null;
+      try {
+        if (FirebaseBackend.initialized && FirebaseBackend.getClassCode()) {
+          const [settings, classSeenIds] = await Promise.all([
+            FirebaseBackend.getClassSettings(),
+            FirebaseBackend.getClassSeenClaims()
+          ]);
+          classSettings = { ...settings, classSeenIds };
+        }
+      } catch (e) {
+        console.warn('Could not fetch class settings:', e);
+      }
+
       // Fetch approved student-contributed claims from Firebase
       let studentClaims = [];
       try {
@@ -202,8 +217,18 @@ export function App() {
         console.warn('Could not fetch student claims:', e);
       }
 
-      // Select claims based on difficulty and subjects, including student contributions
-      const selectedClaims = selectClaimsByDifficulty(difficulty, rounds, subjects, previouslySeenIds, studentClaims);
+      // Select claims based on difficulty, subjects, grade level, including student contributions
+      const selectedClaims = selectClaimsByDifficulty(
+        difficulty,
+        rounds,
+        subjects,
+        previouslySeenIds,
+        studentClaims,
+        classSettings
+      );
+
+      // Track game start in analytics
+      Analytics.track(AnalyticsEvents.GAME_STARTED, { difficulty, rounds });
 
       // Initialize sound manager with user preference
       SoundManager.enabled = soundEnabled;
@@ -249,8 +274,11 @@ export function App() {
     setPendingGameSettings(null);
   }, [pendingGameSettings]);
 
-  // Handle hint usage (deduct points)
-  const handleUseHint = useCallback((cost) => {
+  // Handle hint usage (deduct points and track analytics)
+  const handleUseHint = useCallback((cost, hintType = 'unknown') => {
+    // Track hint usage in analytics
+    Analytics.track(AnalyticsEvents.HINT_USED, { hintType });
+
     setGameState((prev) => ({
       ...prev,
       team: {
@@ -262,6 +290,17 @@ export function App() {
 
   const handleRoundSubmit = useCallback(
     (result) => {
+      // Track round completion in analytics
+      Analytics.track(AnalyticsEvents.ROUND_COMPLETED, {
+        correct: result.correct,
+        subject: result.subject || gameState.currentClaim?.subject
+      });
+
+      // Track streak achievements
+      if (result.correct && currentStreak >= 2) {
+        Analytics.track(AnalyticsEvents.STREAK_ACHIEVED, { streak: currentStreak + 1 });
+      }
+
       // Update streak
       if (result.correct) {
         setCurrentStreak((prev) => prev + 1);
@@ -399,7 +438,26 @@ export function App() {
                 console.warn('Failed to share lifetime achievement:', e);
               });
             });
+
+            // Record claims as seen by this class (prevents other groups from getting same claims)
+            const claimIds = prev.claims.map(c => c.id);
+            FirebaseBackend.recordClassSeenClaims(claimIds).catch(e => {
+              console.warn('Failed to record class seen claims:', e);
+            });
           }
+
+          // Track game completion in analytics
+          Analytics.track(AnalyticsEvents.GAME_COMPLETED, {
+            score: finalScore,
+            accuracy,
+            difficulty: prev.difficulty,
+            rounds: totalRounds
+          });
+
+          // Track achievements earned
+          earnedAchievementIds.forEach(achievementId => {
+            Analytics.track(AnalyticsEvents.ACHIEVEMENT_EARNED, { achievementId });
+          });
 
           return {
             ...prev,

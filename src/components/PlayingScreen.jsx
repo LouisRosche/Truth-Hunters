@@ -207,7 +207,7 @@ export function PlayingScreen({
     setActiveHint({ ...hint, content });
     setUsedHints(prev => [...prev, hintType]);
     setHintCostTotal(prev => prev + hint.cost);
-    onUseHint(hint.cost);
+    onUseHint(hint.cost, hintType);
     SoundManager.play('tick');
   };
 

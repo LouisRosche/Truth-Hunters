@@ -82,6 +82,11 @@ export function TeacherDashboard({ onBack }) {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
+  // Export state
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportData, setExportData] = useState(null);
+  const [exportError, setExportError] = useState(null);
+
   // Load data from Firebase and local storage
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -397,7 +402,8 @@ export function TeacherDashboard({ onBack }) {
           { id: 'reflections', label: 'Reflections', icon: '🪞' },
           { id: 'claims', label: `Claims${pendingClaims.length > 0 ? ` (${pendingClaims.length})` : ''}`, icon: '📝' },
           { id: 'achievements', label: 'Achievements', icon: '🏆' },
-          { id: 'settings', label: 'Settings', icon: '⚙️' }
+          { id: 'settings', label: 'Settings', icon: '⚙️' },
+          { id: 'export', label: 'Export', icon: '📥' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -1237,6 +1243,172 @@ export function TeacherDashboard({ onBack }) {
                 </span>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Tab */}
+      {!loading && activeTab === 'export' && (
+        <div className="animate-in">
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1.5rem'
+            }}
+          >
+            <h3 className="mono" style={{ fontSize: '1rem', color: 'var(--accent-cyan)', marginBottom: '1rem' }}>
+              Export Class Data
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+              Download game records, performance data, and student analytics for your class.
+            </p>
+
+            {/* Export Options */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+              <Button
+                onClick={async () => {
+                  setExportLoading(true);
+                  setExportError(null);
+                  try {
+                    const result = await FirebaseBackend.exportClassData(classCode, 30);
+                    if (result.success) {
+                      setExportData(result.data);
+                    } else {
+                      setExportError(result.error || 'Export failed');
+                    }
+                  } catch (e) {
+                    setExportError(e.message);
+                  }
+                  setExportLoading(false);
+                }}
+                disabled={exportLoading || !isOnline || !classCode}
+              >
+                {exportLoading ? 'Loading...' : '📊 Load Export Data (Last 30 Days)'}
+              </Button>
+
+              {exportData && (
+                <Button
+                  onClick={() => {
+                    const blob = new Blob([exportData.csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `truth-hunters-${classCode}-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{ background: 'var(--accent-emerald)' }}
+                >
+                  📥 Download CSV
+                </Button>
+              )}
+
+              <Button
+                onClick={async () => {
+                  const result = await FirebaseBackend.clearClassSeenClaims(classCode);
+                  if (result.success) {
+                    alert('Class seen claims cleared! Groups will now get fresh claims.');
+                  } else {
+                    alert('Failed to clear: ' + (result.error || 'Unknown error'));
+                  }
+                }}
+                disabled={!isOnline || !classCode}
+                style={{ background: 'var(--accent-amber)' }}
+              >
+                🔄 Reset Claim Pool
+              </Button>
+            </div>
+
+            {exportError && (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid var(--incorrect)',
+                  borderRadius: '6px',
+                  color: 'var(--incorrect)',
+                  fontSize: '0.875rem',
+                  marginBottom: '1rem'
+                }}
+              >
+                {exportError}
+              </div>
+            )}
+
+            {exportData && (
+              <div>
+                {/* Summary Stats */}
+                <div
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <h4 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-emerald)', marginBottom: '0.75rem' }}>
+                    Export Summary
+                  </h4>
+                  <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                        {exportData.summary.totalGames}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Games</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                        {exportData.summary.avgScore}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Avg Score</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                        {exportData.summary.avgAccuracy}%
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Avg Accuracy</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview Table */}
+                <div style={{ overflowX: 'auto' }}>
+                  <h4 className="mono" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                    Preview (First 10 rows)
+                  </h4>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-elevated)' }}>
+                        <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Date</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>Team</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Score</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>Accuracy</th>
+                        <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>Difficulty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {exportData.games.slice(0, 10).map((game, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '0.5rem' }}>{game.timestamp.split('T')[0]}</td>
+                          <td style={{ padding: '0.5rem' }}>{game.teamName}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{game.score}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{game.accuracy}%</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'center' }}>{game.difficulty}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {!classCode && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                Set a class code above to enable data export.
+              </div>
+            )}
           </div>
         </div>
       )}
