@@ -3,12 +3,12 @@
  * Game-specific helper functions for claims, roles, and player display
  */
 
-import { CLAIMS_DATABASE } from '../data/claims';
+import { CLAIMS_DATABASE, getFilteredClaims } from '../data/claims';
 import { SUBJECT_HINTS } from '../data/constants';
 import { shuffleArray } from './generic';
 
 /**
- * Select claims based on difficulty and optional subject filter
+ * Select claims based on difficulty, grade level, and optional subject filter
  * GUARANTEES no duplicate claims within a session
  * For solo players: prioritizes unseen claims until all have been seen
  *
@@ -17,24 +17,39 @@ import { shuffleArray } from './generic';
  * @param {Array<string>} subjects - Optional array of subjects to include (empty = all)
  * @param {Array<string>} previouslySeenIds - Claim IDs the player has already seen (for solo mode)
  * @param {Array<Object>} additionalClaims - Extra claims to add to the pool (e.g., student-contributed)
+ * @param {Object} classSettings - Optional class settings { gradeLevel, classSeenIds }
  * @returns {Array} Selected claims (unique, no repeats, prioritizing unseen)
  */
-export function selectClaimsByDifficulty(difficulty, count, subjects = [], previouslySeenIds = [], additionalClaims = []) {
-  // Combine base database with any additional claims (e.g., student-contributed)
-  const combinedPool = [...CLAIMS_DATABASE, ...additionalClaims];
+export function selectClaimsByDifficulty(difficulty, count, subjects = [], previouslySeenIds = [], additionalClaims = [], classSettings = null) {
+  // Use getFilteredClaims if gradeLevel is specified, otherwise use full database
+  let basePool;
+  if (classSettings?.gradeLevel) {
+    basePool = getFilteredClaims({
+      gradeLevel: classSettings.gradeLevel,
+      subject: subjects?.length === 1 ? subjects[0] : null
+    });
+  } else {
+    basePool = [...CLAIMS_DATABASE];
+  }
 
-  // Filter by subjects if specified
+  // Combine with any additional claims (e.g., student-contributed)
+  const combinedPool = [...basePool, ...additionalClaims];
+
+  // Filter by subjects if specified (and not already filtered by single subject)
   let pool = combinedPool;
-  if (subjects && subjects.length > 0) {
+  if (subjects && subjects.length > 0 && (!classSettings?.gradeLevel || subjects.length !== 1)) {
     pool = combinedPool.filter(c => subjects.includes(c.subject));
   }
 
-  // Convert previouslySeenIds to a Set for O(1) lookup
-  const seenSet = new Set(previouslySeenIds);
+  // Combine individual player seen IDs with class-level seen IDs for group play
+  const allSeenIds = new Set([
+    ...previouslySeenIds,
+    ...(classSettings?.classSeenIds || [])
+  ]);
 
   // Partition pool into unseen and seen claims
-  const unseenPool = pool.filter(c => !seenSet.has(c.id));
-  const seenPool = pool.filter(c => seenSet.has(c.id));
+  const unseenPool = pool.filter(c => !allSeenIds.has(c.id));
+  const seenPool = pool.filter(c => allSeenIds.has(c.id));
 
   // Track used claim IDs to prevent any duplicates within this game
   const usedIds = new Set();
@@ -43,8 +58,8 @@ export function selectClaimsByDifficulty(difficulty, count, subjects = [], previ
   // Helper to select unique claims, prioritizing unseen
   const selectUnique = (sourcePool, maxCount, preferUnseen = true) => {
     // Split source into unseen and seen
-    const unseen = preferUnseen ? sourcePool.filter(c => !seenSet.has(c.id)) : [];
-    const seen = preferUnseen ? sourcePool.filter(c => seenSet.has(c.id)) : sourcePool;
+    const unseen = preferUnseen ? sourcePool.filter(c => !allSeenIds.has(c.id)) : [];
+    const seen = preferUnseen ? sourcePool.filter(c => allSeenIds.has(c.id)) : sourcePool;
 
     const shuffledUnseen = shuffleArray([...unseen]);
     const shuffledSeen = shuffleArray([...seen]);

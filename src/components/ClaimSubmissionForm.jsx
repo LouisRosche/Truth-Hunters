@@ -1,10 +1,12 @@
 /**
  * CLAIM SUBMISSION FORM
  * Allows students to submit new claims for teacher review
+ * Supports offline submission via queue
  */
 
 import { useState, useEffect } from 'react';
 import { FirebaseBackend } from '../services/firebase';
+import { OfflineQueue } from '../services/offlineQueue';
 import { PlayerProfile } from '../services/playerProfile';
 import { SUBJECT_HINTS } from '../data/constants';
 
@@ -36,7 +38,9 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [queuedOffline, setQueuedOffline] = useState(false);
   const [playerInfo, setPlayerInfo] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     const profile = PlayerProfile.get();
@@ -46,6 +50,16 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
         avatar: profile.avatar?.emoji || '🔍'
       });
     }
+
+    // Track online/offline status
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const handleSubmit = async (e) => {
@@ -84,15 +98,42 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
       submitterAvatar: playerInfo?.avatar || '🔍'
     };
 
-    const result = await FirebaseBackend.submitClaim(claimData);
-
-    if (result.success) {
+    // If offline, queue the claim for later submission
+    if (!isOnline || !FirebaseBackend.initialized) {
+      OfflineQueue.enqueue('claim', claimData);
+      setQueuedOffline(true);
       setSuccess(true);
       if (onSubmitSuccess) {
         onSubmitSuccess(claimData);
       }
-    } else {
-      setError(result.error || 'Failed to submit claim. Please try again.');
+      setSubmitting(false);
+      return;
+    }
+
+    // Try online submission
+    try {
+      const result = await FirebaseBackend.submitClaim(claimData);
+
+      if (result.success) {
+        setSuccess(true);
+        if (onSubmitSuccess) {
+          onSubmitSuccess(claimData);
+        }
+      } else {
+        // If online submission fails, queue for later
+        if (!navigator.onLine) {
+          OfflineQueue.enqueue('claim', claimData);
+          setQueuedOffline(true);
+          setSuccess(true);
+        } else {
+          setError(result.error || 'Failed to submit claim. Please try again.');
+        }
+      }
+    } catch (e) {
+      // Network error - queue offline
+      OfflineQueue.enqueue('claim', claimData);
+      setQueuedOffline(true);
+      setSuccess(true);
     }
 
     setSubmitting(false);
@@ -101,12 +142,23 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
   if (success) {
     return (
       <div className="claim-submission-success">
-        <div className="success-icon">🎉</div>
-        <h3>Claim Submitted!</h3>
-        <p>Your claim has been sent to your teacher for review.</p>
-        <p className="success-detail">
-          You&apos;ll see a notification when it&apos;s been approved or if feedback is needed.
+        <div className="success-icon">{queuedOffline ? '📤' : '🎉'}</div>
+        <h3>{queuedOffline ? 'Claim Saved!' : 'Claim Submitted!'}</h3>
+        <p>
+          {queuedOffline
+            ? 'Your claim has been saved and will be submitted when you\'re back online.'
+            : 'Your claim has been sent to your teacher for review.'}
         </p>
+        <p className="success-detail">
+          {queuedOffline
+            ? 'Don\'t worry - your claim is safe! It will sync automatically.'
+            : 'You\'ll see a notification when it\'s been approved or if feedback is needed.'}
+        </p>
+        {queuedOffline && (
+          <div className="offline-badge">
+            <span>📡</span> Waiting for connection...
+          </div>
+        )}
         <button className="primary-button" onClick={onClose}>
           Done
         </button>
@@ -128,6 +180,17 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
             color: var(--text-secondary);
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
+          }
+          .offline-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--accent-amber);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
           }
         `}</style>
       </div>
