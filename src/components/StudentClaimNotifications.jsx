@@ -94,7 +94,7 @@ export function StudentClaimNotifications({ onClose }) {
     <div className="claim-notifications">
       <div className="notifications-header">
         <h3>Your Submitted Claims</h3>
-        <p className="subtitle">Track the status of claims you've submitted for review</p>
+        <p className="subtitle">Track the status of claims you&apos;ve submitted for review</p>
       </div>
 
       {error && (
@@ -109,7 +109,7 @@ export function StudentClaimNotifications({ onClose }) {
       {!error && claims.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📝</div>
-          <p>You haven't submitted any claims yet.</p>
+          <p>You haven&apos;t submitted any claims yet.</p>
           <p className="hint">Submit a claim to challenge your classmates!</p>
         </div>
       ) : !error && (

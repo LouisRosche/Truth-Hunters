@@ -342,7 +342,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
               fontSize: '0.6875rem',
               color: 'var(--accent-violet)'
             }}>
-              🌟 You've seen all {unseenStats.total} claims! Ready for a fresh challenge?
+              🌟 You&apos;ve seen all {unseenStats.total} claims! Ready for a fresh challenge?
             </div>
           )}
         </div>

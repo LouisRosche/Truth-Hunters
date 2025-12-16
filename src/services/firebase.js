@@ -26,14 +26,15 @@ import { formatPlayerName } from '../utils/helpers';
 const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
 const FIREBASE_CLASS_SETTINGS_KEY = 'truthHunters_classSettings';
 
-// Hardcoded Firebase config - no setup needed
+// Firebase configuration from environment variables
+// SECURITY: Never hardcode API keys in source code
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyC26tRrNxPR2CPshuXG91k6vNWGXpo-NYk",
-  authDomain: "truth-hunters-classroom.firebaseapp.com",
-  projectId: "truth-hunters-classroom",
-  storageBucket: "truth-hunters-classroom.firebasestorage.app",
-  messagingSenderId: "694501248854",
-  appId: "1:694501248854:web:e7a183e2cae3323b8e10f7"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 /**
@@ -50,7 +51,15 @@ export const FirebaseBackend = {
    * Check if Firebase is available and configured
    */
   isConfigured() {
-    return true; // Always configured now
+    // Check if all required Firebase config values are present
+    return !!(
+      FIREBASE_CONFIG.apiKey &&
+      FIREBASE_CONFIG.authDomain &&
+      FIREBASE_CONFIG.projectId &&
+      FIREBASE_CONFIG.storageBucket &&
+      FIREBASE_CONFIG.messagingSenderId &&
+      FIREBASE_CONFIG.appId
+    );
   },
 
   /**
@@ -81,13 +90,19 @@ export const FirebaseBackend = {
   },
 
   /**
-   * Initialize Firebase with hardcoded config
+   * Initialize Firebase with environment config
    */
   init() {
     try {
       // Don't reinitialize if already done
       if (this.initialized && this.db) {
         return true;
+      }
+
+      // Check if Firebase is properly configured
+      if (!this.isConfigured()) {
+        console.warn('Firebase configuration missing. Please set VITE_FIREBASE_* environment variables.');
+        return false;
       }
 
       // Initialize Firebase app if not already initialized

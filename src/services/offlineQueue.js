@@ -123,14 +123,16 @@ export const OfflineQueue = {
           case 'reflection':
             result = await FirebaseBackend.saveReflection(item.data);
             break;
-          case 'claim':
+          case 'claim': {
             const claimResult = await FirebaseBackend.submitClaim(item.data);
             result = claimResult.success;
             break;
-          case 'achievement':
+          }
+          case 'achievement': {
             const achResult = await FirebaseBackend.shareAchievement(item.data.achievement, item.data.playerInfo);
             result = achResult.success;
             break;
+          }
           default:
             console.warn(`Unknown queue item type: ${item.type}`);
             result = false;
