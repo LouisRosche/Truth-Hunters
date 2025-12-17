@@ -210,7 +210,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
             background: presentationMode ? 'rgba(34, 211, 238, 0.2)' : 'transparent',
             border: `1px solid ${presentationMode ? 'var(--accent-cyan)' : 'var(--border)'}`,
             borderRadius: '6px',
-            fontSize: '0.75rem',
+            fontSize: '0.6875rem',
             color: presentationMode ? 'var(--accent-cyan)' : 'var(--text-muted)',
             cursor: 'pointer',
             display: 'flex',
@@ -220,8 +220,8 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
             minHeight: '36px'
           }}
         >
-          <span style={{ fontSize: '1.125rem' }}>{presentationMode ? '📺' : '👓'}</span>
-          <span style={{ display: 'none' }} className="show-on-wide">{presentationMode ? 'Large' : 'Normal'}</span>
+          <span style={{ fontSize: '1rem' }}>{presentationMode ? '📺' : '👓'}</span>
+          <span>{presentationMode ? 'Large' : 'Group'}</span>
         </button>
 
         {phase !== 'setup' && phase !== 'debrief' && (

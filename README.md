@@ -18,7 +18,7 @@ Truth Hunters helps students learn to:
 - **94 curated claims** across 11 subjects (Biology, History, Physics, and more)
 - **Progressive difficulty** system (easy, medium, hard, or mixed)
 - **Calibration-based tips** that help students learn from their confidence patterns
-- **Confidence staking** with risk/reward scoring (+1/-1, +3/-3, +5/-6)
+- **Confidence staking** with risk/reward scoring
 - **Hints system** that costs points but helps learning
 - **Achievements** for various accomplishments
 - **Local leaderboards** with optional Firebase class-wide support
@@ -174,10 +174,11 @@ For class-wide leaderboards:
 | Confidence | Correct | Incorrect |
 |------------|---------|-----------|
 | Low (●○○)  | +1      | -1        |
-| Medium (●●○)| +3      | -3        |
-| High (●●●) | +5      | -6        |
+| Medium (●●○)| +2      | -1        |
+| High (●●●) | +3      | -2        |
 
 **Calibration Bonus**: +3 points if your predicted final score is within ±2 of actual.
+**Hints**: Using hints costs points (-1 each) but helps learning.
 
 ## Development
 

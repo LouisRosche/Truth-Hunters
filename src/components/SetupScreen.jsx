@@ -348,96 +348,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
         </div>
       )}
 
-      {/* Leaderboard Button - shown on mobile only (desktop has sidebar) */}
-      <div className="leaderboard-mobile-btn animate-in" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setShowLeaderboard(true)}
-          className="mono"
-          style={{
-            padding: '0.5rem 1rem',
-            background: 'rgba(251, 191, 36, 0.15)',
-            border: '1px solid var(--accent-amber)',
-            borderRadius: '6px',
-            color: 'var(--accent-amber)',
-            fontSize: '0.75rem',
-            cursor: 'pointer'
-          }}
-        >
-          🏆 Leaderboard
-        </button>
-        {!isReturningPlayer && (
-          <button
-            onClick={() => setShowSoloStats(true)}
-            className="mono"
-            style={{
-              padding: '0.5rem 1rem',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              color: 'var(--text-secondary)',
-              fontSize: '0.75rem',
-              cursor: 'pointer'
-            }}
-          >
-            📊 My Stats
-          </button>
-        )}
-      </div>
-
-      {/* Contribute Claims Section */}
-      <div
-        className="animate-in"
-        style={{
-          background: 'linear-gradient(135deg, rgba(167, 139, 250, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%)',
-          border: '1px solid var(--accent-violet)',
-          borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '1rem',
-          textAlign: 'center'
-        }}
-      >
-        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '1rem' }}>✨</span> Help build the game!
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setShowClaimSubmission(true)}
-            className="mono"
-            style={{
-              padding: '0.5rem 1rem',
-              background: 'var(--accent-violet)',
-              border: 'none',
-              borderRadius: '6px',
-              color: 'white',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            📝 Submit a Claim
-          </button>
-          <button
-            onClick={() => setShowMySubmissions(true)}
-            className="mono"
-            style={{
-              padding: '0.5rem 1rem',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              color: 'var(--text-secondary)',
-              fontSize: '0.75rem',
-              cursor: 'pointer'
-            }}
-          >
-            📋 My Submissions
-          </button>
-        </div>
-        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-          Submit claims for your teacher to review. Approved claims get added to the game!
-        </div>
-      </div>
-
-      {/* How To Play */}
+      {/* How To Play - collapsed by default */}
       <div
         className="animate-in"
         style={{
@@ -846,17 +757,92 @@ export function SetupScreen({ onStart, isLoading = false }) {
         </div>
       )}
 
+      {/* Secondary Actions - consolidated below START */}
+      <div
+        className="leaderboard-mobile-btn animate-in"
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '0.375rem',
+          marginBottom: '0.75rem',
+          flexWrap: 'wrap'
+        }}
+      >
+        <button
+          onClick={() => setShowLeaderboard(true)}
+          className="mono"
+          style={{
+            padding: '0.375rem 0.625rem',
+            background: 'rgba(251, 191, 36, 0.1)',
+            border: '1px solid var(--accent-amber)',
+            borderRadius: '5px',
+            color: 'var(--accent-amber)',
+            fontSize: '0.625rem',
+            cursor: 'pointer'
+          }}
+        >
+          🏆 Leaderboard
+        </button>
+        {!isReturningPlayer && (
+          <button
+            onClick={() => setShowSoloStats(true)}
+            className="mono"
+            style={{
+              padding: '0.375rem 0.625rem',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: '5px',
+              color: 'var(--text-muted)',
+              fontSize: '0.625rem',
+              cursor: 'pointer'
+            }}
+          >
+            📊 Stats
+          </button>
+        )}
+        <button
+          onClick={() => setShowClaimSubmission(true)}
+          className="mono"
+          style={{
+            padding: '0.375rem 0.625rem',
+            background: 'rgba(167, 139, 250, 0.1)',
+            border: '1px solid var(--accent-violet)',
+            borderRadius: '5px',
+            color: 'var(--accent-violet)',
+            fontSize: '0.625rem',
+            cursor: 'pointer'
+          }}
+        >
+          ✨ Submit Claim
+        </button>
+        <button
+          onClick={() => setShowMySubmissions(true)}
+          className="mono"
+          style={{
+            padding: '0.375rem 0.625rem',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: '5px',
+            color: 'var(--text-muted)',
+            fontSize: '0.625rem',
+            cursor: 'pointer'
+          }}
+        >
+          📋 Submissions
+        </button>
+      </div>
+
       {/* Tip */}
       <div
         className="animate-in"
         style={{
-          padding: '0.75rem',
+          padding: '0.5rem 0.75rem',
           background: 'var(--bg-elevated)',
           borderRadius: '6px',
           textAlign: 'center'
         }}
       >
-        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
           💡 {getRandomItem(EDUCATIONAL_TIPS).tip}
         </div>
       </div>

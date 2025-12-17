@@ -600,6 +600,8 @@ export function App() {
               isPaused={isPaused}
               previousResults={gameState.team.results}
               claims={gameState.claims}
+              currentScore={gameState.team.score}
+              predictedScore={gameState.team.predictedScore}
             />
           )}
 

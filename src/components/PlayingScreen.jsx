@@ -43,7 +43,9 @@ export function PlayingScreen({
   teamAvatar,
   isPaused: _isPaused,
   previousResults = [],
-  claims = []
+  claims = [],
+  currentScore = 0,
+  predictedScore = 0
 }) {
   const [confidence, setConfidence] = useState(2);
   const [verdict, setVerdict] = useState(null);
@@ -237,7 +239,44 @@ export function PlayingScreen({
         />
       </div>
 
-      {/* Top Bar: Round + Streak */}
+      {/* Calibration Tracker - shows predicted vs current score */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginBottom: '0.75rem'
+        }}
+      >
+        <div
+          className="mono"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.375rem 0.75rem',
+            background: 'var(--bg-elevated)',
+            borderRadius: '6px',
+            fontSize: '0.6875rem'
+          }}
+        >
+          <span style={{ color: 'var(--text-muted)' }}>
+            Predicted: <span style={{ color: 'var(--accent-violet)' }}>{predictedScore}</span>
+          </span>
+          <span style={{ color: 'var(--border)' }}>|</span>
+          <span style={{ color: 'var(--text-muted)' }}>
+            Current: <span style={{ color: currentScore >= 0 ? 'var(--correct)' : 'var(--incorrect)' }}>{currentScore >= 0 ? '+' : ''}{currentScore}</span>
+          </span>
+          <span style={{ color: 'var(--border)' }}>|</span>
+          <span style={{
+            color: Math.abs(currentScore - predictedScore) <= 2 ? 'var(--correct)' : 'var(--accent-amber)',
+            fontWeight: Math.abs(currentScore - predictedScore) <= 2 ? 600 : 400
+          }}>
+            {Math.abs(currentScore - predictedScore) <= 2 ? '✓ On track' : `${currentScore > predictedScore ? '+' : ''}${currentScore - predictedScore} off`}
+          </span>
+        </div>
+      </div>
+
+      {/* Top Bar: Round + Streak + Quick Actions */}
       <div
         style={{
           display: 'flex',
@@ -246,54 +285,52 @@ export function PlayingScreen({
           marginBottom: '1rem'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <div
             className="mono"
             style={{
-              padding: '0.25rem 0.75rem',
-              fontSize: '0.75rem',
+              padding: '0.25rem 0.5rem',
+              fontSize: '0.6875rem',
               background: 'var(--bg-elevated)',
               borderRadius: '4px',
               color: 'var(--text-secondary)'
             }}
           >
-            Round {round} of {totalRounds}
+            {round}/{totalRounds}
           </div>
-          {/* Previous Rounds Button */}
           {previousResults.length > 0 && (
             <button
               onClick={() => setShowPreviousRounds(!showPreviousRounds)}
               title="Review previous rounds"
               className="mono"
               style={{
-                padding: '0.25rem 0.5rem',
+                padding: '0.25rem 0.375rem',
                 fontSize: '0.625rem',
-                background: showPreviousRounds ? 'var(--accent-emerald)' : 'var(--bg-elevated)',
+                background: showPreviousRounds ? 'var(--accent-emerald)' : 'transparent',
                 color: showPreviousRounds ? 'white' : 'var(--text-muted)',
-                border: '1px solid var(--border)',
+                border: `1px solid ${showPreviousRounds ? 'var(--accent-emerald)' : 'var(--border)'}`,
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}
             >
-              📋 {previousResults.length}
+              📋
             </button>
           )}
-          {/* Keyboard shortcut hint toggle */}
           <button
             onClick={() => setShowKeyboardHint(prev => !prev)}
-            title="Keyboard shortcuts (press ? to toggle)"
+            title="Keyboard: T/F/M for verdict, 1-3 for confidence, Enter to submit"
             className="mono"
             style={{
-              padding: '0.25rem 0.5rem',
+              padding: '0.25rem 0.375rem',
               fontSize: '0.625rem',
-              background: showKeyboardHint ? 'var(--accent-violet)' : 'var(--bg-elevated)',
+              background: showKeyboardHint ? 'var(--accent-violet)' : 'transparent',
               color: showKeyboardHint ? 'white' : 'var(--text-muted)',
-              border: '1px solid var(--border)',
+              border: `1px solid ${showKeyboardHint ? 'var(--accent-violet)' : 'var(--border)'}`,
               borderRadius: '4px',
               cursor: 'pointer'
             }}
           >
-            ⌨️
+            ⌨
           </button>
         </div>
 
@@ -304,141 +341,80 @@ export function PlayingScreen({
             aria-live="polite"
             aria-label={`${currentStreak} correct answers in a row`}
             style={{
-              padding: currentStreak >= 5 ? '0.375rem 0.875rem' : '0.25rem 0.625rem',
+              padding: '0.25rem 0.5rem',
               background: currentStreak >= 5
                 ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(239, 68, 68, 0.2) 100%)'
                 : 'rgba(251, 191, 36, 0.15)',
               border: `1px solid ${currentStreak >= 5 ? 'var(--accent-rose)' : 'var(--accent-amber)'}`,
               borderRadius: '4px',
-              fontSize: currentStreak >= 5 ? '0.875rem' : '0.75rem',
+              fontSize: '0.75rem',
               color: currentStreak >= 5 ? 'var(--accent-rose)' : 'var(--accent-amber)',
-              fontWeight: currentStreak >= 5 ? 700 : 400,
-              boxShadow: currentStreak >= 5 ? '0 0 12px rgba(251, 191, 36, 0.4)' : 'none'
+              fontWeight: currentStreak >= 5 ? 700 : 400
             }}
           >
-            {currentStreak >= 5 ? '🔥🔥🔥' : '🔥'} {currentStreak} streak{currentStreak >= 5 ? '!' : ''}
+            🔥 {currentStreak}
           </div>
         )}
       </div>
 
-      {/* Keyboard Shortcuts Panel */}
+      {/* Compact Keyboard Hints - inline */}
       {showKeyboardHint && (
         <div
-          className="animate-in"
+          className="animate-in mono"
           style={{
             marginBottom: '0.75rem',
-            padding: '0.75rem 1rem',
-            background: 'rgba(167, 139, 250, 0.1)',
-            border: '1px solid var(--accent-violet)',
-            borderRadius: '8px'
+            padding: '0.5rem 0.75rem',
+            background: 'rgba(167, 139, 250, 0.08)',
+            border: '1px solid rgba(167, 139, 250, 0.3)',
+            borderRadius: '6px',
+            fontSize: '0.625rem',
+            color: 'var(--text-muted)',
+            textAlign: 'center'
           }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.75rem' }}>
-            <div>
-              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>T</span>
-              <span style={{ color: 'var(--text-muted)' }}> TRUE</span>
-            </div>
-            <div>
-              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>F</span>
-              <span style={{ color: 'var(--text-muted)' }}> FALSE</span>
-            </div>
-            <div>
-              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>M</span>
-              <span style={{ color: 'var(--text-muted)' }}> MIXED</span>
-            </div>
-            <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1rem' }}>
-              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>1-3</span>
-              <span style={{ color: 'var(--text-muted)' }}> Confidence</span>
-            </div>
-            <div>
-              <span className="mono" style={{ color: 'var(--accent-violet)', fontWeight: 600 }}>Enter</span>
-              <span style={{ color: 'var(--text-muted)' }}> Submit/Next</span>
-            </div>
-          </div>
+          <span style={{ color: 'var(--accent-violet)' }}>T</span>rue
+          <span style={{ color: 'var(--accent-violet)' }}> F</span>alse
+          <span style={{ color: 'var(--accent-violet)' }}> M</span>ixed
+          {' · '}
+          <span style={{ color: 'var(--accent-violet)' }}>1-3</span> confidence
+          {' · '}
+          <span style={{ color: 'var(--accent-violet)' }}>Enter</span> submit
         </div>
       )}
 
-      {/* Previous Rounds Review Panel */}
+      {/* Previous Rounds - compact dropdown */}
       {showPreviousRounds && previousResults.length > 0 && (
         <div
           className="animate-in"
           style={{
             marginBottom: '0.75rem',
-            padding: '0.75rem 1rem',
-            background: 'rgba(52, 211, 153, 0.1)',
-            border: '1px solid var(--accent-emerald)',
-            borderRadius: '8px',
-            maxHeight: '200px',
+            padding: '0.5rem',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: '6px',
+            maxHeight: '150px',
             overflowY: 'auto'
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-              📋 Previous Rounds
-            </span>
-            <button
-              onClick={() => setShowPreviousRounds(false)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}
-            >
-              ✕
-            </button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {previousResults.map((result, i) => {
-              const prevClaim = claims.find(c => c.id === result.claimId);
-              return (
-                <div
-                  key={i}
-                  style={{
-                    padding: '0.5rem',
-                    background: 'var(--bg-card)',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      background: result.correct ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                      color: result.correct ? 'var(--correct)' : 'var(--incorrect)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      flexShrink: 0
-                    }}
-                  >
-                    {result.correct ? '✓' : '✗'}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: '0.75rem',
-                        color: 'var(--text-primary)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}
-                    >
-                      {prevClaim?.text?.substring(0, 40) || 'Round ' + result.round}...
-                    </div>
-                    <div className="mono" style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
-                      {result.teamVerdict} • {'●'.repeat(result.confidence)} • {result.points >= 0 ? '+' : ''}{result.points}pts
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+            {previousResults.map((result, i) => (
+              <div
+                key={i}
+                title={claims.find(c => c.id === result.claimId)?.text || `Round ${i + 1}`}
+                className="mono"
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: result.correct ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  border: `1px solid ${result.correct ? 'var(--correct)' : 'var(--incorrect)'}`,
+                  borderRadius: '4px',
+                  fontSize: '0.625rem',
+                  color: result.correct ? 'var(--correct)' : 'var(--incorrect)',
+                  cursor: 'help'
+                }}
+              >
+                R{i + 1} {result.correct ? '✓' : '✗'} {result.points >= 0 ? '+' : ''}{result.points}
+              </div>
+            ))}
           </div>
         </div>
       )}
