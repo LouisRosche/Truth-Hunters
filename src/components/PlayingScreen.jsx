@@ -123,7 +123,7 @@ export function PlayingScreen({
       setPendingSubmit(false);
       // Trigger submit logic inline
       const correct = verdict === claim.answer;
-      const points = calculatePoints(correct, confidence);
+      const points = calculatePoints(correct, confidence, _difficulty);
       SoundManager.play(correct ? 'correct' : 'incorrect');
       const msgs = correct ? ENCOURAGEMENTS.correct : ENCOURAGEMENTS.incorrect;
       setEncouragement(getRandomItem(msgs) || (correct ? 'Nice work!' : 'Keep trying!'));
@@ -164,7 +164,7 @@ export function PlayingScreen({
     if (!verdict || !claim) return;
 
     const correct = verdict === claim.answer;
-    const points = calculatePoints(correct, confidence);
+    const points = calculatePoints(correct, confidence, _difficulty);
 
     SoundManager.play(correct ? 'correct' : 'incorrect');
 

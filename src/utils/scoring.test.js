@@ -6,28 +6,73 @@ import { describe, it, expect } from 'vitest';
 import { calculatePoints, calculateGameStats } from './scoring';
 
 describe('calculatePoints', () => {
-  it('returns +1 for correct answer with low confidence', () => {
-    expect(calculatePoints(true, 1)).toBe(1);
+  describe('base points (easy difficulty)', () => {
+    it('returns +1 for correct answer with low confidence', () => {
+      expect(calculatePoints(true, 1)).toBe(1);
+      expect(calculatePoints(true, 1, 'easy')).toBe(1);
+    });
+
+    it('returns -1 for incorrect answer with low confidence', () => {
+      expect(calculatePoints(false, 1)).toBe(-1);
+      expect(calculatePoints(false, 1, 'easy')).toBe(-1);
+    });
+
+    it('returns +3 for correct answer with medium confidence', () => {
+      expect(calculatePoints(true, 2)).toBe(3);
+      expect(calculatePoints(true, 2, 'easy')).toBe(3);
+    });
+
+    it('returns -3 for incorrect answer with medium confidence', () => {
+      expect(calculatePoints(false, 2)).toBe(-3);
+      expect(calculatePoints(false, 2, 'easy')).toBe(-3);
+    });
+
+    it('returns +5 for correct answer with high confidence', () => {
+      expect(calculatePoints(true, 3)).toBe(5);
+      expect(calculatePoints(true, 3, 'easy')).toBe(5);
+    });
+
+    it('returns -6 for incorrect answer with high confidence', () => {
+      expect(calculatePoints(false, 3)).toBe(-6);
+      expect(calculatePoints(false, 3, 'easy')).toBe(-6);
+    });
   });
 
-  it('returns -1 for incorrect answer with low confidence', () => {
-    expect(calculatePoints(false, 1)).toBe(-1);
+  describe('medium difficulty (1.5x multiplier)', () => {
+    it('applies 1.5x multiplier for correct answers', () => {
+      expect(calculatePoints(true, 1, 'medium')).toBe(2);  // 1 * 1.5 = 1.5 → 2
+      expect(calculatePoints(true, 2, 'medium')).toBe(5);  // 3 * 1.5 = 4.5 → 5
+      expect(calculatePoints(true, 3, 'medium')).toBe(8);  // 5 * 1.5 = 7.5 → 8
+    });
+
+    it('applies 1.5x multiplier for incorrect answers', () => {
+      expect(calculatePoints(false, 1, 'medium')).toBe(-2);  // -1 * 1.5 = -1.5 → -2
+      expect(calculatePoints(false, 2, 'medium')).toBe(-5);  // -3 * 1.5 = -4.5 → -5
+      expect(calculatePoints(false, 3, 'medium')).toBe(-9);  // -6 * 1.5 = -9
+    });
   });
 
-  it('returns +3 for correct answer with medium confidence', () => {
-    expect(calculatePoints(true, 2)).toBe(3);
+  describe('hard difficulty (2x multiplier)', () => {
+    it('applies 2x multiplier for correct answers', () => {
+      expect(calculatePoints(true, 1, 'hard')).toBe(2);   // 1 * 2 = 2
+      expect(calculatePoints(true, 2, 'hard')).toBe(6);   // 3 * 2 = 6
+      expect(calculatePoints(true, 3, 'hard')).toBe(10);  // 5 * 2 = 10
+    });
+
+    it('applies 2x multiplier for incorrect answers', () => {
+      expect(calculatePoints(false, 1, 'hard')).toBe(-2);   // -1 * 2 = -2
+      expect(calculatePoints(false, 2, 'hard')).toBe(-6);   // -3 * 2 = -6
+      expect(calculatePoints(false, 3, 'hard')).toBe(-12);  // -6 * 2 = -12
+    });
   });
 
-  it('returns -3 for incorrect answer with medium confidence', () => {
-    expect(calculatePoints(false, 2)).toBe(-3);
-  });
-
-  it('returns +5 for correct answer with high confidence', () => {
-    expect(calculatePoints(true, 3)).toBe(5);
-  });
-
-  it('returns -6 for incorrect answer with high confidence', () => {
-    expect(calculatePoints(false, 3)).toBe(-6);
+  describe('mixed difficulty (1x multiplier)', () => {
+    it('uses base points for mixed mode', () => {
+      expect(calculatePoints(true, 1, 'mixed')).toBe(1);
+      expect(calculatePoints(true, 2, 'mixed')).toBe(3);
+      expect(calculatePoints(true, 3, 'mixed')).toBe(5);
+      expect(calculatePoints(false, 3, 'mixed')).toBe(-6);
+    });
   });
 });
 

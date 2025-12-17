@@ -7,15 +7,32 @@
  * Calculate points based on correctness and confidence
  * @param {boolean} correct - Whether the answer was correct
  * @param {1|2|3} confidence - Confidence level (1-3)
+ * @param {string} difficulty - Difficulty level ('easy', 'medium', 'hard', 'mixed')
  * @returns {number} Points earned/lost
  */
-export function calculatePoints(correct, confidence) {
+export function calculatePoints(correct, confidence, difficulty = 'easy') {
   const pointsMatrix = {
     1: { correct: 1, incorrect: -1 },
     2: { correct: 3, incorrect: -3 },
     3: { correct: 5, incorrect: -6 }
   };
-  return pointsMatrix[confidence][correct ? 'correct' : 'incorrect'];
+
+  // Base points from confidence
+  const basePoints = pointsMatrix[confidence][correct ? 'correct' : 'incorrect'];
+
+  // Apply difficulty multiplier
+  const difficultyMultipliers = {
+    easy: 1,
+    medium: 1.5,
+    hard: 2,
+    mixed: 1
+  };
+
+  const multiplier = difficultyMultipliers[difficulty] || 1;
+  const total = basePoints * multiplier;
+
+  // Round away from zero for fair scoring (e.g., -1.5 → -2, 1.5 → 2)
+  return total > 0 ? Math.round(total) : -Math.round(Math.abs(total));
 }
 
 /**

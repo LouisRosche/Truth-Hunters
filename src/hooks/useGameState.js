@@ -21,7 +21,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { TEAM_AVATARS } from '../data/constants';
 import { selectClaimsByDifficulty } from '../utils/helpers';
-import { calculateGameStats } from '../utils/scoring';
+import { calculateGameStats, calculatePoints } from '../utils/scoring';
 import { GameStateManager } from '../services/gameState';
 import { PlayerProfile } from '../services/playerProfile';
 import { LeaderboardManager } from '../services/leaderboard';
@@ -106,11 +106,11 @@ export function useGameState() {
    */
   const handleRoundSubmit = useCallback((submission) => {
     const { answer, confidence, hintsUsed } = submission;
-    const { currentClaim, currentRound, totalRounds, team, claims } = gameState;
+    const { currentClaim, currentRound, totalRounds, team, claims, difficulty } = gameState;
 
     // Calculate points
     const isCorrect = answer === currentClaim.answer;
-    const points = calculatePoints(isCorrect, confidence);
+    const points = calculatePoints(isCorrect, confidence, difficulty);
     const deduction = hintsUsed.length * 2; // 2 points per hint
     const netPoints = points - deduction;
 
@@ -237,16 +237,7 @@ export function useGameState() {
   };
 }
 
-/**
- * Helper: Calculate points for a round
- */
-function calculatePoints(correct, confidence) {
-  if (correct) {
-    return confidence === 1 ? 1 : confidence === 2 ? 3 : 6;
-  } else {
-    return confidence === 1 ? -1 : confidence === 2 ? -3 : -5;
-  }
-}
+// calculatePoints is now imported from '../utils/scoring'
 
 /**
  * Helper: Calculate current streak from results
