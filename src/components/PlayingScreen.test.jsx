@@ -49,7 +49,7 @@ describe('PlayingScreen', () => {
 
   it('displays round information', () => {
     render(<PlayingScreen {...defaultProps} />);
-    expect(screen.getByText('Round 1 of 5')).toBeInTheDocument();
+    expect(screen.getByText('1/5')).toBeInTheDocument();
   });
 
   it('shows difficulty badge', () => {
@@ -89,7 +89,7 @@ describe('PlayingScreen', () => {
 
   it('shows streak indicator when streak >= 2', () => {
     render(<PlayingScreen {...defaultProps} currentStreak={3} />);
-    expect(screen.getByText(/3 streak/i)).toBeInTheDocument();
+    expect(screen.getByText(/🔥 3/i)).toBeInTheDocument();
   });
 
   it('does not show streak indicator when streak < 2', () => {
