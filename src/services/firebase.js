@@ -209,11 +209,29 @@ export const FirebaseBackend = {
       }
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      let results = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         timestamp: doc.data().createdAt?.toMillis() || Date.now()
       }));
+
+      // If class-specific leaderboard is empty, fall back to PUBLIC games
+      if (results.length === 0 && filterClass && filterClass !== 'PUBLIC') {
+        const publicQuery = query(
+          gamesRef,
+          where('classCode', '==', 'PUBLIC'),
+          orderBy('score', 'desc'),
+          limit(limitCount)
+        );
+        const publicSnapshot = await getDocs(publicQuery);
+        results = publicSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().createdAt?.toMillis() || Date.now()
+        }));
+      }
+
+      return results;
     } catch (e) {
       console.warn('Failed to fetch from Firebase:', e);
       return [];
@@ -229,21 +247,9 @@ export const FirebaseBackend = {
       return [];
     }
 
-    try {
-      const classCode = this.getClassCode();
-      const gamesRef = collection(this.db, 'games');
-
-      let q;
-      if (classCode) {
-        q = query(gamesRef, where('classCode', '==', classCode));
-      } else {
-        q = query(gamesRef);
-      }
-
-      const snapshot = await getDocs(q);
+    const aggregatePlayers = (docs) => {
       const playerScores = {};
-
-      snapshot.docs.forEach(doc => {
+      docs.forEach(doc => {
         const game = doc.data();
         if (!game.players) return;
 
@@ -274,6 +280,30 @@ export const FirebaseBackend = {
         }))
         .sort((a, b) => b.bestScore - a.bestScore)
         .slice(0, limitCount);
+    };
+
+    try {
+      const classCode = this.getClassCode();
+      const gamesRef = collection(this.db, 'games');
+
+      let q;
+      if (classCode) {
+        q = query(gamesRef, where('classCode', '==', classCode));
+      } else {
+        q = query(gamesRef);
+      }
+
+      const snapshot = await getDocs(q);
+      let results = aggregatePlayers(snapshot.docs);
+
+      // If class-specific results are empty, fall back to PUBLIC games
+      if (results.length === 0 && classCode && classCode !== 'PUBLIC') {
+        const publicQuery = query(gamesRef, where('classCode', '==', 'PUBLIC'));
+        const publicSnapshot = await getDocs(publicQuery);
+        results = aggregatePlayers(publicSnapshot.docs);
+      }
+
+      return results;
     } catch (e) {
       console.warn('Failed to fetch players from Firebase:', e);
       return [];
