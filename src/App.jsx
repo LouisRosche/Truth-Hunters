@@ -58,6 +58,10 @@ export function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
+  // Live leaderboard session tracking
+  const [sessionId, setSessionId] = useState(null);
+  const [showLiveLeaderboard, setShowLiveLeaderboard] = useState(true);
+
   // Sound state - synced with SoundManager
   const [soundEnabled, setSoundEnabled] = useState(() => {
     try {
@@ -80,6 +84,53 @@ export function App() {
       setSavedGameSummary(summary);
     }
   }, []);
+
+  // Update live session during gameplay for class-wide leaderboard
+  useEffect(() => {
+    if (!sessionId || !FirebaseBackend.initialized || !FirebaseBackend.getClassCode()) {
+      return;
+    }
+
+    // Update session during gameplay
+    if (gameState.phase === 'playing') {
+      const correctCount = gameState.team.results.filter(r => r.correct).length;
+      const totalRounds = gameState.team.results.length;
+      const accuracy = totalRounds > 0 ? Math.round((correctCount / totalRounds) * 100) : 0;
+
+      FirebaseBackend.updateActiveSession(sessionId, {
+        teamName: gameState.team.name,
+        teamAvatar: gameState.team.avatar?.emoji || '🔍',
+        players: gameState.team.players || [],
+        currentScore: gameState.team.score,
+        currentRound: gameState.currentRound,
+        totalRounds: gameState.totalRounds,
+        accuracy
+      }).catch(e => console.warn('Failed to update live session:', e));
+    }
+
+    // Remove session when game ends (debrief phase)
+    if (gameState.phase === 'debrief') {
+      FirebaseBackend.removeActiveSession(sessionId).catch(e => {
+        console.warn('Failed to remove live session:', e);
+      });
+      setSessionId(null);
+    }
+  }, [sessionId, gameState.phase, gameState.currentRound, gameState.team.score]);
+
+  // Clean up session on unmount or window close
+  useEffect(() => {
+    const cleanup = () => {
+      if (sessionId && FirebaseBackend.initialized) {
+        FirebaseBackend.removeActiveSession(sessionId).catch(() => {});
+      }
+    };
+
+    window.addEventListener('beforeunload', cleanup);
+    return () => {
+      window.removeEventListener('beforeunload', cleanup);
+      cleanup();
+    };
+  }, [sessionId]);
 
   // Presentation mode for group viewing (larger text for 4 scholars sharing 1 screen)
   const [presentationMode, setPresentationMode] = useState(() => {
@@ -271,6 +322,23 @@ export function App() {
       setShowPrediction(false);
       setPendingGameSettings(null);
       return;
+    }
+
+    // Generate a unique session ID for live leaderboard tracking
+    const newSessionId = `game_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    setSessionId(newSessionId);
+
+    // Update active session in Firebase for live class leaderboard
+    if (FirebaseBackend.initialized && FirebaseBackend.getClassCode()) {
+      FirebaseBackend.updateActiveSession(newSessionId, {
+        teamName: pendingGameSettings.teamName,
+        teamAvatar: pendingGameSettings.avatar?.emoji || '🔍',
+        players: pendingGameSettings.players || [],
+        currentScore: 0,
+        currentRound: 1,
+        totalRounds: pendingGameSettings.rounds,
+        accuracy: 0
+      }).catch(e => console.warn('Failed to start live session:', e));
     }
 
     setShowPrediction(false);
@@ -618,6 +686,9 @@ export function App() {
               claims={gameState.claims}
               currentScore={gameState.team.score}
               predictedScore={gameState.team.predictedScore}
+              sessionId={sessionId}
+              showLiveLeaderboard={showLiveLeaderboard}
+              onToggleLiveLeaderboard={() => setShowLiveLeaderboard(prev => !prev)}
             />
           )}
 

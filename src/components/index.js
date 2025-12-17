@@ -15,3 +15,4 @@ export { ScrollingLeaderboard } from './ScrollingLeaderboard';
 export { SoloStatsView } from './SoloStatsView';
 export { ClaimSubmissionForm } from './ClaimSubmissionForm';
 export { StudentClaimNotifications } from './StudentClaimNotifications';
+export { LiveClassLeaderboard } from './LiveClassLeaderboard';

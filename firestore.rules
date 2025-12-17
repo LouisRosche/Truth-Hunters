@@ -291,6 +291,41 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    // ==================== ACTIVE SESSIONS COLLECTION ====================
+
+    /**
+     * Active Sessions: Live leaderboard for in-progress games
+     *
+     * Read: Public (students see live class leaderboard)
+     * Create/Update: Teams can update their session progress
+     * Delete: Teams can remove session when game ends
+     *
+     * This collection enables real-time class-wide leaderboard during gameplay.
+     * Shows all students' current scores as they play.
+     */
+    match /activeSessions/{sessionId} {
+      // Anyone can read active sessions (live leaderboard)
+      allow read: if true;
+
+      // Teams can create and update their session state
+      allow create, update: if request.resource.data.keys().hasAll([
+                                  'sessionId', 'classCode', 'teamName',
+                                  'currentScore', 'currentRound', 'totalRounds',
+                                  'isActive', 'updatedAt'
+                                ]) &&
+                                validStringLength(request.resource.data.sessionId, 10, 100) &&
+                                validClassCode(request.resource.data.classCode) &&
+                                validStringLength(request.resource.data.teamName, 2, 50) &&
+                                validNumber(request.resource.data.currentScore, -50, 100) &&
+                                validNumber(request.resource.data.currentRound, 0, 20) &&
+                                validNumber(request.resource.data.totalRounds, 3, 20) &&
+                                request.resource.data.isActive is bool &&
+                                request.resource.data.updatedAt == request.time;
+
+      // Teams can delete their session when game ends
+      allow delete: if true;
+    }
+
     // ==================== RATE LIMITING COLLECTION ====================
 
     /**

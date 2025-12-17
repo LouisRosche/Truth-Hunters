@@ -11,6 +11,7 @@ import {
   getDocs,
   getDoc,
   setDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -807,6 +808,115 @@ export const FirebaseBackend = {
       if (typeof unsub === 'function') unsub();
     });
     this._listeners = {};
+  },
+
+  // ==================== LIVE GAME SESSION TRACKING ====================
+
+  /**
+   * Update active game session for live leaderboard
+   * Called during gameplay to track in-progress scores
+   * @param {string} sessionId - Unique session identifier
+   * @param {Object} gameData - Current game state
+   */
+  async updateActiveSession(sessionId, gameData) {
+    if (!this.initialized || !this.db) {
+      return false;
+    }
+
+    try {
+      const classCode = this.getClassCode() || 'PUBLIC';
+      const sessionDoc = doc(this.db, 'activeSessions', sessionId);
+
+      await setDoc(sessionDoc, {
+        sessionId,
+        classCode,
+        teamName: sanitizeInput(gameData.teamName || 'Team'),
+        teamAvatar: gameData.teamAvatar || '🔍',
+        players: (gameData.players || []).map(p => ({
+          firstName: sanitizeInput(p.firstName || ''),
+          lastInitial: sanitizeInput(p.lastInitial || '')
+        })),
+        currentScore: typeof gameData.currentScore === 'number' ? gameData.currentScore : 0,
+        currentRound: gameData.currentRound || 1,
+        totalRounds: gameData.totalRounds || 10,
+        accuracy: gameData.accuracy || 0,
+        isActive: true,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      return true;
+    } catch (e) {
+      console.warn('Failed to update active session:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Remove active session when game ends
+   * @param {string} sessionId - Session to remove
+   */
+  async removeActiveSession(sessionId) {
+    if (!this.initialized || !this.db) {
+      return false;
+    }
+
+    try {
+      const sessionDoc = doc(this.db, 'activeSessions', sessionId);
+      await deleteDoc(sessionDoc);
+      return true;
+    } catch (e) {
+      console.warn('Failed to remove active session:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Subscribe to live class leaderboard (active games in progress)
+   * Shows real-time scores of all students in the same class
+   * @param {Function} callback - Called with updated sessions array
+   * @param {string} classFilter - Optional class code filter
+   * @returns {Function} Unsubscribe function
+   */
+  subscribeToLiveLeaderboard(callback, classFilter = null) {
+    if (!this.initialized || !this.db) {
+      console.warn('Firebase not initialized for live leaderboard');
+      return () => {};
+    }
+
+    try {
+      const filterClass = classFilter || this.getClassCode();
+      if (!filterClass) {
+        callback([]);
+        return () => {};
+      }
+
+      const sessionsRef = collection(this.db, 'activeSessions');
+      const q = query(
+        sessionsRef,
+        where('classCode', '==', filterClass),
+        where('isActive', '==', true),
+        orderBy('currentScore', 'desc'),
+        limit(20)
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const sessions = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().updatedAt?.toMillis() || Date.now()
+        }));
+        callback(sessions);
+      }, (error) => {
+        console.warn('Live leaderboard subscription error:', error);
+        callback([]);
+      });
+
+      this._listeners['liveLeaderboard'] = unsubscribe;
+      return unsubscribe;
+    } catch (e) {
+      console.warn('Failed to set up live leaderboard subscription:', e);
+      return () => {};
+    }
   },
 
   // ==================== CLASS SETTINGS ====================

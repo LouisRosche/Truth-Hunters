@@ -8,6 +8,7 @@ import { Button } from './Button';
 import { ClaimCard } from './ClaimCard';
 import { ConfidenceSelector } from './ConfidenceSelector';
 import { VerdictSelector } from './VerdictSelector';
+import { LiveClassLeaderboard } from './LiveClassLeaderboard';
 import { DIFFICULTY_CONFIG, DIFFICULTY_BG_COLORS, HINT_TYPES, ENCOURAGEMENTS } from '../data/constants';
 import { calculatePoints } from '../utils/scoring';
 import { getRandomItem, getHintContent } from '../utils/helpers';
@@ -45,7 +46,10 @@ export function PlayingScreen({
   previousResults = [],
   claims = [],
   currentScore = 0,
-  predictedScore = 0
+  predictedScore = 0,
+  sessionId = null,
+  showLiveLeaderboard = true,
+  onToggleLiveLeaderboard = () => {}
 }) {
   const [confidence, setConfidence] = useState(2);
   const [verdict, setVerdict] = useState(null);
@@ -275,6 +279,15 @@ export function PlayingScreen({
           </span>
         </div>
       </div>
+
+      {/* Live Class Leaderboard - shows all students' scores in real-time */}
+      {sessionId && (
+        <LiveClassLeaderboard
+          currentSessionId={sessionId}
+          isMinimized={!showLiveLeaderboard}
+          onToggle={onToggleLiveLeaderboard}
+        />
+      )}
 
       {/* Top Bar: Round + Streak + Quick Actions */}
       <div

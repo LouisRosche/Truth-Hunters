@@ -32,12 +32,6 @@ export function SetupScreen({ onStart, isLoading = false }) {
     return getUnseenClaimStats(existingProfile.claimsSeen || []);
   }, [isReturningPlayer, existingProfile.claimsSeen]);
 
-  // Calculate available claims for selected subjects (warn if too few)
-  const subjectClaimStats = useMemo(() => {
-    if (selectedSubjects.length === 0) return null;
-    return getUnseenClaimStats([], selectedSubjects);
-  }, [selectedSubjects]);
-
   const [teamName, setTeamName] = useState(isReturningPlayer ? quickStartSettings.playerName : '');
   const [rounds, setRounds] = useState(isReturningPlayer ? quickStartSettings.rounds : 5);
   const [difficulty, setDifficulty] = useState(isReturningPlayer ? quickStartSettings.difficulty : 'mixed');
@@ -58,6 +52,12 @@ export function SetupScreen({ onStart, isLoading = false }) {
   const [selectedSubjects, setSelectedSubjects] = useState(
     isReturningPlayer ? (quickStartSettings.subjects || []) : []
   );
+
+  // Calculate available claims for selected subjects (warn if too few)
+  const subjectClaimStats = useMemo(() => {
+    if (selectedSubjects.length === 0) return null;
+    return getUnseenClaimStats([], selectedSubjects);
+  }, [selectedSubjects]);
 
   // Player inputs (up to 6 players per group) - start with just 1 visible
   const [players, setPlayers] = useState([
