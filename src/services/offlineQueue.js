@@ -3,6 +3,8 @@
  * Queues Firebase saves when offline and syncs when back online
  */
 
+import { logger } from '../utils/logger';
+
 const QUEUE_KEY = 'truthHunters_offlineQueue';
 
 // Listeners for queue changes
@@ -25,7 +27,7 @@ export const OfflineQueue = {
       const stored = localStorage.getItem(QUEUE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (e) {
-      console.warn('Failed to read offline queue:', e);
+      logger.warn('Failed to read offline queue:', e);
       return [];
     }
   },
@@ -40,7 +42,7 @@ export const OfflineQueue = {
       // Notify listeners
       _listeners.forEach(cb => cb(queue));
     } catch (e) {
-      console.warn('Failed to save offline queue:', e);
+      logger.warn('Failed to save offline queue:', e);
     }
   },
 
@@ -69,7 +71,7 @@ export const OfflineQueue = {
       retries: 0
     });
     this.saveQueue(queue);
-    console.log(`Queued ${type} for later sync`);
+    logger.log(`Queued ${type} for later sync`);
   },
 
   /**
@@ -137,14 +139,14 @@ export const OfflineQueue = {
             break;
           }
           default:
-            console.warn(`Unknown queue item type: ${item.type}`);
+            logger.warn(`Unknown queue item type: ${item.type}`);
             result = false;
         }
 
         if (result) {
           this.dequeue(item.id);
           success++;
-          console.log(`Synced queued ${item.type}`);
+          logger.log(`Synced queued ${item.type}`);
         } else {
           // Increment retry count
           item.retries++;
@@ -152,11 +154,11 @@ export const OfflineQueue = {
             // Give up after 3 retries
             this.dequeue(item.id);
             failed++;
-            console.warn(`Gave up on queued ${item.type} after 3 retries`);
+            logger.warn(`Gave up on queued ${item.type} after 3 retries`);
           }
         }
       } catch (e) {
-        console.warn(`Failed to sync queued ${item.type}:`, e);
+        logger.warn(`Failed to sync queued ${item.type}:`, e);
         item.retries++;
         if (item.retries >= 3) {
           this.dequeue(item.id);
@@ -227,19 +229,19 @@ if (typeof window !== 'undefined') {
           `Successfully synced ${result.success} queued ${result.success === 1 ? 'item' : 'items'}`,
           'success'
         );
-        console.log(`Synced ${result.success} queued items`);
+        logger.log(`Synced ${result.success} queued items`);
       } else if (result.failed > 0 && result.success === 0) {
         OfflineQueue._showToast(
           `Failed to sync ${result.failed} queued ${result.failed === 1 ? 'item' : 'items'}. Will retry later.`,
           'error'
         );
-        console.warn(`Failed to sync ${result.failed} queued items`);
+        logger.warn(`Failed to sync ${result.failed} queued items`);
       } else {
         OfflineQueue._showToast(
           `Synced ${result.success} ${result.success === 1 ? 'item' : 'items'}, ${result.failed} failed`,
           'warning'
         );
-        console.log(`Synced ${result.success} items, ${result.failed} failed`);
+        logger.log(`Synced ${result.success} items, ${result.failed} failed`);
       }
     }
   });

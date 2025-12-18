@@ -70,6 +70,29 @@ export const DIFFICULTY_MULTIPLIERS = {
   mixed: 1
 };
 
+// Timing Constants
+export const TIMING = {
+  TOAST_DURATION_MS: 3000,
+  SETTINGS_SAVE_FEEDBACK_MS: 2000,
+  ACHIEVEMENT_SOUND_DELAY_MS: 500,
+  SESSION_CLEANUP_RETRY_DELAY_MS: 200,
+  LEADERBOARD_REFRESH_INTERVAL_MS: 30000,
+  VISIBILITY_DEBOUNCE_MS: 100,
+  FOCUS_DELAY_MS: 0
+};
+
+// Retry Configuration
+export const RETRY_CONFIG = {
+  MAX_RETRIES: 3,
+  OFFLINE_QUEUE_MAX_RETRIES: 3
+};
+
+// Storage Configuration
+export const STORAGE_CONFIG = {
+  MAX_AGE_MS: 24 * 60 * 60 * 1000, // 24 hours
+  ERROR_RETENTION_DAYS: 7
+};
+
 /**
  * Difficulty configuration
  */

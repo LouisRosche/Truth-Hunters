@@ -26,6 +26,7 @@ import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
 import { useOfflineToasts } from './hooks/useOfflineToasts';
+import { RETRY_CONFIG, TIMING } from './data/constants';
 
 export function App() {
   // Connect offline queue to toast notifications

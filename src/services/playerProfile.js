@@ -4,6 +4,8 @@
  * Tracks lifetime stats, achievements, and learning progress
  */
 
+import { logger } from '../utils/logger';
+
 const STORAGE_KEY = 'truthHunters_playerProfile';
 const PROFILE_VERSION = 1;
 
@@ -130,7 +132,7 @@ export const PlayerProfile = {
 
       return profile;
     } catch (e) {
-      console.warn('Failed to load player profile:', e);
+      logger.warn('Failed to load player profile:', e);
       return createDefaultProfile();
     }
   },
@@ -146,7 +148,7 @@ export const PlayerProfile = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
       return true;
     } catch (e) {
-      console.warn('Failed to save player profile:', e);
+      logger.warn('Failed to save player profile:', e);
       return false;
     }
   },
@@ -444,7 +446,7 @@ export const PlayerProfile = {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
-      console.warn('Failed to clear player profile:', e);
+      logger.warn('Failed to clear player profile:', e);
     }
   },
 

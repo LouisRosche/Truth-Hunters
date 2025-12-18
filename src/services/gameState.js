@@ -3,6 +3,8 @@
  * Handles mid-game state persistence to localStorage for crash recovery
  */
 
+import { logger } from '../utils/logger';
+
 const STORAGE_KEY = 'truthHunters_savedGame';
 
 /**
@@ -58,7 +60,7 @@ export const GameStateManager = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
       return true;
     } catch (e) {
-      console.warn('Failed to save game state:', e);
+      logger.warn('Failed to save game state:', e);
       return false;
     }
   },
@@ -86,7 +88,7 @@ export const GameStateManager = {
 
       // Check version for future migration
       if (parsed.version !== 1) {
-        console.warn('Saved game version mismatch, clearing');
+        logger.warn('Saved game version mismatch, clearing');
         this.clear();
         return null;
       }
@@ -100,7 +102,7 @@ export const GameStateManager = {
       // Check if save is too old (24 hours)
       const MAX_AGE = 24 * 60 * 60 * 1000;
       if (Date.now() - parsed.savedAt > MAX_AGE) {
-        console.log('Saved game too old, clearing');
+        logger.log('Saved game too old, clearing');
         this.clear();
         return null;
       }
@@ -113,14 +115,14 @@ export const GameStateManager = {
         !Array.isArray(gs.claims) ||
         !gs.team
       ) {
-        console.warn('Saved game state invalid, clearing');
+        logger.warn('Saved game state invalid, clearing');
         this.clear();
         return null;
       }
 
       return parsed;
     } catch (e) {
-      console.warn('Failed to load saved game:', e);
+      logger.warn('Failed to load saved game:', e);
       this.clear();
       return null;
     }
@@ -145,7 +147,7 @@ export const GameStateManager = {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
-      console.warn('Failed to clear saved game:', e);
+      logger.warn('Failed to clear saved game:', e);
     }
   },
 
