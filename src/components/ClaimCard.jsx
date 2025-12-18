@@ -10,8 +10,8 @@ export function ClaimCard({ claim, showAnswer = false }) {
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
-        borderRadius: '12px',
-        padding: '1.5rem',
+        borderRadius: '8px',
+        padding: '1rem',
         position: 'relative',
         overflow: 'hidden'
       }}
@@ -39,16 +39,16 @@ export function ClaimCard({ claim, showAnswer = false }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '1rem'
+          marginBottom: '0.625rem'
         }}
       >
         <span
           className="mono"
           style={{
-            fontSize: '0.75rem',
-            padding: '0.25rem 0.5rem',
+            fontSize: '0.6875rem',
+            padding: '0.1875rem 0.4375rem',
             background: 'var(--bg-elevated)',
-            borderRadius: '4px',
+            borderRadius: '3px',
             color: 'var(--text-secondary)'
           }}
         >
@@ -59,8 +59,8 @@ export function ClaimCard({ claim, showAnswer = false }) {
           <span
             className="mono"
             style={{
-              fontSize: '0.75rem',
-              padding: '0.25rem 0.5rem',
+              fontSize: '0.6875rem',
+              padding: '0.1875rem 0.4375rem',
               background:
                 claim.source === 'student-contributed'
                   ? 'rgba(251, 191, 36, 0.2)'
@@ -73,7 +73,7 @@ export function ClaimCard({ claim, showAnswer = false }) {
                   : claim.source === 'ai-generated'
                   ? 'var(--accent-violet)'
                   : 'var(--accent-emerald)',
-              borderRadius: '4px'
+              borderRadius: '3px'
             }}
           >
             {claim.source === 'student-contributed'
@@ -89,13 +89,13 @@ export function ClaimCard({ claim, showAnswer = false }) {
       <blockquote
         className="claim-text"
         style={{
-          fontSize: '1.25rem',
-          lineHeight: 1.75,
+          fontSize: '1.0625rem',
+          lineHeight: 1.6,
           color: 'var(--text-primary)',
           fontStyle: 'italic',
-          borderLeft: '4px solid var(--accent-cyan)',
-          paddingLeft: '1.25rem',
-          margin: '1.25rem 0'
+          borderLeft: '3px solid var(--accent-cyan)',
+          paddingLeft: '0.875rem',
+          margin: '0.75rem 0'
         }}
       >
         &ldquo;{claim.text}&rdquo;
@@ -103,21 +103,21 @@ export function ClaimCard({ claim, showAnswer = false }) {
 
       {/* Answer reveal section */}
       {showAnswer && (
-        <div className="animate-in" style={{ marginTop: '1.5rem' }}>
+        <div className="animate-in" style={{ marginTop: '0.75rem' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
-              marginBottom: '0.75rem'
+              gap: '0.5rem',
+              marginBottom: '0.5rem'
             }}
           >
             <span
               className="mono"
               style={{
-                fontSize: '0.875rem',
+                fontSize: '0.8125rem',
                 fontWeight: 700,
-                padding: '0.375rem 0.75rem',
+                padding: '0.3125rem 0.625rem',
                 borderRadius: '4px',
                 background:
                   claim.answer === 'TRUE'
@@ -139,7 +139,7 @@ export function ClaimCard({ claim, showAnswer = false }) {
               <span
                 className="mono"
                 style={{
-                  fontSize: '0.75rem',
+                  fontSize: '0.6875rem',
                   color: 'var(--accent-rose)'
                 }}
               >
@@ -150,8 +150,8 @@ export function ClaimCard({ claim, showAnswer = false }) {
           <p
             style={{
               color: 'var(--text-secondary)',
-              fontSize: '0.9375rem',
-              lineHeight: 1.6
+              fontSize: '0.875rem',
+              lineHeight: 1.5
             }}
           >
             {claim.explanation}
