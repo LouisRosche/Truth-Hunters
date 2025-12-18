@@ -8,6 +8,9 @@ const QUEUE_KEY = 'truthHunters_offlineQueue';
 // Listeners for queue changes
 const _listeners = new Set();
 
+// Toast notification callback
+let _toastCallback = null;
+
 /**
  * Offline Queue Manager
  * Handles queuing and syncing of Firebase operations when offline
@@ -189,6 +192,25 @@ export const OfflineQueue = {
       acc[item.type] = (acc[item.type] || 0) + 1;
       return acc;
     }, {});
+  },
+
+  /**
+   * Set toast notification callback
+   * @param {Function} callback - Function to call for toast notifications
+   */
+  setToastCallback(callback) {
+    _toastCallback = callback;
+  },
+
+  /**
+   * Show toast notification (internal helper)
+   * @param {string} message - Toast message
+   * @param {string} type - Toast type (success, error, warning, info)
+   */
+  _showToast(message, type = 'info') {
+    if (_toastCallback) {
+      _toastCallback(message, type);
+    }
   }
 };
 
@@ -198,8 +220,27 @@ if (typeof window !== 'undefined') {
     // Dynamic import to avoid circular dependency
     const { FirebaseBackend } = await import('./firebase');
     const result = await OfflineQueue.sync(FirebaseBackend);
-    if (result.success > 0) {
-      console.log(`Synced ${result.success} queued items`);
+
+    if (result.success > 0 || result.failed > 0) {
+      if (result.success > 0 && result.failed === 0) {
+        OfflineQueue._showToast(
+          `Successfully synced ${result.success} queued ${result.success === 1 ? 'item' : 'items'}`,
+          'success'
+        );
+        console.log(`Synced ${result.success} queued items`);
+      } else if (result.failed > 0 && result.success === 0) {
+        OfflineQueue._showToast(
+          `Failed to sync ${result.failed} queued ${result.failed === 1 ? 'item' : 'items'}. Will retry later.`,
+          'error'
+        );
+        console.warn(`Failed to sync ${result.failed} queued items`);
+      } else {
+        OfflineQueue._showToast(
+          `Synced ${result.success} ${result.success === 1 ? 'item' : 'items'}, ${result.failed} failed`,
+          'warning'
+        );
+        console.log(`Synced ${result.success} items, ${result.failed} failed`);
+      }
     }
   });
 }

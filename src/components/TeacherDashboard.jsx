@@ -3,7 +3,7 @@
  * View class performance, student reflections, and export data
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from './Button';
 import { FirebaseBackend } from '../services/firebase';
 import { LeaderboardManager } from '../services/leaderboard';
@@ -87,8 +87,22 @@ export function TeacherDashboard({ onBack }) {
   const [exportData, setExportData] = useState(null);
   const [exportError, setExportError] = useState(null);
 
+  const isMountedRef = useRef(true);
+  const settingsTimeoutRef = useRef(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (settingsTimeoutRef.current) {
+        clearTimeout(settingsTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Load data from Firebase and local storage
   const loadData = useCallback(async () => {
+    if (!isMountedRef.current) return;
     setLoading(true);
     setError(null);
 
@@ -102,31 +116,39 @@ export function TeacherDashboard({ onBack }) {
           FirebaseBackend.getClassSettings(),
           FirebaseBackend.getClassAchievements()
         ]);
-        setReflections(firebaseReflections);
-        setGames(firebaseGames);
-        setPendingClaims(claims.filter(c => c.status === 'pending'));
-        setReviewedClaims(claims.filter(c => c.status !== 'pending'));
-        setClassSettings(settings);
-        setClassAchievements(achievements);
+        if (isMountedRef.current) {
+          setReflections(firebaseReflections);
+          setGames(firebaseGames);
+          setPendingClaims(claims.filter(c => c.status === 'pending'));
+          setReviewedClaims(claims.filter(c => c.status !== 'pending'));
+          setClassSettings(settings);
+          setClassAchievements(achievements);
+        }
       } else {
         // Fallback to local storage
         const localGames = LeaderboardManager.getAll();
-        setGames(localGames);
-        setReflections([]);
-        setPendingClaims([]);
-        setReviewedClaims([]);
-        setClassSettings(FirebaseBackend._getDefaultClassSettings());
-        setClassAchievements([]);
+        if (isMountedRef.current) {
+          setGames(localGames);
+          setReflections([]);
+          setPendingClaims([]);
+          setReviewedClaims([]);
+          setClassSettings(FirebaseBackend._getDefaultClassSettings());
+          setClassAchievements([]);
+        }
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
-      setError('Failed to load data. Please try again.');
-      // Fallback to local
-      const localGames = LeaderboardManager.getAll();
-      setGames(localGames);
-      setClassSettings(FirebaseBackend._getDefaultClassSettings());
+      if (isMountedRef.current) {
+        setError('Failed to load data. Please try again.');
+        // Fallback to local
+        const localGames = LeaderboardManager.getAll();
+        setGames(localGames);
+        setClassSettings(FirebaseBackend._getDefaultClassSettings());
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [isOnline]);
 
@@ -135,7 +157,9 @@ export function TeacherDashboard({ onBack }) {
     if (!isOnline || !FirebaseBackend.initialized) return;
 
     const unsubscribe = FirebaseBackend.subscribeToPendingClaims((claims) => {
-      setPendingClaims(claims);
+      if (isMountedRef.current) {
+        setPendingClaims(claims);
+      }
     });
 
     return () => unsubscribe();
@@ -146,7 +170,9 @@ export function TeacherDashboard({ onBack }) {
     if (!isOnline || !FirebaseBackend.initialized) return;
 
     const unsubscribe = FirebaseBackend.subscribeToClassAchievements((achievements) => {
-      setClassAchievements(achievements);
+      if (isMountedRef.current) {
+        setClassAchievements(achievements);
+      }
     });
 
     return () => unsubscribe();
@@ -158,23 +184,32 @@ export function TeacherDashboard({ onBack }) {
 
   // Save class settings
   const handleSaveSettings = async () => {
-    if (!classSettings) return;
+    if (!classSettings || !isMountedRef.current) return;
 
     setSettingsLoading(true);
     setError(null);
 
     try {
       const result = await FirebaseBackend.saveClassSettings(classSettings);
+      if (!isMountedRef.current) return;
+
       if (result.success) {
         setSettingsSaved(true);
-        setTimeout(() => setSettingsSaved(false), 2000);
+        if (settingsTimeoutRef.current) clearTimeout(settingsTimeoutRef.current);
+        settingsTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) setSettingsSaved(false);
+        }, 2000);
       } else {
         setError(result.error || 'Failed to save settings');
       }
     } catch (e) {
-      setError('Failed to save settings');
+      if (isMountedRef.current) {
+        setError('Failed to save settings');
+      }
     } finally {
-      setSettingsLoading(false);
+      if (isMountedRef.current) {
+        setSettingsLoading(false);
+      }
     }
   };
 
@@ -262,10 +297,13 @@ export function TeacherDashboard({ onBack }) {
 
   // Handle claim review (approve/reject)
   const handleReviewClaim = async (claimId, approved) => {
+    if (!isMountedRef.current) return;
     setReviewLoading(true);
     setError(null);
     try {
       const result = await FirebaseBackend.reviewClaim(claimId, approved, reviewNote);
+      if (!isMountedRef.current) return;
+
       if (result.success) {
         // Move claim from pending to reviewed
         const claim = pendingClaims.find(c => c.id === claimId);
@@ -281,9 +319,13 @@ export function TeacherDashboard({ onBack }) {
       }
     } catch (e) {
       console.warn('Review claim error:', e);
-      setError('An error occurred. Please try again.');
+      if (isMountedRef.current) {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
-      setReviewLoading(false);
+      if (isMountedRef.current) {
+        setReviewLoading(false);
+      }
     }
   };
 

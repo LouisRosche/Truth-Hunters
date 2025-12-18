@@ -4,7 +4,7 @@
  * Supports offline submission via queue
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FirebaseBackend } from '../services/firebase';
 import { OfflineQueue } from '../services/offlineQueue';
 import { PlayerProfile } from '../services/playerProfile';
@@ -41,6 +41,7 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
   const [queuedOffline, setQueuedOffline] = useState(false);
   const [playerInfo, setPlayerInfo] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     const profile = PlayerProfile.get();
@@ -52,11 +53,16 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
     }
 
     // Track online/offline status
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      if (isMountedRef.current) setIsOnline(true);
+    };
+    const handleOffline = () => {
+      if (isMountedRef.current) setIsOnline(false);
+    };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
+      isMountedRef.current = false;
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -64,25 +70,32 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isMountedRef.current) return;
     setError(null);
     setSubmitting(true);
 
     // Validation
     if (!formData.claimText.trim()) {
-      setError('Please enter your claim text.');
-      setSubmitting(false);
+      if (isMountedRef.current) {
+        setError('Please enter your claim text.');
+        setSubmitting(false);
+      }
       return;
     }
 
     if (formData.claimText.trim().length < 20) {
-      setError('Your claim should be at least 20 characters long.');
-      setSubmitting(false);
+      if (isMountedRef.current) {
+        setError('Your claim should be at least 20 characters long.');
+        setSubmitting(false);
+      }
       return;
     }
 
     if (!formData.explanation.trim()) {
-      setError('Please explain why this claim is true or false.');
-      setSubmitting(false);
+      if (isMountedRef.current) {
+        setError('Please explain why this claim is true or false.');
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -101,18 +114,24 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
     // If offline, queue the claim for later submission
     if (!isOnline || !FirebaseBackend.initialized) {
       OfflineQueue.enqueue('claim', claimData);
-      setQueuedOffline(true);
-      setSuccess(true);
+      if (isMountedRef.current) {
+        setQueuedOffline(true);
+        setSuccess(true);
+      }
       if (onSubmitSuccess) {
         onSubmitSuccess(claimData);
       }
-      setSubmitting(false);
+      if (isMountedRef.current) {
+        setSubmitting(false);
+      }
       return;
     }
 
     // Try online submission
     try {
       const result = await FirebaseBackend.submitClaim(claimData);
+
+      if (!isMountedRef.current) return;
 
       if (result.success) {
         setSuccess(true);
@@ -130,13 +149,16 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
         }
       }
     } catch (e) {
+      if (!isMountedRef.current) return;
       // Network error - queue offline
       OfflineQueue.enqueue('claim', claimData);
       setQueuedOffline(true);
       setSuccess(true);
     }
 
-    setSubmitting(false);
+    if (isMountedRef.current) {
+      setSubmitting(false);
+    }
   };
 
   if (success) {

@@ -3,7 +3,7 @@
  * Shows students the status of their submitted claims
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FirebaseBackend } from '../services/firebase';
 import { PlayerProfile } from '../services/playerProfile';
 
@@ -11,6 +11,8 @@ export function StudentClaimNotifications({ onClose }) {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [playerName, setPlayerName] = useState(null);
+  const [error, setError] = useState(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     const profile = PlayerProfile.get();
@@ -20,22 +22,30 @@ export function StudentClaimNotifications({ onClose }) {
     } else {
       setLoading(false);
     }
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  const [error, setError] = useState(null);
-
   const loadClaims = async (name) => {
+    if (!isMountedRef.current) return;
     setLoading(true);
     setError(null);
     try {
       const results = await FirebaseBackend.getStudentClaims(name);
-      setClaims(results);
+      if (isMountedRef.current) {
+        setClaims(results);
+      }
     } catch (e) {
       console.warn('Failed to load claims:', e);
-      setError('Could not load your submissions. Please try again.');
-      setClaims([]);
+      if (isMountedRef.current) {
+        setError('Could not load your submissions. Please try again.');
+        setClaims([]);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 

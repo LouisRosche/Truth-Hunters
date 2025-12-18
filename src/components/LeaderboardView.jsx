@@ -3,7 +3,7 @@
  * Displays local and cloud leaderboards with team/player tabs
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { LeaderboardManager } from '../services/leaderboard';
 import { FirebaseBackend } from '../services/firebase';
 import { formatPlayerName } from '../utils/helpers';
@@ -13,6 +13,7 @@ export function LeaderboardView({ onBack }) {
   const [cloudTeams, setCloudTeams] = useState([]);
   const [cloudPlayers, setCloudPlayers] = useState([]);
   const [loadingCloud, setLoadingCloud] = useState(false);
+  const isMountedRef = useRef(true);
 
   // Load cloud leaderboard when Firebase is connected
   useEffect(() => {
@@ -20,16 +21,23 @@ export function LeaderboardView({ onBack }) {
       setLoadingCloud(true);
       Promise.all([FirebaseBackend.getTopTeams(10), FirebaseBackend.getTopPlayers(10)])
         .then(([teams, players]) => {
-          setCloudTeams(teams);
-          setCloudPlayers(players);
+          if (isMountedRef.current) {
+            setCloudTeams(teams);
+            setCloudPlayers(players);
+          }
         })
         .catch((e) => {
           console.warn('Failed to load cloud leaderboard:', e);
         })
         .finally(() => {
-          setLoadingCloud(false);
+          if (isMountedRef.current) {
+            setLoadingCloud(false);
+          }
         });
     }
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // Local leaderboard data

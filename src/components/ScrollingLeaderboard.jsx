@@ -12,6 +12,7 @@ export function ScrollingLeaderboard({ onViewFull }) {
   const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef(null);
   const animationRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   // Load leaderboard data
   useEffect(() => {
@@ -32,14 +33,19 @@ export function ScrollingLeaderboard({ onViewFull }) {
         data = LeaderboardManager.getTopTeams(20);
       }
 
-      setEntries(data);
+      if (isMountedRef.current) {
+        setEntries(data);
+      }
     };
 
     loadLeaderboard();
 
     // Refresh every 30 seconds
     const interval = setInterval(loadLeaderboard, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Auto-scroll animation

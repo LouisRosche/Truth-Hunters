@@ -60,15 +60,17 @@ export function useFocusTrap(isActive) {
 
     // Focus first focusable element when trap becomes active
     const focusableElements = getFocusableElements();
+    let timeoutId = null;
     if (focusableElements.length > 0) {
       // Small delay to ensure element is rendered
-      setTimeout(() => focusableElements[0].focus(), 0);
+      timeoutId = setTimeout(() => focusableElements[0].focus(), 0);
     }
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keydown', handleEscape);
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keydown', handleEscape);
     };

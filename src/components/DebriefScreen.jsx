@@ -3,7 +3,7 @@
  * End-of-game summary with achievements and reflection
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button } from './Button';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { AI_ERROR_PATTERNS } from '../data/claims';
@@ -21,6 +21,18 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
   const [reflectionResponse, setReflectionResponse] = useState('');
   const [reflectionSaved, setReflectionSaved] = useState(false);
   const [shareStatus, setShareStatus] = useState(null); // 'copied' | 'error' | null
+  const isMountedRef = useRef(true);
+  const shareTimeoutRef = useRef(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (shareTimeoutRef.current) {
+        clearTimeout(shareTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const calibrationBonus = Math.abs(team.score - team.predictedScore) <= 2 ? 3 : 0;
   const finalScore = team.score + calibrationBonus;
@@ -56,7 +68,7 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
 
   // Save reflection to Firebase for teacher insights
   const handleSaveReflection = useCallback(async () => {
-    if (reflectionSaved) return;
+    if (reflectionSaved || !isMountedRef.current) return;
 
     const correctCount = team.results.filter((r) => r.correct).length;
     const accuracy = team.results.length > 0
@@ -75,7 +87,7 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
     };
 
     const saved = await FirebaseBackend.saveReflection(reflectionData);
-    if (saved) {
+    if (saved && isMountedRef.current) {
       setReflectionSaved(true);
       SoundManager.play('tick');
       // Track reflection submission in analytics
@@ -85,6 +97,8 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
 
   // Share results handler
   const handleShare = useCallback(async () => {
+    if (!isMountedRef.current) return;
+
     const correctCount = team.results.filter((r) => r.correct).length;
     const accuracy = team.results.length > 0
       ? Math.round((correctCount / team.results.length) * 100)
@@ -107,26 +121,43 @@ Play Truth Hunters and test your fact-checking skills!`;
           title: 'Truth Hunters Results',
           text: shareText
         });
-        setShareStatus('shared');
+        if (isMountedRef.current) {
+          setShareStatus('shared');
+        }
       } else {
         // Fall back to clipboard
         await navigator.clipboard.writeText(shareText);
-        setShareStatus('copied');
-        SoundManager.play('tick');
+        if (isMountedRef.current) {
+          setShareStatus('copied');
+          SoundManager.play('tick');
+        }
       }
       // Clear status after 3 seconds
-      setTimeout(() => setShareStatus(null), 3000);
+      if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+      shareTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) setShareStatus(null);
+      }, 3000);
     } catch (err) {
       if (err.name !== 'AbortError') {
         // Try clipboard as fallback
         try {
           await navigator.clipboard.writeText(shareText);
-          setShareStatus('copied');
-          SoundManager.play('tick');
-          setTimeout(() => setShareStatus(null), 3000);
+          if (isMountedRef.current) {
+            setShareStatus('copied');
+            SoundManager.play('tick');
+          }
+          if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+          shareTimeoutRef.current = setTimeout(() => {
+            if (isMountedRef.current) setShareStatus(null);
+          }, 3000);
         } catch {
-          setShareStatus('error');
-          setTimeout(() => setShareStatus(null), 3000);
+          if (isMountedRef.current) {
+            setShareStatus('error');
+          }
+          if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+          shareTimeoutRef.current = setTimeout(() => {
+            if (isMountedRef.current) setShareStatus(null);
+          }, 3000);
         }
       }
     }

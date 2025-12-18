@@ -3,7 +3,7 @@
  * For teacher dashboard - approve/reject student-submitted claims
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from './Button';
 import { FirebaseBackend } from '../services/firebase';
 
@@ -12,19 +12,33 @@ export function ClaimModeration({ classCode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processingId, setProcessingId] = useState(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadPendingClaims = useCallback(async () => {
+    if (!isMountedRef.current) return;
     setLoading(true);
     setError(null);
 
     try {
       const claims = await FirebaseBackend.getPendingClaims(classCode);
-      setPendingClaims(claims || []);
+      if (isMountedRef.current) {
+        setPendingClaims(claims || []);
+      }
     } catch (err) {
-      setError(`Failed to load pending claims: ${err.message}`);
-      console.error('Error loading claims:', err);
+      if (isMountedRef.current) {
+        setError(`Failed to load pending claims: ${err.message}`);
+        console.error('Error loading claims:', err);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [classCode]);
 
@@ -39,28 +53,42 @@ export function ClaimModeration({ classCode }) {
   }, [loadPendingClaims]);
 
   const handleApprove = async (claim) => {
+    if (!isMountedRef.current) return;
     setProcessingId(claim.id);
 
     try {
       await FirebaseBackend.approveClaim(claim.id, claim);
-      setPendingClaims(prev => prev.filter(c => c.id !== claim.id));
+      if (isMountedRef.current) {
+        setPendingClaims(prev => prev.filter(c => c.id !== claim.id));
+      }
     } catch (err) {
-      setError(`Failed to approve claim: ${err.message}`);
+      if (isMountedRef.current) {
+        setError(`Failed to approve claim: ${err.message}`);
+      }
     } finally {
-      setProcessingId(null);
+      if (isMountedRef.current) {
+        setProcessingId(null);
+      }
     }
   };
 
   const handleReject = async (claimId, reason) => {
+    if (!isMountedRef.current) return;
     setProcessingId(claimId);
 
     try {
       await FirebaseBackend.rejectClaim(claimId, reason);
-      setPendingClaims(prev => prev.filter(c => c.id !== claimId));
+      if (isMountedRef.current) {
+        setPendingClaims(prev => prev.filter(c => c.id !== claimId));
+      }
     } catch (err) {
-      setError(`Failed to reject claim: ${err.message}`);
+      if (isMountedRef.current) {
+        setError(`Failed to reject claim: ${err.message}`);
+      }
     } finally {
-      setProcessingId(null);
+      if (isMountedRef.current) {
+        setProcessingId(null);
+      }
     }
   };
 

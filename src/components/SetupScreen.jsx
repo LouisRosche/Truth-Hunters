@@ -3,7 +3,7 @@
  * Team configuration and game settings
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from './Button';
 import { LeaderboardView } from './LeaderboardView';
 import { ScrollingLeaderboard } from './ScrollingLeaderboard';

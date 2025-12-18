@@ -25,8 +25,12 @@ import { FirebaseBackend } from './services/firebase';
 import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
+import { useOfflineToasts } from './hooks/useOfflineToasts';
 
 export function App() {
+  // Connect offline queue to toast notifications
+  useOfflineToasts();
+
   // Check for teacher mode via URL parameter (?teacher=true or #teacher)
   const [isTeacherMode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
