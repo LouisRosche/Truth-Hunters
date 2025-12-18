@@ -152,15 +152,15 @@ export function SetupScreen({ onStart, isLoading = false }) {
     });
   };
 
-  // Toggle subject selection
-  const toggleSubject = (subject) => {
+  // Toggle subject selection (memoized to prevent re-creation)
+  const toggleSubject = useCallback((subject) => {
     setSelectedSubjects(prev => {
       if (prev.includes(subject)) {
         return prev.filter(s => s !== subject);
       }
       return [...prev, subject];
     });
-  };
+  }, []); // No dependencies - uses functional update
 
   // Difficulty background colors
   const difficultyBgColors = {

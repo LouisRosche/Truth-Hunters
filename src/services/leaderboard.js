@@ -5,6 +5,7 @@
 
 import { sanitizeInput, isContentAppropriate } from '../utils/moderation';
 import { formatPlayerName } from '../utils/helpers';
+import { getTopPlayers as getTopPlayersUtil } from '../utils/leaderboardUtils';
 
 const STORAGE_KEY = 'truthHunters_leaderboard';
 
@@ -184,38 +185,7 @@ export const LeaderboardManager = {
    */
   getTopPlayers(limit = 10) {
     const records = this.getAll();
-    const playerScores = {};
-
-    records.forEach(game => {
-      if (!game.players) return;
-      game.players.forEach(player => {
-        const key = `${player.firstName}_${player.lastInitial}`.toLowerCase();
-        const displayName = `${player.firstName} ${player.lastInitial}.`;
-
-        if (!playerScores[key]) {
-          playerScores[key] = {
-            displayName,
-            totalScore: 0,
-            gamesPlayed: 0,
-            bestScore: 0
-          };
-        }
-
-        // Each player on the team shares the team's score
-        playerScores[key].totalScore += game.score;
-        playerScores[key].gamesPlayed += 1;
-        playerScores[key].bestScore = Math.max(playerScores[key].bestScore, game.score);
-      });
-    });
-
-    return Object.values(playerScores)
-      .filter(p => p.gamesPlayed > 0) // Guard against division by zero
-      .map(p => ({
-        ...p,
-        avgScore: Math.round(p.totalScore / p.gamesPlayed)
-      }))
-      .sort((a, b) => b.bestScore - a.bestScore)
-      .slice(0, limit);
+    return getTopPlayersUtil(records, limit);
   },
 
   /**

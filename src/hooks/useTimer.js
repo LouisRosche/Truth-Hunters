@@ -16,23 +16,40 @@ export function useTimer(initialTime, onComplete) {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const callbackRef = useRef(onComplete);
+  const visibilityTimeoutRef = useRef(null);
+  const wasHiddenRef = useRef(false);
 
   useEffect(() => {
     callbackRef.current = onComplete;
   }, [onComplete]);
 
-  // Handle tab visibility - pause when hidden
+  // Handle tab visibility - pause when hidden with debouncing to prevent race conditions
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setIsPaused(true);
-      } else {
-        setIsPaused(false);
+      // Clear any pending visibility changes
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
       }
+
+      // Debounce visibility changes to prevent rapid toggling
+      visibilityTimeoutRef.current = setTimeout(() => {
+        const isHidden = document.hidden;
+
+        // Only update if visibility actually changed
+        if (wasHiddenRef.current !== isHidden) {
+          wasHiddenRef.current = isHidden;
+          setIsPaused(isHidden);
+        }
+      }, 100); // 100ms debounce
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
