@@ -51,6 +51,26 @@ export const ENCOURAGEMENTS = {
 };
 
 /**
+ * Scoring matrix for confidence levels
+ * Maps confidence level to points earned/lost for correct/incorrect answers
+ */
+export const POINTS_MATRIX = {
+  1: { correct: 1, incorrect: -1 },
+  2: { correct: 3, incorrect: -3 },
+  3: { correct: 5, incorrect: -6 }
+};
+
+/**
+ * Difficulty multipliers for scoring
+ */
+export const DIFFICULTY_MULTIPLIERS = {
+  easy: 1,
+  medium: 1.5,
+  hard: 2,
+  mixed: 1
+};
+
+/**
  * Difficulty configuration
  */
 export const DIFFICULTY_CONFIG = {

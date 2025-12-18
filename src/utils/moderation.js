@@ -157,13 +157,14 @@ export function isContentAppropriate(text) {
 /**
  * Sanitize text input - removes or replaces inappropriate content
  * @param {string} text - Text to sanitize
+ * @param {number} maxLength - Maximum length (default: 50)
  * @returns {string} Sanitized text
  */
-export function sanitizeInput(text) {
+export function sanitizeInput(text, maxLength = 50) {
   if (!text || typeof text !== 'string') return '';
 
   // First, trim and limit length
-  let sanitized = text.trim().substring(0, 50);
+  let sanitized = text.trim().substring(0, maxLength);
 
   // Remove any HTML/script tags to prevent XSS
   sanitized = sanitized
@@ -179,6 +180,42 @@ export function sanitizeInput(text) {
   sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
 
   return sanitized;
+}
+
+/**
+ * Sanitize HTML content using DOMPurify (for user-generated content like claims)
+ * Provides defense-in-depth protection against XSS attacks
+ * @param {string} html - HTML content to sanitize
+ * @param {number} maxLength - Maximum length (default: 1000)
+ * @returns {string} Sanitized plain text
+ */
+export function sanitizeHTML(html, maxLength = 1000) {
+  if (!html || typeof html !== 'string') return '';
+
+  // Use DOMPurify if available (loaded via CDN or npm)
+  let clean = html;
+
+  try {
+    // Dynamically import DOMPurify
+    if (typeof window !== 'undefined') {
+      // Try to use DOMPurify if it's available globally
+      const DOMPurify = window.DOMPurify;
+      if (DOMPurify && typeof DOMPurify.sanitize === 'function') {
+        clean = DOMPurify.sanitize(html, {
+          ALLOWED_TAGS: [], // No HTML tags allowed - plain text only
+          ALLOWED_ATTR: [],
+          KEEP_CONTENT: true // Keep text content, strip tags
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('DOMPurify not available, using fallback sanitization:', e);
+  }
+
+  // Apply basic sanitization as defense-in-depth
+  clean = sanitizeInput(clean, maxLength);
+
+  return clean;
 }
 
 /**

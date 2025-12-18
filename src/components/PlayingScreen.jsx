@@ -67,55 +67,56 @@ export function PlayingScreen({
   const [showPreviousRounds, setShowPreviousRounds] = useState(false);
 
   // Keyboard shortcuts for faster gameplay
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Don't trigger if user is typing in textarea
-      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  // Memoize the handler to prevent memory leaks from stale closures
+  const handleKeyDown = useCallback((e) => {
+    // Don't trigger if user is typing in textarea
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
 
-      if (!showResult) {
-        // Verdict shortcuts
-        if (e.key === 't' || e.key === 'T') {
-          setVerdict('TRUE');
-          SoundManager.play('tick');
-        } else if (e.key === 'f' || e.key === 'F') {
-          setVerdict('FALSE');
-          SoundManager.play('tick');
-        } else if (e.key === 'm' || e.key === 'M') {
-          setVerdict('MIXED');
-          SoundManager.play('tick');
-        }
-        // Confidence shortcuts
-        else if (e.key === '1') {
-          setConfidence(1);
-          SoundManager.play('tick');
-        } else if (e.key === '2') {
-          setConfidence(2);
-          SoundManager.play('tick');
-        } else if (e.key === '3') {
-          setConfidence(3);
-          SoundManager.play('tick');
-        }
-        // Submit with Enter when verdict is selected
-        else if (e.key === 'Enter' && verdict) {
-          e.preventDefault();
-          setPendingSubmit(true);
-        }
-        // Show keyboard hint with ?
-        else if (e.key === '?') {
-          setShowKeyboardHint(prev => !prev);
-        }
-      } else {
-        // In result view, Enter advances to next round
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setPendingNext(true);
-        }
+    if (!showResult) {
+      // Verdict shortcuts
+      if (e.key === 't' || e.key === 'T') {
+        setVerdict('TRUE');
+        SoundManager.play('tick');
+      } else if (e.key === 'f' || e.key === 'F') {
+        setVerdict('FALSE');
+        SoundManager.play('tick');
+      } else if (e.key === 'm' || e.key === 'M') {
+        setVerdict('MIXED');
+        SoundManager.play('tick');
       }
-    };
+      // Confidence shortcuts
+      else if (e.key === '1') {
+        setConfidence(1);
+        SoundManager.play('tick');
+      } else if (e.key === '2') {
+        setConfidence(2);
+        SoundManager.play('tick');
+      } else if (e.key === '3') {
+        setConfidence(3);
+        SoundManager.play('tick');
+      }
+      // Submit with Enter when verdict is selected
+      else if (e.key === 'Enter' && verdict) {
+        e.preventDefault();
+        setPendingSubmit(true);
+      }
+      // Show keyboard hint with ?
+      else if (e.key === '?') {
+        setShowKeyboardHint(prev => !prev);
+      }
+    } else {
+      // In result view, Enter advances to next round
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setPendingNext(true);
+      }
+    }
+  }, [showResult, verdict]); // Include all dependencies used inside handler
 
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showResult, verdict]);
+  }, [handleKeyDown]); // Now depends on the memoized handler
 
   // Handle pending keyboard actions (to avoid circular dependencies)
   useEffect(() => {
