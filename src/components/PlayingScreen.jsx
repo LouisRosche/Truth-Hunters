@@ -386,26 +386,28 @@ export function PlayingScreen({
         />
       )}
 
-      {/* Tab Switch Warning */}
+      {/* Tab Switch Warning - ZERO TOLERANCE */}
       {tabSwitchWarning !== null && ANTI_CHEAT.ENABLED && (
         <div
           className="animate-shake"
           style={{
             marginBottom: '0.75rem',
             padding: '0.75rem 1rem',
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '2px solid var(--incorrect)',
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '3px solid var(--incorrect)',
             borderRadius: '8px',
-            textAlign: 'center'
+            textAlign: 'center',
+            boxShadow: '0 0 20px rgba(239, 68, 68, 0.3)'
           }}
         >
-          <div className="mono" style={{ fontSize: '0.875rem', color: 'var(--incorrect)', fontWeight: 600 }}>
-            ⚠️ TAB SWITCH DETECTED!
+          <div className="mono" style={{ fontSize: '1rem', color: 'var(--incorrect)', fontWeight: 700 }}>
+            🚫 TAB SWITCH DETECTED!
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            {tabSwitchWarning >= ANTI_CHEAT.MAX_TAB_SWITCHES_PER_ROUND
-              ? 'Round forfeited for excessive tab switching'
-              : `Warning ${tabSwitchWarning}/${ANTI_CHEAT.MAX_TAB_SWITCHES_PER_ROUND} - ${ANTI_CHEAT.TAB_SWITCH_PENALTY} points penalty`}
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', marginTop: '0.375rem', fontWeight: 600 }}>
+            ROUND FORFEITED - {ANTI_CHEAT.FORFEIT_PENALTY} POINTS
+          </div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.25rem', fontStyle: 'italic' }}>
+            Zero tolerance policy: No tab switching allowed during gameplay
           </div>
         </div>
       )}
@@ -796,16 +798,23 @@ export function PlayingScreen({
               style={{
                 marginTop: '0.5rem',
                 padding: '0.5rem 0.75rem',
-                background: resultData.speedBonus.tier === 'lightning'
+                background: resultData.speedBonus.tier === 'ultra-lightning'
+                  ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.35) 0%, rgba(245, 158, 11, 0.3) 100%)'
+                  : resultData.speedBonus.tier === 'lightning'
                   ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(245, 158, 11, 0.2) 100%)'
                   : 'rgba(251, 191, 36, 0.15)',
-                border: `1px solid var(--accent-amber)`,
+                border: `2px solid ${resultData.speedBonus.tier === 'ultra-lightning' ? 'var(--accent-amber)' : 'var(--accent-amber)'}`,
                 borderRadius: '6px',
-                display: 'inline-block'
+                display: 'inline-block',
+                boxShadow: resultData.speedBonus.tier === 'ultra-lightning' ? '0 0 15px rgba(251, 191, 36, 0.4)' : 'none'
               }}
             >
-              <span className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                {resultData.speedBonus.icon} {resultData.speedBonus.tier === 'lightning' ? 'LIGHTNING FAST!' : 'SPEED BONUS!'} +{resultData.speedBonus.bonus}
+              <span className="mono" style={{
+                fontSize: resultData.speedBonus.tier === 'ultra-lightning' ? '1rem' : '0.875rem',
+                color: 'var(--accent-amber)',
+                fontWeight: 600
+              }}>
+                {resultData.speedBonus.icon} {resultData.speedBonus.label} +{resultData.speedBonus.bonus}
               </span>
             </div>
           )}

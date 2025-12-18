@@ -7,9 +7,10 @@ import { POINTS_MATRIX, DIFFICULTY_MULTIPLIERS, SPEED_BONUS } from '../data/cons
 
 /**
  * Calculate speed bonus multiplier based on response time
+ * Uses granular tier system for more nuanced rewards
  * @param {number} timeElapsed - Time taken to answer (seconds)
  * @param {number} totalTime - Total time available (seconds)
- * @returns {Object} { multiplier, tier, icon } - Bonus info
+ * @returns {Object} { multiplier, tier, icon, label } - Bonus info
  */
 export function calculateSpeedBonus(timeElapsed, totalTime) {
   if (!SPEED_BONUS.ENABLED || timeElapsed <= 0 || totalTime <= 0) {
@@ -18,20 +19,19 @@ export function calculateSpeedBonus(timeElapsed, totalTime) {
 
   const percentageUsed = timeElapsed / totalTime;
 
-  if (percentageUsed <= SPEED_BONUS.LIGHTNING_THRESHOLD) {
-    return {
-      multiplier: SPEED_BONUS.LIGHTNING_MULTIPLIER,
-      tier: 'lightning',
-      icon: SPEED_BONUS.LIGHTNING_ICON
-    };
-  } else if (percentageUsed <= SPEED_BONUS.FAST_THRESHOLD) {
-    return {
-      multiplier: SPEED_BONUS.FAST_MULTIPLIER,
-      tier: 'fast',
-      icon: SPEED_BONUS.FAST_ICON
-    };
+  // Check tiers in order (fastest to slowest)
+  for (const tierConfig of SPEED_BONUS.TIERS) {
+    if (percentageUsed <= tierConfig.threshold) {
+      return {
+        multiplier: tierConfig.multiplier,
+        tier: tierConfig.tier,
+        icon: tierConfig.icon,
+        label: tierConfig.label
+      };
+    }
   }
 
+  // No bonus if too slow
   return { multiplier: 1, tier: null };
 }
 
@@ -89,6 +89,7 @@ export function calculatePoints(correct, confidence, difficulty = 'easy', option
     speedBonus: speedBonus.tier ? {
       tier: speedBonus.tier,
       icon: speedBonus.icon,
+      label: speedBonus.label,
       multiplier: speedBonus.multiplier,
       bonus: Math.round((basePoints * difficultyMultiplier * speedBonus.multiplier) - (basePoints * difficultyMultiplier))
     } : null,
