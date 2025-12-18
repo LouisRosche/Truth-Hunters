@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import { sanitizeInput } from '../utils/moderation';
 import { formatPlayerName } from '../utils/helpers';
+import { aggregatePlayerScores } from '../utils/leaderboardUtils';
 
 const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
 const FIREBASE_CLASS_SETTINGS_KEY = 'truthHunters_classSettings';
@@ -288,41 +289,6 @@ export const FirebaseBackend = {
       return [];
     }
 
-    const aggregatePlayers = (docs) => {
-      const playerScores = {};
-      docs.forEach(doc => {
-        const game = doc.data();
-        if (!game.players) return;
-
-        game.players.forEach(player => {
-          const key = `${player.firstName}_${player.lastInitial}`.toLowerCase();
-          const displayName = formatPlayerName(player.firstName, player.lastInitial);
-
-          if (!playerScores[key]) {
-            playerScores[key] = {
-              displayName,
-              totalScore: 0,
-              gamesPlayed: 0,
-              bestScore: -Infinity
-            };
-          }
-
-          playerScores[key].totalScore += game.score || 0;
-          playerScores[key].gamesPlayed += 1;
-          playerScores[key].bestScore = Math.max(playerScores[key].bestScore, game.score || 0);
-        });
-      });
-
-      return Object.values(playerScores)
-        .filter(p => p.gamesPlayed > 0)
-        .map(p => ({
-          ...p,
-          avgScore: Math.round(p.totalScore / p.gamesPlayed)
-        }))
-        .sort((a, b) => b.bestScore - a.bestScore)
-        .slice(0, limitCount);
-    };
-
     try {
       const classCode = this.getClassCode();
       const gamesRef = collection(this.db, 'games');
@@ -335,13 +301,28 @@ export const FirebaseBackend = {
       }
 
       const snapshot = await getDocs(q);
-      let results = aggregatePlayers(snapshot.docs);
+      // Convert Firestore docs to game records
+      let games = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        score: doc.data().score || 0,
+        players: doc.data().players || []
+      }));
+
+      // Use shared aggregation logic
+      let aggregated = aggregatePlayerScores(games);
+      let results = aggregated.slice(0, limitCount);
 
       // If class-specific results are empty, fall back to PUBLIC games
       if (results.length === 0 && classCode && classCode !== 'PUBLIC') {
         const publicQuery = query(gamesRef, where('classCode', '==', 'PUBLIC'));
         const publicSnapshot = await getDocs(publicQuery);
-        results = aggregatePlayers(publicSnapshot.docs);
+        const publicGames = publicSnapshot.docs.map(doc => ({
+          ...doc.data(),
+          score: doc.data().score || 0,
+          players: doc.data().players || []
+        }));
+        const publicAggregated = aggregatePlayerScores(publicGames);
+        results = publicAggregated.slice(0, limitCount);
       }
 
       return results;

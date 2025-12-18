@@ -42,6 +42,9 @@ export const SoundManager = {
 
       const now = this.ctx.currentTime;
 
+      // Sound duration based on type
+      let duration;
+
       switch(type) {
         case 'correct':
           osc.frequency.setValueAtTime(523, now); // C5
@@ -51,6 +54,7 @@ export const SoundManager = {
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
           osc.start(now);
           osc.stop(now + 0.4);
+          duration = 0.4;
           break;
 
         case 'incorrect':
@@ -60,6 +64,7 @@ export const SoundManager = {
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
           osc.start(now);
           osc.stop(now + 0.3);
+          duration = 0.3;
           break;
 
         case 'tick':
@@ -68,6 +73,7 @@ export const SoundManager = {
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
           osc.start(now);
           osc.stop(now + 0.05);
+          duration = 0.05;
           break;
 
         case 'achievement':
@@ -79,6 +85,7 @@ export const SoundManager = {
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
           osc.start(now);
           osc.stop(now + 0.5);
+          duration = 0.5;
           break;
 
         case 'streak':
@@ -89,8 +96,22 @@ export const SoundManager = {
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
           osc.start(now);
           osc.stop(now + 0.3);
+          duration = 0.3;
           break;
+
+        default:
+          duration = 0.1;
       }
+
+      // Clean up audio nodes after sound completes to prevent memory leaks
+      osc.onended = () => {
+        try {
+          gain.disconnect();
+          osc.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors (node may already be disconnected)
+        }
+      };
     } catch (e) {
       // Silently fail if audio doesn't work
       console.warn('Sound playback failed:', e);
