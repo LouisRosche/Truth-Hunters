@@ -455,6 +455,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
               key={avatar.id}
               onClick={() => setSelectedAvatar(avatar)}
               title={avatar.name}
+              aria-label={`Select ${avatar.name} as team mascot`}
+              aria-pressed={selectedAvatar.id === avatar.id}
               style={{
                 padding: '0.5rem 0.375rem',
                 background: selectedAvatar.id === avatar.id ? 'rgba(34, 211, 238, 0.15)' : 'var(--bg-elevated)',
@@ -464,7 +466,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
                 fontSize: '1.25rem'
               }}
             >
-              {avatar.emoji}
+              <span role="img" aria-label={avatar.name}>{avatar.emoji}</span>
             </button>
           ))}
         </div>

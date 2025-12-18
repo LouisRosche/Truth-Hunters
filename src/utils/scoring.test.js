@@ -6,6 +6,29 @@ import { describe, it, expect } from 'vitest';
 import { calculatePoints, calculateGameStats } from './scoring';
 
 describe('calculatePoints', () => {
+  describe('input validation', () => {
+    it('throws error for invalid confidence values', () => {
+      expect(() => calculatePoints(true, 0)).toThrow('Invalid confidence value');
+      expect(() => calculatePoints(true, 4)).toThrow('Invalid confidence value');
+      expect(() => calculatePoints(true, null)).toThrow('Invalid confidence value');
+      expect(() => calculatePoints(true, undefined)).toThrow('Invalid confidence value');
+      expect(() => calculatePoints(true, 1.5)).toThrow('Invalid confidence value');
+      expect(() => calculatePoints(true, '2')).toThrow('Invalid confidence value');
+    });
+
+    it('throws error for invalid correct values', () => {
+      expect(() => calculatePoints('true', 2)).toThrow('Invalid correct value');
+      expect(() => calculatePoints(1, 2)).toThrow('Invalid correct value');
+      expect(() => calculatePoints(null, 2)).toThrow('Invalid correct value');
+    });
+
+    it('accepts valid inputs without throwing', () => {
+      expect(() => calculatePoints(true, 1)).not.toThrow();
+      expect(() => calculatePoints(false, 2)).not.toThrow();
+      expect(() => calculatePoints(true, 3, 'hard')).not.toThrow();
+    });
+  });
+
   describe('base points (easy difficulty)', () => {
     it('returns +1 for correct answer with low confidence', () => {
       expect(calculatePoints(true, 1)).toBe(1);

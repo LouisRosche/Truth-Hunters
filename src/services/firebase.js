@@ -91,9 +91,9 @@ export const FirebaseBackend = {
 
   /**
    * Initialize Firebase with environment config
-   * Uses a flag to prevent race conditions from concurrent initialization
+   * Uses Promise-based singleton to prevent race conditions
    */
-  _initializing: false,
+  _initPromise: null,
 
   init() {
     // Return cached result if already initialized
@@ -101,14 +101,56 @@ export const FirebaseBackend = {
       return true;
     }
 
-    // Prevent concurrent initialization (race condition guard)
-    if (this._initializing) {
+    // If initialization is in progress, wait for it
+    // This prevents race conditions where multiple callers try to initialize simultaneously
+    if (this._initPromise) {
+      // For synchronous callers, return false to indicate "not ready yet"
+      // They should retry or use async patterns
       return false;
     }
-    this._initializing = true;
 
+    // Start initialization
+    this._initPromise = this._performInit()
+      .finally(() => {
+        this._initPromise = null;
+      });
+
+    // Trigger the promise but return synchronously for backwards compatibility
+    this._initPromise.catch(() => {}); // Prevent unhandled rejection
+
+    return this.initialized;
+  },
+
+  /**
+   * Async initialization for Promise-based callers
+   * @returns {Promise<boolean>} True if initialization succeeded
+   */
+  async initAsync() {
+    // Already initialized
+    if (this.initialized && this.db) {
+      return true;
+    }
+
+    // Wait for in-progress initialization
+    if (this._initPromise) {
+      return this._initPromise;
+    }
+
+    // Start new initialization
+    this._initPromise = this._performInit()
+      .finally(() => {
+        this._initPromise = null;
+      });
+
+    return this._initPromise;
+  },
+
+  /**
+   * Internal initialization logic
+   * @private
+   */
+  async _performInit() {
     try {
-
       // Check if Firebase is properly configured
       if (!this.isConfigured()) {
         console.warn('Firebase configuration missing. Please set VITE_FIREBASE_* environment variables.');
@@ -131,9 +173,8 @@ export const FirebaseBackend = {
       return true;
     } catch (e) {
       console.warn('Failed to initialize Firebase:', e);
+      this.initialized = false;
       return false;
-    } finally {
-      this._initializing = false;
     }
   },
 
@@ -343,7 +384,13 @@ export const FirebaseBackend = {
 
     // Validate required fields
     if (!claimData.claimText || claimData.claimText.trim().length < 10) {
-      return { success: false, error: 'Claim text is too short' };
+      return { success: false, error: 'Claim text must be at least 10 characters' };
+    }
+
+    // Validate maximum length to prevent database bloat
+    const MAX_CLAIM_LENGTH = 500;
+    if (claimData.claimText.length > MAX_CLAIM_LENGTH) {
+      return { success: false, error: `Claim text must be less than ${MAX_CLAIM_LENGTH} characters` };
     }
 
     // Validate answer field
@@ -369,8 +416,9 @@ export const FirebaseBackend = {
 
     try {
       const classCode = this.getClassCode() || 'PUBLIC';
-      const sanitizedClaimText = sanitizeInput(claimData.claimText || '');
-      const submitterName = sanitizeInput(claimData.submitterName || 'Anonymous');
+      // Use maxLength parameter for claim text (500 chars max)
+      const sanitizedClaimText = sanitizeInput(claimData.claimText || '', MAX_CLAIM_LENGTH);
+      const submitterName = sanitizeInput(claimData.submitterName || 'Anonymous', 50);
 
       // Check for duplicate claims by same student (simple text similarity)
       const existingClaims = await this.getStudentClaims(submitterName);

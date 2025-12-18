@@ -109,9 +109,15 @@ export function App() {
     }
 
     // Remove session when game ends (debrief phase)
-    if (gameState.phase === 'debrief') {
+    if (gameState.phase === 'debrief' && sessionId) {
       FirebaseBackend.removeActiveSession(sessionId).catch(e => {
-        console.warn('Failed to remove live session:', e);
+        console.error('Failed to remove live session on game end:', e);
+        // Attempt retry after brief delay
+        setTimeout(() => {
+          FirebaseBackend.removeActiveSession(sessionId).catch(retryErr => {
+            console.error('Retry failed for session removal:', retryErr);
+          });
+        }, 1000);
       });
       setSessionId(null);
     }
@@ -119,9 +125,38 @@ export function App() {
 
   // Clean up session on unmount or window close
   useEffect(() => {
-    const cleanup = () => {
+    const cleanup = async () => {
       if (sessionId && FirebaseBackend.initialized) {
-        FirebaseBackend.removeActiveSession(sessionId).catch(() => {});
+        try {
+          // Retry up to 3 times for critical cleanup
+          let retries = 3;
+          while (retries > 0) {
+            try {
+              await FirebaseBackend.removeActiveSession(sessionId);
+              break; // Success
+            } catch (err) {
+              retries--;
+              if (retries === 0) {
+                console.error('Failed to remove live session after 3 retries:', err);
+                // Log to analytics/error tracking if available
+                if (window.navigator.sendBeacon) {
+                  // Use sendBeacon for cleanup during page unload
+                  window.navigator.sendBeacon('/api/log-error', JSON.stringify({
+                    error: 'session-cleanup-failed',
+                    sessionId,
+                    timestamp: Date.now()
+                  }));
+                }
+              } else {
+                // Wait briefly before retry
+                await new Promise(resolve => setTimeout(resolve, 200));
+              }
+            }
+          }
+        } catch (e) {
+          // Final fallback - at least log it
+          console.error('Critical: Session cleanup failed completely:', e);
+        }
       }
     };
 
@@ -414,7 +449,8 @@ export function App() {
 
         // Get next claim with bounds checking
         const nextRound = prev.currentRound + 1;
-        const nextClaimIndex = prev.currentRound;
+        // Next claim index should match the next round number (fixed off-by-one bug)
+        const nextClaimIndex = nextRound;
         const nextClaim =
           !isLastRound && nextClaimIndex < prev.claims.length ? prev.claims[nextClaimIndex] : null;
 
