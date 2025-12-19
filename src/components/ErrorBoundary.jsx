@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -23,21 +24,17 @@ export class ErrorBoundary extends React.Component {
     this.setState({ errorInfo });
 
     // Attempt to save error to localStorage for debugging (if available)
-    try {
-      const errorLog = {
-        message: error?.message || 'Unknown error',
-        stack: error?.stack,
-        componentStack: errorInfo?.componentStack,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-      };
-      const existingLogs = JSON.parse(localStorage.getItem('truthHunters_errorLog') || '[]');
-      existingLogs.push(errorLog);
-      // Keep only last 5 errors
-      localStorage.setItem('truthHunters_errorLog', JSON.stringify(existingLogs.slice(-5)));
-    } catch (e) {
-      // localStorage not available, ignore
-    }
+    const errorLog = {
+      message: error?.message || 'Unknown error',
+      stack: error?.stack,
+      componentStack: errorInfo?.componentStack,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent
+    };
+    const existingLogs = safeGetItem('truthHunters_errorLog', []);
+    existingLogs.push(errorLog);
+    // Keep only last 5 errors
+    safeSetItem('truthHunters_errorLog', existingLogs.slice(-5));
   }
 
   render() {

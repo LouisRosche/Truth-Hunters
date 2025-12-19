@@ -3,7 +3,8 @@
  * Main gameplay component - single unified screen for claim evaluation
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { ClaimCard } from './ClaimCard';
 import { ConfidenceSelector } from './ConfidenceSelector';
@@ -14,6 +15,7 @@ import { calculatePoints } from '../utils/scoring';
 import { getRandomItem, getHintContent } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
 import { useGameIntegrity } from '../hooks/useGameIntegrity';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 // Calibration-based tips that rotate based on performance
 const CALIBRATION_TIPS = {
@@ -76,8 +78,8 @@ export function PlayingScreen({
 
   // Check if tutorial should be shown (first time user in this session)
   useEffect(() => {
-    const tutorialData = localStorage.getItem('truthDetector_tutorialSeen');
-    const lastSessionId = tutorialData ? JSON.parse(tutorialData).sessionId : null;
+    const tutorialData = safeGetItem('truthDetector_tutorialSeen', null);
+    const lastSessionId = tutorialData?.sessionId || null;
 
     // Show tutorial if: (1) never seen, OR (2) new session started
     const shouldShow = round === 1 && (!tutorialData || lastSessionId !== sessionId);
@@ -358,10 +360,21 @@ export function PlayingScreen({
     SoundManager.play('tick');
   };
 
+  // Loading state check
+  if (!claim || !claim.id) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem', textAlign: 'center' }}>
+        <div className="mono" style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>
+          Loading claim...
+        </div>
+      </div>
+    );
+  }
+
   const isLastRound = round >= totalRounds;
 
-  // Calculate confidence risk preview
-  const getConfidencePreview = () => {
+  // Calculate confidence risk preview (memoized for performance)
+  const confidencePreview = useMemo(() => {
     const basePoints = {
       1: { correct: 1, incorrect: -1 },
       2: { correct: 3, incorrect: -3 },
@@ -372,7 +385,7 @@ export function PlayingScreen({
       ifCorrect: Math.round(basePoints.correct * multiplier),
       ifWrong: -Math.round(Math.abs(basePoints.incorrect * multiplier))
     };
-  };
+  }, [confidence, _difficulty]);
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0.75rem' }}>
@@ -437,7 +450,7 @@ export function PlayingScreen({
               onClick={() => {
                 setShowTutorial(false);
                 // Store session ID to allow tutorial again in new sessions
-                localStorage.setItem('truthDetector_tutorialSeen', JSON.stringify({ sessionId, seen: true }));
+                safeSetItem('truthDetector_tutorialSeen', { sessionId, seen: true });
               }}
               fullWidth
             >
@@ -574,6 +587,10 @@ export function PlayingScreen({
           {!showResult && timeRemaining !== null && (
             <div
               className="mono"
+              role="timer"
+              aria-live={timeRemaining <= 10 ? 'assertive' : 'off'}
+              aria-atomic="true"
+              aria-label={`Time remaining: ${Math.floor(timeRemaining / 60)} minutes ${timeRemaining % 60} seconds`}
               style={{
                 padding: '0.25rem 0.5rem',
                 fontSize: '0.6875rem',
@@ -794,10 +811,13 @@ export function PlayingScreen({
               <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
                 CONFIDENCE
               </h3>
-              <ConfidenceSelector value={confidence} onChange={setConfidence} />
+              <ConfidenceSelector value={confidence} onChange={setConfidence} aria-describedby="confidence-preview" />
               {/* Risk Preview */}
               <div
+                id="confidence-preview"
                 className="mono"
+                role="status"
+                aria-live="polite"
                 style={{
                   marginTop: '0.5rem',
                   padding: '0.375rem 0.5rem',
@@ -808,18 +828,11 @@ export function PlayingScreen({
                   color: 'var(--text-muted)'
                 }}
               >
-                {(() => {
-                  const preview = getConfidencePreview();
-                  return (
-                    <>
-                      If right: <span style={{ color: 'var(--correct)', fontWeight: 600 }}>+{preview.ifCorrect}</span>
-                      {' | '}
-                      If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 600 }}>{preview.ifWrong}</span>
-                      <br />
-                      <span style={{ fontSize: '0.5625rem', opacity: 0.7 }}>+ speed bonus (up to 2.0x)</span>
-                    </>
-                  );
-                })()}
+                If right: <span style={{ color: 'var(--correct)', fontWeight: 600 }}>+{confidencePreview.ifCorrect}</span>
+                {' | '}
+                If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 600 }}>{confidencePreview.ifWrong}</span>
+                <br />
+                <span style={{ fontSize: '0.5625rem', color: 'var(--text-muted)' }}>+ speed bonus (up to 2.0x)</span>
               </div>
             </div>
           </div>
@@ -1079,3 +1092,61 @@ export function PlayingScreen({
     </div>
   );
 }
+
+// PropTypes validation for production safety
+PlayingScreen.propTypes = {
+  claim: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    text: PropTypes.string.isRequired,
+    answer: PropTypes.oneOf(['TRUE', 'FALSE', 'MIXED']).isRequired,
+    difficulty: PropTypes.oneOf(['easy', 'medium', 'hard', 'expert']),
+    category: PropTypes.string,
+    source: PropTypes.string,
+    context: PropTypes.string
+  }).isRequired,
+  round: PropTypes.number.isRequired,
+  totalRounds: PropTypes.number.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  difficulty: PropTypes.oneOf(['easy', 'medium', 'hard', 'expert']).isRequired,
+  currentStreak: PropTypes.number,
+  onUseHint: PropTypes.func,
+  teamAvatar: PropTypes.shape({
+    emoji: PropTypes.string,
+    name: PropTypes.string
+  }),
+  isPaused: PropTypes.bool,
+  previousResults: PropTypes.arrayOf(
+    PropTypes.shape({
+      claimId: PropTypes.string,
+      teamVerdict: PropTypes.oneOf(['TRUE', 'FALSE', 'MIXED']),
+      confidence: PropTypes.oneOf([1, 2, 3]),
+      correct: PropTypes.bool,
+      points: PropTypes.number
+    })
+  ),
+  claims: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      text: PropTypes.string.isRequired
+    })
+  ),
+  currentScore: PropTypes.number,
+  predictedScore: PropTypes.number,
+  sessionId: PropTypes.string,
+  showLiveLeaderboard: PropTypes.bool,
+  onToggleLiveLeaderboard: PropTypes.func
+};
+
+PlayingScreen.defaultProps = {
+  currentStreak: 0,
+  onUseHint: () => {},
+  teamAvatar: null,
+  isPaused: false,
+  previousResults: [],
+  claims: [],
+  currentScore: 0,
+  predictedScore: 0,
+  sessionId: null,
+  showLiveLeaderboard: true,
+  onToggleLiveLeaderboard: () => {}
+};
