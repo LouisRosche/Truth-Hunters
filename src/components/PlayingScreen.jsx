@@ -18,22 +18,22 @@ import { SoundManager } from '../services/sound';
 import { useGameIntegrity } from '../hooks/useGameIntegrity';
 import { safeGetItem } from '../utils/safeStorage';
 
-// Calibration-based tips that rotate based on performance
+// Tips shown after each round based on how confidence matched the result
 const CALIBRATION_TIPS = {
   overconfident: [
-    "💡 High confidence but wrong? Consider checking sources before committing.",
-    "💡 When very confident, ask: 'What would make this false?'",
-    "💡 Overconfidence is common! Slow down on claims that feel 'obvious'."
+    "💡 You felt sure but got it wrong. Next time, ask yourself: 'Could this be false?'",
+    "💡 Sometimes things that seem obvious can be tricky. Slow down on 'easy' ones!",
+    "💡 When you feel 100% certain, that's a good time to double-check."
   ],
   underconfident: [
-    "💡 You knew more than you thought! Trust your team's reasoning.",
-    "💡 Low confidence but correct? Your instincts are good - trust them more!",
-    "💡 When uncertain, your first group consensus is often right."
+    "💡 You were right! Trust your thinking more — you knew it!",
+    "💡 You doubted yourself but got it right. Your instincts are better than you think!",
+    "💡 Nice work! When your team agrees, that's usually a good sign."
   ],
   calibrated: [
-    "💡 Great calibration! Your confidence matched reality.",
-    "💡 Well calibrated! Keep using evidence to guide confidence.",
-    "💡 Nice work matching confidence to accuracy!"
+    "💡 Perfect! Your confidence matched how well you actually did.",
+    "💡 Great job knowing what you know! Keep using clues to guide your confidence.",
+    "💡 You're getting good at knowing when you're right!"
   ]
 };
 
@@ -64,7 +64,7 @@ export function PlayingScreen({
   const [hintCostTotal, setHintCostTotal] = useState(0); // Running total of hint costs
   const [encouragement, setEncouragement] = useState('');
   const [calibrationTip, setCalibrationTip] = useState(null);
-  const [showKeyboardHint, setShowKeyboardHint] = useState(false);
+  const [showKeyboardHint, setShowKeyboardHint] = useState(round === 1); // Show on first round
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const [pendingNext, setPendingNext] = useState(false);
   const [showPreviousRounds, setShowPreviousRounds] = useState(false);
@@ -536,35 +536,41 @@ export function PlayingScreen({
             {round}/{totalRounds}
           </div>
           {/* Timer Display with speed bonus zones */}
-          {!showResult && timeRemaining !== null && (
-            <div
-              className="mono"
-              role="timer"
-              aria-live={timeRemaining <= 10 ? 'assertive' : 'off'}
-              aria-atomic="true"
-              aria-label={`Time remaining: ${Math.floor(timeRemaining / 60)} minutes ${timeRemaining % 60} seconds`}
-              style={{
-                padding: '0.25rem 0.5rem',
-                fontSize: '0.6875rem',
-                background: (() => {
-                  if (timeRemaining <= 10) return 'rgba(239, 68, 68, 0.15)';
-                  const elapsed = totalTimeAllowed - timeRemaining;
-                  const pct = elapsed / totalTimeAllowed;
-                  if (pct <= 0.10) return 'rgba(251, 191, 36, 0.25)'; // Ultra lightning zone
-                  if (pct <= 0.20) return 'rgba(251, 191, 36, 0.2)'; // Lightning zone
-                  if (pct <= 0.35) return 'rgba(251, 191, 36, 0.15)'; // Very fast zone
-                  if (pct <= 0.50) return 'rgba(167, 139, 250, 0.15)'; // Fast zone
-                  return 'var(--bg-elevated)';
-                })(),
-                border: timeRemaining <= 10 ? '1px solid var(--incorrect)' : '1px solid transparent',
-                borderRadius: '4px',
-                color: timeRemaining <= 10 ? 'var(--incorrect)' : 'var(--accent-cyan)',
-                fontWeight: timeRemaining <= 10 ? 600 : 400
-              }}
-            >
-              ⏱️ {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, '0')}
-            </div>
-          )}
+          {!showResult && timeRemaining !== null && (() => {
+            const elapsed = totalTimeAllowed - timeRemaining;
+            const pct = elapsed / totalTimeAllowed;
+            const inBonusZone = pct <= 0.50 && timeRemaining > 10;
+            const bonusLabel = pct <= 0.10 ? '⚡2x' : pct <= 0.20 ? '⚡1.5x' : pct <= 0.35 ? '⚡1.3x' : pct <= 0.50 ? '⚡1.1x' : '';
+            return (
+              <div
+                className="mono"
+                role="timer"
+                aria-live={timeRemaining <= 10 ? 'assertive' : 'off'}
+                aria-atomic="true"
+                aria-label={`Time remaining: ${Math.floor(timeRemaining / 60)} minutes ${timeRemaining % 60} seconds`}
+                title={inBonusZone ? 'Answer quickly for bonus points!' : 'Time remaining'}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  fontSize: '0.6875rem',
+                  background: (() => {
+                    if (timeRemaining <= 10) return 'rgba(239, 68, 68, 0.15)';
+                    if (pct <= 0.10) return 'rgba(251, 191, 36, 0.25)';
+                    if (pct <= 0.20) return 'rgba(251, 191, 36, 0.2)';
+                    if (pct <= 0.35) return 'rgba(251, 191, 36, 0.15)';
+                    if (pct <= 0.50) return 'rgba(167, 139, 250, 0.15)';
+                    return 'var(--bg-elevated)';
+                  })(),
+                  border: timeRemaining <= 10 ? '1px solid var(--incorrect)' : '1px solid transparent',
+                  borderRadius: '4px',
+                  color: timeRemaining <= 10 ? 'var(--incorrect)' : 'var(--accent-cyan)',
+                  fontWeight: timeRemaining <= 10 ? 600 : 400
+                }}
+              >
+                ⏱️ {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, '0')}
+                {inBonusZone && <span style={{ marginLeft: '0.25rem', color: 'var(--accent-amber)', fontSize: '0.5625rem' }}>{bonusLabel}</span>}
+              </div>
+            );
+          })()}
           {previousResults.length > 0 && (
             <button
               onClick={() => setShowPreviousRounds(!showPreviousRounds)}
@@ -624,7 +630,7 @@ export function PlayingScreen({
         )}
       </div>
 
-      {/* Compact Keyboard Hints - inline */}
+      {/* Keyboard Shortcuts - shown on first round, toggleable after */}
       {showKeyboardHint && (
         <div
           className="animate-in mono"
@@ -634,18 +640,19 @@ export function PlayingScreen({
             background: 'rgba(167, 139, 250, 0.08)',
             border: '1px solid rgba(167, 139, 250, 0.3)',
             borderRadius: '6px',
-            fontSize: '0.625rem',
+            fontSize: '0.6875rem',
             color: 'var(--text-muted)',
             textAlign: 'center'
           }}
         >
-          <span style={{ color: 'var(--accent-violet)' }}>T</span>rue
-          <span style={{ color: 'var(--accent-violet)' }}> F</span>alse
-          <span style={{ color: 'var(--accent-violet)' }}> M</span>ixed
+          {round === 1 && <span style={{ marginRight: '0.5rem' }}>⌨️ Keyboard shortcuts:</span>}
+          <span style={{ color: 'var(--accent-violet)' }}>T</span>=True
+          <span style={{ color: 'var(--accent-violet)' }}> F</span>=False
+          <span style={{ color: 'var(--accent-violet)' }}> M</span>=Mixed
           {' · '}
-          <span style={{ color: 'var(--accent-violet)' }}>1-3</span> confidence
+          <span style={{ color: 'var(--accent-violet)' }}>1-3</span>=confidence
           {' · '}
-          <span style={{ color: 'var(--accent-violet)' }}>Enter</span> submit
+          <span style={{ color: 'var(--accent-violet)' }}>Enter</span>=submit
         </div>
       )}
 

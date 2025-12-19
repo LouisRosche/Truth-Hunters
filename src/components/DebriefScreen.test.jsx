@@ -202,8 +202,8 @@ describe('DebriefScreen', () => {
         />
       );
 
-      expect(screen.getByText(/\+3 CALIBRATION BONUS!/i)).toBeInTheDocument();
-      expect(screen.getByText(/You predicted 14 and scored 15/i)).toBeInTheDocument();
+      expect(screen.getByText(/\+3 PREDICTION BONUS!/i)).toBeInTheDocument();
+      expect(screen.getByText(/You guessed 14 pts and got 15/i)).toBeInTheDocument();
     });
 
     it('does not award bonus when prediction is off by more than 2', () => {
@@ -220,7 +220,7 @@ describe('DebriefScreen', () => {
         />
       );
 
-      expect(screen.queryByText(/\+3 CALIBRATION BONUS!/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/\+3 PREDICTION BONUS!/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Predicted: 10 \| Actual: 15 \(off by 5\)/i)).toBeInTheDocument();
     });
 
@@ -238,7 +238,7 @@ describe('DebriefScreen', () => {
         />
       );
 
-      expect(screen.getByText(/\+3 CALIBRATION BONUS!/i)).toBeInTheDocument();
+      expect(screen.getByText(/\+3 PREDICTION BONUS!/i)).toBeInTheDocument();
     });
   });
 
@@ -556,10 +556,10 @@ describe('DebriefScreen', () => {
         />
       );
 
-      expect(screen.getByText(/How was your confidence calibration?/)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /📈 Too high/i })).toBeInTheDocument();
+      expect(screen.getByText(/Were you good at knowing when you were right or wrong?/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /📈 Too confident/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /✅ Just right/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /📉 Too low/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /📉 Not confident enough/i })).toBeInTheDocument();
     });
 
     it('allows selecting calibration assessment', () => {

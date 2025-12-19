@@ -277,7 +277,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
           TRUTH HUNTERS
         </h1>
         <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-          The Calibration Game
+          Spot facts vs. fiction & learn when to trust yourself
         </p>
       </div>
 

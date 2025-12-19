@@ -217,10 +217,10 @@ Play Truth Hunters and test your fact-checking skills!`;
             }}
           >
             <span className="mono" style={{ color: 'var(--accent-amber)' }}>
-              +3 CALIBRATION BONUS! 🎯
+              +3 PREDICTION BONUS! 🎯
             </span>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-              You predicted {team.predictedScore} and scored {team.score}
+              You guessed {team.predictedScore} pts and got {team.score} — great self-awareness!
             </div>
           </div>
         ) : (
@@ -571,13 +571,13 @@ Play Truth Hunters and test your fact-checking skills!`;
 
         <div style={{ marginBottom: '1.25rem' }}>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-            How was your confidence calibration?
+            Were you good at knowing when you were right or wrong?
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {[
-              { label: '📈 Too high', value: 'overconfident', description: 'I was more confident than I should have been' },
-              { label: '✅ Just right', value: 'calibrated', description: 'My confidence matched my accuracy' },
-              { label: '📉 Too low', value: 'underconfident', description: 'I was less confident than I should have been' }
+              { label: '📈 Too confident', value: 'overconfident', description: 'I felt sure but was often wrong' },
+              { label: '✅ Just right', value: 'calibrated', description: 'My guesses about my accuracy were correct' },
+              { label: '📉 Not confident enough', value: 'underconfident', description: 'I doubted myself but was actually right' }
             ].map((option) => (
               <button
                 key={option.value}

@@ -81,9 +81,8 @@ export function VerdictSelector({ value, onChange, disabled }) {
               {v.value}
             </div>
             {v.hasExplainer && (
-              <span
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowMixedHelp(!showMixedHelp);
@@ -96,27 +95,23 @@ export function VerdictSelector({ value, onChange, disabled }) {
                   }
                 }}
                 aria-label="What does MIXED mean?"
-                title="What does MIXED mean?"
                 style={{
                   position: 'absolute',
-                  top: '0.375rem',
-                  right: '0.375rem',
-                  width: '1.25rem',
-                  height: '1.25rem',
-                  borderRadius: '50%',
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-muted)',
-                  fontSize: '0.75rem',
+                  bottom: '0.375rem',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  padding: '0.125rem 0.5rem',
+                  borderRadius: '4px',
+                  background: 'rgba(251, 191, 36, 0.15)',
+                  border: '1px solid var(--accent-amber)',
+                  color: 'var(--accent-amber)',
+                  fontSize: '0.5625rem',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 600
+                  whiteSpace: 'nowrap'
                 }}
               >
-                ?
-              </span>
+                What&apos;s this?
+              </button>
             )}
           </button>
         ))}

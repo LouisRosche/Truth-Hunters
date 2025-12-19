@@ -50,7 +50,7 @@ describe('SetupScreen', () => {
 
   it('renders the subtitle', () => {
     render(<SetupScreen onStart={mockOnStart} />);
-    expect(screen.getByText('The Calibration Game')).toBeInTheDocument();
+    expect(screen.getByText('Spot facts vs. fiction & learn when to trust yourself')).toBeInTheDocument();
   });
 
   it('renders team name input', () => {
