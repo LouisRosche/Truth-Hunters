@@ -450,7 +450,7 @@ export function App() {
       setGameState((prev) => {
         const newResults = [...prev.team.results, { ...result, round: prev.currentRound }];
         const newScore = prev.team.score + result.points;
-        const isLastRound = prev.currentRound >= prev.totalRounds;
+        const isLastRound = prev.currentRound + 1 >= prev.totalRounds;
 
         // Get next claim with bounds checking
         const nextRound = prev.currentRound + 1;

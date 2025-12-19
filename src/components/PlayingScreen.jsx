@@ -83,7 +83,7 @@ export function PlayingScreen({
     const lastSessionId = tutorialData?.sessionId || null;
 
     // Show tutorial if: (1) never seen, OR (2) new session started
-    const shouldShow = round === 1 && (!tutorialData || lastSessionId !== sessionId);
+    const shouldShow = round === 0 && (!tutorialData || lastSessionId !== sessionId);
 
     if (shouldShow) {
       setShowTutorial(true);
@@ -374,7 +374,7 @@ export function PlayingScreen({
     );
   }
 
-  const isLastRound = round >= totalRounds;
+  const isLastRound = round + 1 >= totalRounds;
 
   // Calculate confidence risk preview (memoized for performance)
   const confidencePreview = useMemo(() => {
