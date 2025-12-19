@@ -87,10 +87,13 @@ export function PlayingScreen({
     () => {
       // Auto-forfeit on max switches exceeded
       if (!showResult) {
-        // Force submit with forfeit penalty
+        // Force submit with forfeit penalty - no verdict since they cheated
         const correct = false;
         const points = ANTI_CHEAT.FORFEIT_PENALTY;
-        setResultData({ correct, points, confidence, verdict: 'FORFEITED', forfeited: true });
+        const timeElapsed = roundStartTimeRef.current
+          ? Math.floor((Date.now() - roundStartTimeRef.current) / 1000)
+          : 0;
+        setResultData({ correct, points, confidence, verdict: null, forfeited: true, timeElapsed, forfeitReason: 'tab-switch' });
         setShowResult(true);
       }
     }
@@ -162,9 +165,24 @@ export function PlayingScreen({
           const remaining = Math.max(0, totalTimeAllowed - elapsed);
           setTimeRemaining(remaining);
 
-          // Auto-submit when time runs out
-          if (remaining === 0 && verdict) {
-            setPendingSubmit(true);
+          // Auto-submit when time runs out (or forfeit if no verdict)
+          if (remaining === 0) {
+            if (verdict) {
+              setPendingSubmit(true);
+            } else {
+              // Time's up without a verdict - forfeit with warning
+              const timeElapsed = Math.floor((Date.now() - roundStartTimeRef.current) / 1000);
+              setResultData({
+                correct: false,
+                points: -2, // Small penalty for not answering in time
+                confidence,
+                verdict: null,
+                forfeited: true,
+                timeElapsed,
+                forfeitReason: 'time-out'
+              });
+              setShowResult(true);
+            }
           }
         }
       }, 1000);
@@ -428,15 +446,24 @@ export function PlayingScreen({
           >
             {round}/{totalRounds}
           </div>
-          {/* Timer Display */}
+          {/* Timer Display with speed bonus zones */}
           {!showResult && timeRemaining !== null && (
             <div
               className="mono"
               style={{
                 padding: '0.25rem 0.5rem',
                 fontSize: '0.6875rem',
-                background: timeRemaining <= 10 ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-elevated)',
-                border: timeRemaining <= 10 ? '1px solid var(--incorrect)' : 'none',
+                background: (() => {
+                  if (timeRemaining <= 10) return 'rgba(239, 68, 68, 0.15)';
+                  const elapsed = totalTimeAllowed - timeRemaining;
+                  const pct = elapsed / totalTimeAllowed;
+                  if (pct <= 0.10) return 'rgba(251, 191, 36, 0.25)'; // Ultra lightning zone
+                  if (pct <= 0.20) return 'rgba(251, 191, 36, 0.2)'; // Lightning zone
+                  if (pct <= 0.35) return 'rgba(251, 191, 36, 0.15)'; // Very fast zone
+                  if (pct <= 0.50) return 'rgba(167, 139, 250, 0.15)'; // Fast zone
+                  return 'var(--bg-elevated)';
+                })(),
+                border: timeRemaining <= 10 ? '1px solid var(--incorrect)' : '1px solid transparent',
                 borderRadius: '4px',
                 color: timeRemaining <= 10 ? 'var(--incorrect)' : 'var(--accent-cyan)',
                 fontWeight: timeRemaining <= 10 ? 600 : 400
@@ -861,11 +888,17 @@ export function PlayingScreen({
           )}
 
           <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '0.375rem' }}>
-            {encouragement}
+            {resultData.forfeited
+              ? (resultData.forfeitReason === 'tab-switch' ? '🚫 Round forfeited for tab switching' : '⏰ Time ran out - no verdict submitted')
+              : encouragement
+            }
           </div>
 
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: calibrationTip ? '0.5rem' : '0.75rem' }}>
-            {resultData.verdict} · {'●'.repeat(resultData.confidence)} confidence
+            {resultData.forfeited
+              ? `No verdict submitted · Time: ${resultData.timeElapsed || 0}s`
+              : `${resultData.verdict} · ${'●'.repeat(resultData.confidence)} confidence${resultData.timeElapsed ? ` · ⏱️ ${resultData.timeElapsed}s` : ''}`
+            }
           </div>
 
           {/* Calibration Tip - Compact */}
