@@ -26,7 +26,6 @@ import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
 import { useOfflineToasts } from './hooks/useOfflineToasts';
-import { RETRY_CONFIG, TIMING } from './data/constants';
 
 export function App() {
   // Connect offline queue to toast notifications
@@ -126,7 +125,7 @@ export function App() {
       });
       setSessionId(null);
     }
-  }, [sessionId, gameState.phase, gameState.currentRound, gameState.team.score]);
+  }, [sessionId, gameState.phase, gameState.currentRound, gameState.team.score, gameState.team.name, gameState.team.avatar?.emoji, gameState.team.players, gameState.team.results, gameState.totalRounds]);
 
   // Clean up session on unmount or window close
   useEffect(() => {

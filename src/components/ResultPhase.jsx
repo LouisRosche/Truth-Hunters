@@ -166,7 +166,7 @@ export function ResultPhase({
 
       {/* Next Round Button */}
       <Button onClick={onNext} fullWidth>
-        {isLastRound ? '📊 Results' : '➡️ Next'}
+        {isLastRound ? '📊 See Final Results' : '➡️ Next Round'}
       </Button>
     </div>
   );

@@ -55,7 +55,7 @@ export function TutorialOverlay({ onClose, sessionId }) {
             Answer faster to earn multipliers up to 2.0x!
           </p>
           <p style={{ marginBottom: '0.75rem' }}>
-            <strong style={{ color: 'var(--incorrect)' }}>⚠️ Don't switch tabs or round forfeits!</strong><br />
+            <strong style={{ color: 'var(--incorrect)' }}>⚠️ Do not switch tabs or round forfeits!</strong><br />
             Zero tolerance: ANY tab switch = -10 points
           </p>
           <p style={{ marginBottom: '0.75rem' }}>
@@ -68,7 +68,7 @@ export function TutorialOverlay({ onClose, sessionId }) {
           </p>
         </div>
         <Button onClick={handleClose} fullWidth>
-          Got it! Let's play 🎯
+          Got it! Let&apos;s play 🎯
         </Button>
       </div>
     </div>

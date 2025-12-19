@@ -238,21 +238,6 @@ export function useGameState() {
 // calculatePoints is now imported from '../utils/scoring'
 
 /**
- * Helper: Calculate current streak from results
- */
-function calculateCurrentStreak(results) {
-  let streak = 0;
-  for (let i = results.length - 1; i >= 0; i--) {
-    if (results[i].correct) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
-/**
  * Helper: Save game record to leaderboard and Firebase
  */
 async function saveGameRecord(gameState) {

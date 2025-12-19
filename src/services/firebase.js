@@ -21,7 +21,6 @@ import {
   doc
 } from 'firebase/firestore';
 import { sanitizeInput } from '../utils/moderation';
-import { formatPlayerName } from '../utils/helpers';
 import { aggregatePlayerScores } from '../utils/leaderboardUtils';
 
 const FIREBASE_CLASS_KEY = 'truthHunters_classCode';

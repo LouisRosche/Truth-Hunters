@@ -16,7 +16,7 @@ import { calculatePoints } from '../utils/scoring';
 import { getRandomItem, getHintContent } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
 import { useGameIntegrity } from '../hooks/useGameIntegrity';
-import { safeGetItem, safeSetItem } from '../utils/safeStorage';
+import { safeGetItem } from '../utils/safeStorage';
 
 // Calibration-based tips that rotate based on performance
 const CALIBRATION_TIPS = {
@@ -364,21 +364,11 @@ export function PlayingScreen({
     SoundManager.play('tick');
   };
 
-  // Loading state check
-  if (!claim || !claim.id) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem', textAlign: 'center' }}>
-        <div className="mono" style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>
-          Loading claim...
-        </div>
-      </div>
-    );
-  }
-
   // Check if this is the last round (rounds are 1-indexed: 1, 2, 3)
   const isLastRound = round >= totalRounds;
 
   // Calculate confidence risk preview (memoized for performance)
+  // Note: Must be called before any conditional returns to comply with Rules of Hooks
   const confidencePreview = useMemo(() => {
     const basePoints = {
       1: { correct: 1, incorrect: -1 },
@@ -391,6 +381,17 @@ export function PlayingScreen({
       ifWrong: -Math.round(Math.abs(basePoints.incorrect * multiplier))
     };
   }, [confidence, difficulty]);
+
+  // Loading state check - placed after all hooks to comply with Rules of Hooks
+  if (!claim || !claim.id) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem', textAlign: 'center' }}>
+        <div className="mono" style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>
+          Loading claim...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0.75rem' }}>
@@ -424,7 +425,7 @@ export function PlayingScreen({
       >
         <div
           style={{
-            width: `${((round + 1) / totalRounds) * 100}%`,
+            width: `${(round / totalRounds) * 100}%`,
             height: '100%',
             background: 'linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-violet) 100%)',
             borderRadius: '2px',
@@ -532,7 +533,7 @@ export function PlayingScreen({
               color: 'var(--text-secondary)'
             }}
           >
-            {round + 1}/{totalRounds}
+            {round}/{totalRounds}
           </div>
           {/* Timer Display with speed bonus zones */}
           {!showResult && timeRemaining !== null && (

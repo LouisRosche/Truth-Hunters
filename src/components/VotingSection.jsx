@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { VerdictSelector } from './VerdictSelector';
 import { ConfidenceSelector } from './ConfidenceSelector';
-import { HINT_TYPES, DIFFICULTY_MULTIPLIERS } from '../data/constants';
+import { HINT_TYPES } from '../data/constants';
 
 /**
  * Voting section component for claim evaluation

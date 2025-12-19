@@ -6,7 +6,6 @@
 
 import { useState, useEffect } from 'react';
 import { FirebaseBackend } from '../services/firebase';
-import { formatPlayerName } from '../utils/helpers';
 
 export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, onToggle }) {
   const [sessions, setSessions] = useState([]);
