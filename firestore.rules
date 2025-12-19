@@ -11,7 +11,8 @@ rules_version = '2';
  * - classAchievements: Achievements shared with the class
  * - classSettings: Class-specific configuration (teacher-managed)
  * - reflections: Student reflections after games
- * - activeGames: Real-time game state for teacher monitoring
+ * - activeSessions: Live leaderboard for in-progress games
+ * - classSeenClaims: Tracks claims played per class per day (prevents duplicates)
  *
  * Security Principles:
  * 1. All reads are public (within class context) - no authentication required
@@ -336,6 +337,40 @@ service cloud.firestore {
      */
     match /rateLimits/{userId} {
       allow read, write: if true;
+    }
+
+    // ==================== CLASS SEEN CLAIMS COLLECTION ====================
+
+    /**
+     * Class Seen Claims: Tracks which claims have been played by a class today
+     *
+     * Read: Public (app checks to avoid duplicate claims)
+     * Create/Update: Anyone can record seen claims
+     *
+     * Document ID format: {classCode}_{date} (e.g., "MATH101_2025-12-19")
+     * Resets daily to allow claim reuse across sessions.
+     */
+    match /classSeenClaims/{docId} {
+      // Anyone can read seen claims (to check for duplicates)
+      allow read: if true;
+
+      // Anyone can create or update seen claims with validation
+      allow create, update: if request.resource.data.keys().hasAll([
+                                  'classCode', 'date', 'claimIds', 'updatedAt'
+                                ]) &&
+                                validClassCode(request.resource.data.classCode) &&
+                                // Date must be a valid date string (YYYY-MM-DD format)
+                                request.resource.data.date is string &&
+                                request.resource.data.date.size() == 10 &&
+                                // Claim IDs must be an array
+                                request.resource.data.claimIds is list &&
+                                // Limit to prevent abuse (max 500 claims per day per class)
+                                request.resource.data.claimIds.size() <= 500 &&
+                                // Timestamp must be server timestamp
+                                request.resource.data.updatedAt == request.time;
+
+      // No deletes (handled by daily reset logic)
+      allow delete: if false;
     }
 
     // ==================== DEFAULT DENY ====================
