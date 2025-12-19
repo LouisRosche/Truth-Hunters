@@ -77,17 +77,11 @@ export function useGameIntegrity(isActive = false, onTabSwitch = null, onForfeit
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Also track window blur/focus for additional detection
-    const handleBlur = () => handleVisibilityChange();
-    const handleFocus = () => handleVisibilityChange();
-
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('focus', handleFocus);
+    // Note: We DON'T track blur/focus because they fire on non-tab events
+    // (clicking dev tools, iframes, address bar, etc) which would false-positive
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('focus', handleFocus);
     };
   }, [isActive, handleVisibilityChange]);
 
@@ -107,6 +101,7 @@ export function useGameIntegrity(isActive = false, onTabSwitch = null, onForfeit
     // Helper flags
     hasWarning: tabSwitches > 0 && tabSwitches <= ANTI_CHEAT.MAX_TAB_SWITCHES_PER_ROUND,
     isNearForfeit: tabSwitches >= ANTI_CHEAT.MAX_TAB_SWITCHES_PER_ROUND,
-    penalty: Math.min(tabSwitches * ANTI_CHEAT.TAB_SWITCH_PENALTY, 0)
+    // Penalty calculation: use forfeit penalty if any switches occurred, otherwise 0
+    penalty: tabSwitches > 0 ? ANTI_CHEAT.FORFEIT_PENALTY : 0
   };
 }

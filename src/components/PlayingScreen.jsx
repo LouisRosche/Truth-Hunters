@@ -9,7 +9,7 @@ import { ClaimCard } from './ClaimCard';
 import { ConfidenceSelector } from './ConfidenceSelector';
 import { VerdictSelector } from './VerdictSelector';
 import { LiveClassLeaderboard } from './LiveClassLeaderboard';
-import { DIFFICULTY_CONFIG, DIFFICULTY_BG_COLORS, HINT_TYPES, ENCOURAGEMENTS, ANTI_CHEAT } from '../data/constants';
+import { DIFFICULTY_CONFIG, DIFFICULTY_BG_COLORS, DIFFICULTY_MULTIPLIERS, HINT_TYPES, ENCOURAGEMENTS, ANTI_CHEAT } from '../data/constants';
 import { calculatePoints } from '../utils/scoring';
 import { getRandomItem, getHintContent } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
@@ -74,13 +74,18 @@ export function PlayingScreen({
   const roundStartTimeRef = useRef(null);
   const timerIntervalRef = useRef(null);
 
-  // Check if tutorial should be shown (first time user)
+  // Check if tutorial should be shown (first time user in this session)
   useEffect(() => {
-    const hasSeenTutorial = localStorage.getItem('truthDetector_tutorialSeen');
-    if (!hasSeenTutorial && round === 1) {
+    const tutorialData = localStorage.getItem('truthDetector_tutorialSeen');
+    const lastSessionId = tutorialData ? JSON.parse(tutorialData).sessionId : null;
+
+    // Show tutorial if: (1) never seen, OR (2) new session started
+    const shouldShow = round === 1 && (!tutorialData || lastSessionId !== sessionId);
+
+    if (shouldShow) {
       setShowTutorial(true);
     }
-  }, [round]);
+  }, [round, sessionId]);
 
   // Get time limits from difficulty config
   const totalTimeAllowed = DIFFICULTY_CONFIG[_difficulty]?.discussTime || 120;
@@ -175,24 +180,12 @@ export function PlayingScreen({
           const remaining = Math.max(0, totalTimeAllowed - elapsed);
           setTimeRemaining(remaining);
 
-          // Auto-submit when time runs out (or forfeit if no verdict)
+          // Auto-submit when time runs out (forfeit always - let interval check verdict)
           if (remaining === 0) {
-            if (verdict) {
-              setPendingSubmit(true);
-            } else {
-              // Time's up without a verdict - forfeit with warning
-              const timeElapsed = Math.floor((Date.now() - roundStartTimeRef.current) / 1000);
-              setResultData({
-                correct: false,
-                points: -2, // Small penalty for not answering in time
-                confidence,
-                verdict: null,
-                forfeited: true,
-                timeElapsed,
-                forfeitReason: 'time-out'
-              });
-              setShowResult(true);
-            }
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+            // Set a flag to trigger submission check
+            setPendingSubmit(true);
           }
         }
       }, 1000);
@@ -209,13 +202,34 @@ export function PlayingScreen({
         clearInterval(timerIntervalRef.current);
       }
     };
-  }, [showResult, claim, totalTimeAllowed, verdict]);
+  }, [showResult, claim, totalTimeAllowed]); // Removed verdict dependency
 
-  // Handle pending keyboard actions (to avoid circular dependencies)
+  // Handle pending keyboard actions and timer auto-submit (to avoid circular dependencies)
   useEffect(() => {
-    if (pendingSubmit && verdict && claim) {
+    if (pendingSubmit && claim) {
       setPendingSubmit(false);
-      // Trigger submit logic inline
+
+      // If no verdict selected (time ran out), forfeit the round
+      if (!verdict) {
+        const timeElapsed = roundStartTimeRef.current
+          ? Math.floor((Date.now() - roundStartTimeRef.current) / 1000)
+          : totalTimeAllowed;
+
+        setResultData({
+          correct: false,
+          points: ANTI_CHEAT.FORFEIT_PENALTY,
+          confidence,
+          verdict: null,
+          forfeited: true,
+          timeElapsed,
+          forfeitReason: 'time-out'
+        });
+        setShowResult(true);
+        SoundManager.play('incorrect');
+        return;
+      }
+
+      // Normal verdict submission
       const correct = verdict === claim.answer;
 
       // Calculate time elapsed for speed bonus
@@ -266,6 +280,7 @@ export function PlayingScreen({
       setUsedHints([]);
       setHintCostTotal(0);
       setCalibrationTip(null);
+      setForfeitAcknowledged(true); // Reset forfeit warning for next round
       integrity.reset(); // Reset anti-cheat tracking
     }
   }, [pendingNext, resultData, claim, reasoning, onSubmit, integrity]);
@@ -327,6 +342,7 @@ export function PlayingScreen({
     setUsedHints([]);
     setHintCostTotal(0);
     setCalibrationTip(null);
+    setForfeitAcknowledged(true); // Reset forfeit warning for next round
     integrity.reset(); // Reset anti-cheat tracking
   }, [claim, resultData, reasoning, onSubmit, integrity]);
 
@@ -420,7 +436,8 @@ export function PlayingScreen({
             <Button
               onClick={() => {
                 setShowTutorial(false);
-                localStorage.setItem('truthDetector_tutorialSeen', 'true');
+                // Store session ID to allow tutorial again in new sessions
+                localStorage.setItem('truthDetector_tutorialSeen', JSON.stringify({ sessionId, seen: true }));
               }}
               fullWidth
             >
@@ -798,6 +815,8 @@ export function PlayingScreen({
                       If right: <span style={{ color: 'var(--correct)', fontWeight: 600 }}>+{preview.ifCorrect}</span>
                       {' | '}
                       If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 600 }}>{preview.ifWrong}</span>
+                      <br />
+                      <span style={{ fontSize: '0.5625rem', opacity: 0.7 }}>+ speed bonus (up to 2.0x)</span>
                     </>
                   );
                 })()}
