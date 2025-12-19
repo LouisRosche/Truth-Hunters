@@ -93,7 +93,7 @@ export function useGameState() {
     predictionRef.current = predictedScore;
 
     // Save state for crash recovery
-    GameStateManager.save(newState);
+    GameStateManager.save(newState, 0);
 
     // Play sound
     SoundManager.play('start');
@@ -174,7 +174,7 @@ export function useGameState() {
       };
 
       setGameState(newState);
-      GameStateManager.save(newState);
+      GameStateManager.save(newState, newStreak);
 
       // Play feedback sound
       SoundManager.play(isCorrect ? 'correct' : 'incorrect');
@@ -205,10 +205,8 @@ export function useGameState() {
   const resumeSavedGame = useCallback(() => {
     const saved = GameStateManager.load();
     if (saved) {
-      setGameState(saved);
-      // Recalculate streak
-      const streak = calculateCurrentStreak(saved.team.results);
-      setCurrentStreak(streak);
+      setGameState(saved.gameState);
+      setCurrentStreak(saved.currentStreak || 0);
       return true;
     }
     return false;
