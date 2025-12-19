@@ -450,12 +450,12 @@ export function App() {
       setGameState((prev) => {
         const newResults = [...prev.team.results, { ...result, round: prev.currentRound }];
         const newScore = prev.team.score + result.points;
-        const isLastRound = prev.currentRound + 1 >= prev.totalRounds;
+        const isLastRound = prev.currentRound >= prev.totalRounds;
 
         // Get next claim with bounds checking
         const nextRound = prev.currentRound + 1;
-        // Next claim index should match the next round number (fixed off-by-one bug)
-        const nextClaimIndex = nextRound;
+        // Convert 1-indexed round to 0-indexed array (round 1 = claims[0])
+        const nextClaimIndex = nextRound - 1;
         const nextClaim =
           !isLastRound && nextClaimIndex < prev.claims.length ? prev.claims[nextClaimIndex] : null;
 
