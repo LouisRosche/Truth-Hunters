@@ -8,11 +8,21 @@ import { ANTI_CHEAT } from '../data/constants';
 import { logger } from '../utils/logger';
 
 /**
- * Hook to track game integrity and prevent cheating
- * @param {boolean} isActive - Whether integrity tracking is active
- * @param {Function} onTabSwitch - Callback when tab is switched away
- * @param {Function} onForfeit - Callback when max tab switches exceeded
- * @returns {Object} Integrity tracking data
+ * Hook to track game integrity and prevent cheating via tab visibility monitoring
+ * Automatically detects when students switch away from the game tab
+ *
+ * @param {boolean} isActive - Whether integrity tracking is active (usually !showResult)
+ * @param {Function} onTabSwitch - Callback fired when tab is switched away, receives (switchCount)
+ * @param {Function} onForfeit - Callback fired when max tab switches exceeded
+ * @returns {Object} Integrity tracking state
+ * @returns {number} .tabSwitches - Number of times tab was switched
+ * @returns {boolean} .isTabVisible - Whether tab is currently visible
+ * @returns {boolean} .isForfeit - Whether student has forfeited due to excessive switching
+ * @returns {number} .totalTimeHidden - Total milliseconds spent with tab hidden
+ * @returns {Function} .reset - Function to reset all tracking state
+ * @returns {boolean} .hasWarning - Whether student has warnings (but not forfeited yet)
+ * @returns {boolean} .isNearForfeit - Whether student is close to forfeiting
+ * @returns {number} .penalty - Point penalty to apply for tab switches
  */
 export function useGameIntegrity(isActive = false, onTabSwitch = null, onForfeit = null) {
   const [tabSwitches, setTabSwitches] = useState(0);

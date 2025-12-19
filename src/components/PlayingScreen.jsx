@@ -7,9 +7,10 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { ClaimCard } from './ClaimCard';
-import { ConfidenceSelector } from './ConfidenceSelector';
-import { VerdictSelector } from './VerdictSelector';
 import { LiveClassLeaderboard } from './LiveClassLeaderboard';
+import { TutorialOverlay } from './TutorialOverlay';
+import { VotingSection } from './VotingSection';
+import { ResultPhase } from './ResultPhase';
 import { DIFFICULTY_CONFIG, DIFFICULTY_BG_COLORS, DIFFICULTY_MULTIPLIERS, HINT_TYPES, ENCOURAGEMENTS, ANTI_CHEAT } from '../data/constants';
 import { calculatePoints } from '../utils/scoring';
 import { getRandomItem, getHintContent } from '../utils/helpers';
@@ -41,11 +42,10 @@ export function PlayingScreen({
   round,
   totalRounds,
   onSubmit,
-  difficulty: _difficulty,
+  difficulty,
   currentStreak,
   onUseHint,
   teamAvatar,
-  isPaused: _isPaused,
   previousResults = [],
   claims = [],
   currentScore = 0,
@@ -72,6 +72,7 @@ export function PlayingScreen({
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [forfeitAcknowledged, setForfeitAcknowledged] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const roundStartTimeRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -90,7 +91,7 @@ export function PlayingScreen({
   }, [round, sessionId]);
 
   // Get time limits from difficulty config
-  const totalTimeAllowed = DIFFICULTY_CONFIG[_difficulty]?.discussTime || 120;
+  const totalTimeAllowed = DIFFICULTY_CONFIG[difficulty]?.discussTime || 120;
 
   // Anti-cheat integrity tracking
   const integrity = useGameIntegrity(
@@ -240,7 +241,7 @@ export function PlayingScreen({
         : totalTimeAllowed;
 
       // Calculate points with speed bonus and integrity penalties
-      const pointsResult = calculatePoints(correct, confidence, _difficulty, {
+      const pointsResult = calculatePoints(correct, confidence, difficulty, {
         timeElapsed,
         totalTime: totalTimeAllowed,
         integrityPenalty: integrity.penalty
@@ -259,7 +260,7 @@ export function PlayingScreen({
       setResultData({ correct, points, confidence, verdict, speedBonus, timeElapsed });
       setShowResult(true);
     }
-  }, [pendingSubmit, verdict, claim, confidence, _difficulty, totalTimeAllowed, integrity.penalty]);
+  }, [pendingSubmit, verdict, claim, confidence, difficulty, totalTimeAllowed, integrity.penalty]);
 
   useEffect(() => {
     if (pendingNext && resultData) {
@@ -288,8 +289,9 @@ export function PlayingScreen({
   }, [pendingNext, resultData, claim, reasoning, onSubmit, integrity]);
 
   const handleSubmitVerdict = useCallback(() => {
-    if (!verdict || !claim) return;
+    if (!verdict || !claim || isSubmitting) return;
 
+    setIsSubmitting(true);
     const correct = verdict === claim.answer;
 
     // Calculate time elapsed for speed bonus
@@ -298,7 +300,7 @@ export function PlayingScreen({
       : totalTimeAllowed;
 
     // Calculate points with speed bonus and integrity penalties
-    const pointsResult = calculatePoints(correct, confidence, _difficulty, {
+    const pointsResult = calculatePoints(correct, confidence, difficulty, {
       timeElapsed,
       totalTime: totalTimeAllowed,
       integrityPenalty: integrity.penalty
@@ -322,7 +324,8 @@ export function PlayingScreen({
     setCalibrationTip(getRandomItem(CALIBRATION_TIPS[calibrationType]) || null);
     setResultData({ correct, points, confidence, verdict, speedBonus, timeElapsed });
     setShowResult(true);
-  }, [verdict, confidence, claim, _difficulty, totalTimeAllowed, integrity.penalty]);
+    setIsSubmitting(false); // Reset for next round
+  }, [verdict, confidence, claim, difficulty, totalTimeAllowed, integrity.penalty, isSubmitting]);
 
   const handleNextRound = useCallback(() => {
     onSubmit({
@@ -380,12 +383,12 @@ export function PlayingScreen({
       2: { correct: 3, incorrect: -3 },
       3: { correct: 5, incorrect: -6 }
     }[confidence];
-    const multiplier = DIFFICULTY_MULTIPLIERS[_difficulty] || 1;
+    const multiplier = DIFFICULTY_MULTIPLIERS[difficulty] || 1;
     return {
       ifCorrect: Math.round(basePoints.correct * multiplier),
       ifWrong: -Math.round(Math.abs(basePoints.incorrect * multiplier))
     };
-  }, [confidence, _difficulty]);
+  }, [confidence, difficulty]);
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0.75rem' }}>
@@ -400,64 +403,10 @@ export function PlayingScreen({
 
       {/* Tutorial Overlay - First Time Users */}
       {showTutorial && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              border: '2px solid var(--accent-violet)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              maxWidth: '500px',
-              boxShadow: '0 0 30px rgba(167, 139, 250, 0.5)'
-            }}
-          >
-            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--accent-violet)' }}>
-              🎮 Welcome to Truth Detector!
-            </h2>
-            <div style={{ fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1rem', color: 'var(--text-primary)' }}>
-              <p style={{ marginBottom: '0.75rem' }}>
-                <strong style={{ color: 'var(--accent-amber)' }}>⚡ Gold timer = speed bonus zone</strong><br />
-                Answer faster to earn multipliers up to 2.0x!
-              </p>
-              <p style={{ marginBottom: '0.75rem' }}>
-                <strong style={{ color: 'var(--incorrect)' }}>⚠️ Don't switch tabs or round forfeits!</strong><br />
-                Zero tolerance: ANY tab switch = -10 points
-              </p>
-              <p style={{ marginBottom: '0.75rem' }}>
-                <strong style={{ color: 'var(--accent-cyan)' }}>💡 Higher confidence = higher stakes</strong><br />
-                Confidence ●●●: +5 pts if right, -6 pts if wrong
-              </p>
-              <p>
-                <strong style={{ color: 'var(--accent-emerald)' }}>⌨️ Keyboard shortcuts</strong><br />
-                T/F/M for verdict · 1-3 for confidence · Enter to submit · ? for help
-              </p>
-            </div>
-            <Button
-              onClick={() => {
-                setShowTutorial(false);
-                // Store session ID to allow tutorial again in new sessions
-                safeSetItem('truthDetector_tutorialSeen', { sessionId, seen: true });
-              }}
-              fullWidth
-            >
-              Got it! Let's play 🎯
-            </Button>
-          </div>
-        </div>
+        <TutorialOverlay
+          onClose={() => setShowTutorial(false)}
+          sessionId={sessionId}
+        />
       )}
 
       {/* Progress Bar */}
@@ -781,313 +730,34 @@ export function PlayingScreen({
 
       {/* Voting Section - shown when not viewing result */}
       {!showResult && (
-        <div className="animate-in" style={{ marginTop: '0.75rem' }}>
-          {/* Verdict & Confidence side-by-side to save vertical space */}
-          <div className="voting-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            {/* Verdict Selection */}
-            <div
-              style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '0.75rem'
-              }}
-            >
-              <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
-                VERDICT
-              </h3>
-              <VerdictSelector value={verdict} onChange={setVerdict} />
-            </div>
-
-            {/* Confidence Selection with Risk Preview */}
-            <div
-              style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '0.75rem'
-              }}
-            >
-              <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
-                CONFIDENCE
-              </h3>
-              <ConfidenceSelector value={confidence} onChange={setConfidence} aria-describedby="confidence-preview" />
-              {/* Risk Preview */}
-              <div
-                id="confidence-preview"
-                className="mono"
-                role="status"
-                aria-live="polite"
-                style={{
-                  marginTop: '0.5rem',
-                  padding: '0.375rem 0.5rem',
-                  background: 'rgba(167, 139, 250, 0.1)',
-                  borderRadius: '4px',
-                  fontSize: '0.625rem',
-                  textAlign: 'center',
-                  color: 'var(--text-muted)'
-                }}
-              >
-                If right: <span style={{ color: 'var(--correct)', fontWeight: 600 }}>+{confidencePreview.ifCorrect}</span>
-                {' | '}
-                If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 600 }}>{confidencePreview.ifWrong}</span>
-                <br />
-                <span style={{ fontSize: '0.5625rem', color: 'var(--text-muted)' }}>+ speed bonus (up to 2.0x)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Reasoning (optional) */}
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '0.75rem',
-              marginBottom: '0.5rem'
-            }}
-          >
-            <label
-              className="mono"
-              style={{ display: 'block', fontSize: '0.625rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}
-            >
-              WHY? (optional)
-            </label>
-            <textarea
-              value={reasoning}
-              onChange={(e) => setReasoning(e.target.value)}
-              placeholder="What made you choose this?"
-              rows={2}
-              maxLength={500}
-              aria-label="Explain your reasoning"
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontSize: '0.8125rem',
-                fontFamily: 'var(--font-serif)',
-                resize: 'none'
-              }}
-            />
-          </div>
-
-          {/* Hint System */}
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '0.75rem',
-              marginBottom: '0.75rem'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <h3
-                className="mono"
-                style={{ fontSize: '0.75rem', color: 'var(--accent-violet)', margin: 0 }}
-              >
-                💡 HINTS
-              </h3>
-              {hintCostTotal > 0 && (
-                <span
-                  className="mono"
-                  style={{
-                    fontSize: '0.625rem',
-                    color: 'var(--incorrect)',
-                    padding: '0.125rem 0.375rem',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    borderRadius: '3px'
-                  }}
-                >
-                  -{hintCostTotal} pts
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-              {HINT_TYPES.map((hint) => {
-                const isUsed = usedHints.includes(hint.id);
-                return (
-                  <button
-                    key={hint.id}
-                    onClick={() => handleHintRequest(hint.id)}
-                    disabled={isUsed}
-                    className="mono"
-                    style={{
-                      padding: '0.375rem 0.5rem',
-                      background: isUsed ? 'var(--accent-violet)' : 'var(--bg-elevated)',
-                      color: isUsed ? 'white' : 'var(--text-secondary)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '4px',
-                      fontSize: '0.6875rem',
-                      cursor: isUsed ? 'default' : 'pointer',
-                      opacity: isUsed ? 0.7 : 1,
-                      textDecoration: isUsed ? 'line-through' : 'none'
-                    }}
-                  >
-                    {hint.icon} {hint.name} (-{hint.cost})
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <Button onClick={handleSubmitVerdict} fullWidth disabled={!verdict}>
-            {teamAvatar?.emoji || '🔒'} Lock In Answer
-          </Button>
-        </div>
+        <VotingSection
+          verdict={verdict}
+          onVerdictChange={setVerdict}
+          confidence={confidence}
+          onConfidenceChange={setConfidence}
+          confidencePreview={confidencePreview}
+          reasoning={reasoning}
+          onReasoningChange={setReasoning}
+          usedHints={usedHints}
+          hintCostTotal={hintCostTotal}
+          onHintRequest={handleHintRequest}
+          onSubmit={handleSubmitVerdict}
+          teamAvatar={teamAvatar}
+          disabled={isSubmitting}
+        />
       )}
 
       {/* Result Phase */}
-      {showResult && resultData && (
-        <div
-          className={`animate-in ${resultData.correct ? 'animate-celebrate' : 'animate-shake'}`}
-          style={{
-            marginTop: '0.75rem',
-            background: resultData.correct ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            border: `2px solid ${resultData.correct ? 'var(--correct)' : 'var(--incorrect)'}`,
-            borderRadius: '8px',
-            padding: '1rem',
-            textAlign: 'center'
-          }}
-        >
-          <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>{resultData.correct ? '✓' : '✗'}</div>
-          <div
-            className="mono"
-            style={{
-              fontSize: '1.125rem',
-              fontWeight: 700,
-              color: resultData.correct ? 'var(--correct)' : 'var(--incorrect)',
-              marginBottom: '0.25rem'
-            }}
-          >
-            {resultData.correct ? 'CORRECT!' : 'INCORRECT'}
-          </div>
-          <div
-            className="mono"
-            style={{
-              fontSize: '1rem',
-              color: resultData.points >= 0 ? 'var(--correct)' : 'var(--incorrect)',
-              marginBottom: resultData.speedBonus || integrity.penalty < 0 ? '0.375rem' : '0.5rem'
-            }}
-          >
-            {resultData.points >= 0 ? '+' : ''}
-            {resultData.points} points
-          </div>
-
-          {/* Speed Bonus & Penalty - Combined inline */}
-          {(resultData.speedBonus || integrity.penalty < 0) && (
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '0.375rem' }}>
-              {resultData.speedBonus && (
-                <div
-                  className="animate-celebrate"
-                  style={{
-                    padding: '0.375rem 0.625rem',
-                    background: resultData.speedBonus.tier === 'ultra-lightning'
-                      ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.35) 0%, rgba(245, 158, 11, 0.3) 100%)'
-                      : resultData.speedBonus.tier === 'lightning'
-                      ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(245, 158, 11, 0.2) 100%)'
-                      : 'rgba(251, 191, 36, 0.15)',
-                    border: `1px solid var(--accent-amber)`,
-                    borderRadius: '4px',
-                    boxShadow: resultData.speedBonus.tier === 'ultra-lightning' ? '0 0 10px rgba(251, 191, 36, 0.4)' : 'none'
-                  }}
-                >
-                  <span className="mono" style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--accent-amber)',
-                    fontWeight: 600
-                  }}>
-                    {resultData.speedBonus.icon} {resultData.speedBonus.label} +{resultData.speedBonus.bonus}
-                  </span>
-                </div>
-              )}
-              {integrity.penalty < 0 && (
-                <div
-                  style={{
-                    padding: '0.375rem 0.625rem',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid var(--incorrect)',
-                    borderRadius: '4px'
-                  }}
-                >
-                  <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--incorrect)' }}>
-                    ⚠️ Tab: {integrity.penalty} pts
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {resultData.correct && currentStreak >= 2 && (
-            <div
-              className={currentStreak >= 5 ? 'animate-celebrate' : ''}
-              style={{
-                marginBottom: '0.375rem',
-                padding: '0.375rem 0.625rem',
-                background: currentStreak >= 5
-                  ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(167, 139, 250, 0.2) 100%)'
-                  : 'rgba(251, 191, 36, 0.15)',
-                borderRadius: '4px',
-                display: 'inline-block',
-                border: currentStreak >= 5 ? '1px solid var(--accent-amber)' : 'none'
-              }}
-            >
-              <span
-                className="mono"
-                style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--accent-amber)',
-                  fontWeight: 600
-                }}
-              >
-                {currentStreak >= 5 && '⭐ '}
-                {ENCOURAGEMENTS?.streak?.[Math.min(currentStreak - 1, (ENCOURAGEMENTS?.streak?.length || 1) - 1)] ||
-                  `${currentStreak} in a row!`}
-                {currentStreak >= 5 && ' ⭐'}
-              </span>
-            </div>
-          )}
-
-          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '0.375rem' }}>
-            {resultData.forfeited
-              ? (resultData.forfeitReason === 'tab-switch' ? '🚫 Round forfeited for tab switching' : '⏰ Time ran out - no verdict submitted')
-              : encouragement
-            }
-          </div>
-
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: calibrationTip ? '0.5rem' : '0.75rem' }}>
-            {resultData.forfeited
-              ? `No verdict submitted · Time: ${resultData.timeElapsed || 0}s`
-              : `${resultData.verdict} · ${'●'.repeat(resultData.confidence)} confidence${resultData.timeElapsed ? ` · ⏱️ ${resultData.timeElapsed}s` : ''}`
-            }
-          </div>
-
-          {/* Calibration Tip - Compact */}
-          {calibrationTip && (
-            <div
-              style={{
-                marginBottom: '0.75rem',
-                padding: '0.5rem 0.75rem',
-                background: 'rgba(167, 139, 250, 0.08)',
-                border: '1px solid rgba(167, 139, 250, 0.3)',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                color: 'var(--accent-violet)',
-                textAlign: 'left'
-              }}
-            >
-              {calibrationTip}
-            </div>
-          )}
-
-          {/* Next Round Button */}
-          <Button onClick={handleNextRound} fullWidth>
-            {isLastRound ? '📊 Results' : '➡️ Next'}
-          </Button>
-        </div>
+      {showResult && (
+        <ResultPhase
+          resultData={resultData}
+          currentStreak={currentStreak}
+          encouragement={encouragement}
+          calibrationTip={calibrationTip}
+          integrityPenalty={integrity.penalty}
+          isLastRound={isLastRound}
+          onNext={handleNextRound}
+        />
       )}
     </div>
   );
@@ -1114,7 +784,6 @@ PlayingScreen.propTypes = {
     emoji: PropTypes.string,
     name: PropTypes.string
   }),
-  isPaused: PropTypes.bool,
   previousResults: PropTypes.arrayOf(
     PropTypes.shape({
       claimId: PropTypes.string,
@@ -1141,7 +810,6 @@ PlayingScreen.defaultProps = {
   currentStreak: 0,
   onUseHint: () => {},
   teamAvatar: null,
-  isPaused: false,
   previousResults: [],
   claims: [],
   currentScore: 0,
