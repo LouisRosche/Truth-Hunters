@@ -68,9 +68,19 @@ export function PlayingScreen({
   const [showPreviousRounds, setShowPreviousRounds] = useState(false);
   const [tabSwitchWarning, setTabSwitchWarning] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [forfeitAcknowledged, setForfeitAcknowledged] = useState(true);
 
   const roundStartTimeRef = useRef(null);
   const timerIntervalRef = useRef(null);
+
+  // Check if tutorial should be shown (first time user)
+  useEffect(() => {
+    const hasSeenTutorial = localStorage.getItem('truthDetector_tutorialSeen');
+    if (!hasSeenTutorial && round === 1) {
+      setShowTutorial(true);
+    }
+  }, [round]);
 
   // Get time limits from difficulty config
   const totalTimeAllowed = DIFFICULTY_CONFIG[_difficulty]?.discussTime || 120;
@@ -79,10 +89,10 @@ export function PlayingScreen({
   const integrity = useGameIntegrity(
     !showResult, // Active when not showing result
     (switchCount) => {
-      // Show warning on tab switch
+      // Show warning on tab switch - requires acknowledgment now
       setTabSwitchWarning(switchCount);
+      setForfeitAcknowledged(false);
       SoundManager.play('incorrect'); // Play warning sound
-      setTimeout(() => setTabSwitchWarning(null), 3000);
     },
     () => {
       // Auto-forfeit on max switches exceeded
@@ -334,8 +344,92 @@ export function PlayingScreen({
 
   const isLastRound = round >= totalRounds;
 
+  // Calculate confidence risk preview
+  const getConfidencePreview = () => {
+    const basePoints = {
+      1: { correct: 1, incorrect: -1 },
+      2: { correct: 3, incorrect: -3 },
+      3: { correct: 5, incorrect: -6 }
+    }[confidence];
+    const multiplier = DIFFICULTY_MULTIPLIERS[_difficulty] || 1;
+    return {
+      ifCorrect: Math.round(basePoints.correct * multiplier),
+      ifWrong: -Math.round(Math.abs(basePoints.incorrect * multiplier))
+    };
+  };
+
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0.75rem' }}>
+      {/* Mobile responsive CSS */}
+      <style>{`
+        @media (max-width: 700px) {
+          .voting-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+
+      {/* Tutorial Overlay - First Time Users */}
+      {showTutorial && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '2px solid var(--accent-violet)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '500px',
+              boxShadow: '0 0 30px rgba(167, 139, 250, 0.5)'
+            }}
+          >
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--accent-violet)' }}>
+              🎮 Welcome to Truth Detector!
+            </h2>
+            <div style={{ fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+              <p style={{ marginBottom: '0.75rem' }}>
+                <strong style={{ color: 'var(--accent-amber)' }}>⚡ Gold timer = speed bonus zone</strong><br />
+                Answer faster to earn multipliers up to 2.0x!
+              </p>
+              <p style={{ marginBottom: '0.75rem' }}>
+                <strong style={{ color: 'var(--incorrect)' }}>⚠️ Don't switch tabs or round forfeits!</strong><br />
+                Zero tolerance: ANY tab switch = -10 points
+              </p>
+              <p style={{ marginBottom: '0.75rem' }}>
+                <strong style={{ color: 'var(--accent-cyan)' }}>💡 Higher confidence = higher stakes</strong><br />
+                Confidence ●●●: +5 pts if right, -6 pts if wrong
+              </p>
+              <p>
+                <strong style={{ color: 'var(--accent-emerald)' }}>⌨️ Keyboard shortcuts</strong><br />
+                T/F/M for verdict · 1-3 for confidence · Enter to submit · ? for help
+              </p>
+            </div>
+            <Button
+              onClick={() => {
+                setShowTutorial(false);
+                localStorage.setItem('truthDetector_tutorialSeen', 'true');
+              }}
+              fullWidth
+            >
+              Got it! Let's play 🎯
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Progress Bar */}
       <div
         style={{
@@ -404,23 +498,36 @@ export function PlayingScreen({
         />
       )}
 
-      {/* Tab Switch Warning - ZERO TOLERANCE */}
-      {tabSwitchWarning !== null && ANTI_CHEAT.ENABLED && (
+      {/* Tab Switch Warning - PERSISTENT (requires acknowledgment) */}
+      {tabSwitchWarning !== null && ANTI_CHEAT.ENABLED && !forfeitAcknowledged && (
         <div
           className="animate-shake"
           style={{
-            marginBottom: '0.5rem',
-            padding: '0.5rem 0.75rem',
+            marginBottom: '0.75rem',
+            padding: '0.75rem 1rem',
             background: 'rgba(239, 68, 68, 0.2)',
-            border: '2px solid var(--incorrect)',
-            borderRadius: '6px',
+            border: '3px solid var(--incorrect)',
+            borderRadius: '8px',
             textAlign: 'center',
-            boxShadow: '0 0 15px rgba(239, 68, 68, 0.3)'
+            boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)'
           }}
         >
-          <div className="mono" style={{ fontSize: '0.8125rem', color: 'var(--incorrect)', fontWeight: 700 }}>
-            🚫 TAB SWITCH - ROUND FORFEITED ({ANTI_CHEAT.FORFEIT_PENALTY} PTS)
+          <div className="mono" style={{ fontSize: '1rem', color: 'var(--incorrect)', fontWeight: 700, marginBottom: '0.5rem' }}>
+            🚫 TAB SWITCH DETECTED!
           </div>
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+            This round has been forfeited.<br />
+            <strong>{ANTI_CHEAT.FORFEIT_PENALTY} points penalty</strong>
+          </div>
+          <Button
+            onClick={() => {
+              setForfeitAcknowledged(true);
+              setTabSwitchWarning(null);
+            }}
+            fullWidth
+          >
+            I Understand
+          </Button>
         </div>
       )}
 
@@ -593,7 +700,7 @@ export function PlayingScreen({
         </div>
       )}
 
-      {/* Difficulty Badge */}
+      {/* Difficulty Badge with Multiplier */}
       {claim.difficulty && (
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
           <span
@@ -606,8 +713,9 @@ export function PlayingScreen({
               borderRadius: '4px',
               textTransform: 'uppercase'
             }}
+            title={`Points multiplier: ${DIFFICULTY_MULTIPLIERS[claim.difficulty] || 1}x`}
           >
-            {DIFFICULTY_CONFIG[claim.difficulty]?.icon} {claim.difficulty}
+            {DIFFICULTY_CONFIG[claim.difficulty]?.icon} {claim.difficulty} • {DIFFICULTY_MULTIPLIERS[claim.difficulty] || 1}x
           </span>
         </div>
       )}
@@ -641,7 +749,7 @@ export function PlayingScreen({
       {!showResult && (
         <div className="animate-in" style={{ marginTop: '0.75rem' }}>
           {/* Verdict & Confidence side-by-side to save vertical space */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <div className="voting-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
             {/* Verdict Selection */}
             <div
               style={{
@@ -657,7 +765,7 @@ export function PlayingScreen({
               <VerdictSelector value={verdict} onChange={setVerdict} />
             </div>
 
-            {/* Confidence Selection */}
+            {/* Confidence Selection with Risk Preview */}
             <div
               style={{
                 background: 'var(--bg-card)',
@@ -670,6 +778,30 @@ export function PlayingScreen({
                 CONFIDENCE
               </h3>
               <ConfidenceSelector value={confidence} onChange={setConfidence} />
+              {/* Risk Preview */}
+              <div
+                className="mono"
+                style={{
+                  marginTop: '0.5rem',
+                  padding: '0.375rem 0.5rem',
+                  background: 'rgba(167, 139, 250, 0.1)',
+                  borderRadius: '4px',
+                  fontSize: '0.625rem',
+                  textAlign: 'center',
+                  color: 'var(--text-muted)'
+                }}
+              >
+                {(() => {
+                  const preview = getConfidencePreview();
+                  return (
+                    <>
+                      If right: <span style={{ color: 'var(--correct)', fontWeight: 600 }}>+{preview.ifCorrect}</span>
+                      {' | '}
+                      If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 600 }}>{preview.ifWrong}</span>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </div>
 
