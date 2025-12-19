@@ -385,26 +385,32 @@ export function SetupScreen({ onStart, isLoading = false }) {
         </button>
 
         {showHowToPlay && (
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.625rem', marginTop: '0.75rem', padding: 0, margin: '0.75rem 0 0 0' }}>
             {[
-              'Read claims together — some are AI-generated!',
-              'Discuss as a team using assigned roles',
-              'Vote TRUE, FALSE, or MIXED',
-              'Stake confidence points',
-              'Learn from mistakes!'
-            ].map((item, i) => (
+              { step: '1', text: 'Read claims together — some are AI-generated!' },
+              { step: '2', text: 'Discuss as a team: Is it TRUE, FALSE, or MIXED?' },
+              { step: '3', text: 'Choose your confidence level (higher = more points but riskier!)' },
+              { step: '4', text: 'Submit your answer and see if you were right' },
+              { step: '5', text: 'Learn from the explanation and try again!' }
+            ].map((item) => (
               <li
-                key={i}
+                key={item.step}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '0.5rem',
+                  gap: '0.625rem',
                   color: 'var(--text-secondary)',
-                  fontSize: '0.8125rem'
+                  fontSize: '0.875rem',
+                  lineHeight: 1.4
                 }}
               >
-                <span style={{ color: 'var(--accent-cyan)' }}>▸</span>
-                {item}
+                <span className="mono" style={{
+                  color: 'var(--accent-cyan)',
+                  fontWeight: 600,
+                  minWidth: '1.25rem',
+                  textAlign: 'center'
+                }}>{item.step}.</span>
+                <span>{item.text}</span>
               </li>
             ))}
           </ul>
@@ -486,15 +492,16 @@ export function SetupScreen({ onStart, isLoading = false }) {
         <label className="mono" style={{ display: 'block', fontSize: '0.6875rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
           👥 TEAM MEMBERS (for leaderboard)
         </label>
-        {/* Column headers for clarity */}
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.25rem', paddingLeft: '1.5rem' }}>
+        {/* Column headers aligned with inputs below */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.25rem' }}>
+          <span style={{ width: '1rem' }}></span>
           <span className="mono" style={{ flex: 1, fontSize: '0.5625rem', color: 'var(--text-muted)' }}>
-            First Name
+            First Name Only
           </span>
           <span className="mono" style={{ width: '3rem', fontSize: '0.5625rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-            Last Initial
+            Initial
           </span>
-          <span style={{ width: '2rem' }}></span>
+          {players.length > 1 && <span style={{ width: '2rem' }}></span>}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {players.map((player, index) => (
@@ -506,7 +513,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
                 type="text"
                 value={player.firstName}
                 onChange={(e) => updatePlayer(index, 'firstName', e.target.value)}
-                placeholder="Emma"
+                placeholder="First name"
                 maxLength={15}
                 autoComplete="off"
                 aria-label={`Player ${index + 1} first name`}
@@ -525,8 +532,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
                 type="text"
                 value={player.lastInitial}
                 onChange={(e) => updatePlayer(index, 'lastInitial', e.target.value.charAt(0).toUpperCase())}
-                placeholder="S"
-                title="Last name initial (e.g., S for Smith)"
+                placeholder=""
+                title="Last name initial (e.g., S for Smith) - optional"
                 maxLength={1}
                 autoComplete="off"
                 aria-label={`Player ${index + 1} last initial`}
