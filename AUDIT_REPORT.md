@@ -42,7 +42,7 @@ This repository should be measured against standards for **production educationa
 | **Sustainability** | 4/5 | Active development (93 commits/6mo), but limited contributor base (2) |
 | **Security** | 5/5 | Robust security rules, content moderation, XSS protection, no secrets exposed |
 | **Accessibility** | 5/5 | ARIA attributes, keyboard navigation, screen reader support, skip links |
-| **Ecosystem Integration** | 5/5 | Modern stack (React 18, Vite 7, Vitest), standard npm conventions, multiple deployment options |
+| **Ecosystem Integration** | 5/5 | Modern stack (React 18, Vite 6, Vitest), standard npm conventions, multiple deployment options |
 
 **Overall Score: 4.6/5** - Exceptional educational software with production-grade quality
 
