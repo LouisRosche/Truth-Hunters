@@ -275,8 +275,27 @@ When adding claims, ensure:
 
 MIT License - see LICENSE file for details.
 
+## Repository Audit Framework
+
+This repository includes a comprehensive **[Universal GitHub Repository Audit Framework](AUDIT_FRAMEWORK.md)** for evaluating any GitHub repository with context-aware, domain-specific criteria.
+
+**Key Features:**
+- Context-calibrated evaluation (hobby vs. production vs. research)
+- Domain-specific standards (ML, embedded, educational, etc.)
+- Bias-aware methodology to avoid unfair comparisons
+- Complete with template and usage guide
+
+**Quick Links:**
+- [Framework Document](AUDIT_FRAMEWORK.md) - Complete evaluation criteria
+- [Audit Template](AUDIT_TEMPLATE.md) - Copy this to conduct an audit
+- [Usage Guide](docs/AUDIT_FRAMEWORK_GUIDE.md) - Step-by-step instructions
+- [Example Audit](AUDIT_REPORT.md) - See the framework applied to this repo
+
+The framework was developed through analyzing this repository and has been validated on production educational software.
+
 ## Acknowledgments
 
 - Research-based design informed by epistemic education literature
 - Sound effects using Web Audio API for Chromebook compatibility
 - Accessible design with keyboard navigation and screen reader support
+- Audit framework developed using DORA metrics, CHAOSS standards, and domain-specific best practices

@@ -2,8 +2,10 @@
 
 **Audit Date:** December 17, 2025
 **Repository:** [LouisRosche/TruthDetector](https://github.com/LouisRosche/TruthDetector)
-**Audit Framework Version:** Universal GitHub Repository Audit Framework v1.0
+**Audit Framework:** [Universal GitHub Repository Audit Framework v1.0](AUDIT_FRAMEWORK.md)
 **Auditor:** Automated analysis via Claude Code
+
+> **Note:** This audit was conducted using the [Universal GitHub Repository Audit Framework](AUDIT_FRAMEWORK.md), a context-aware methodology for evaluating GitHub repositories. For template and guidelines, see [AUDIT_TEMPLATE.md](AUDIT_TEMPLATE.md) and [docs/AUDIT_FRAMEWORK_GUIDE.md](docs/AUDIT_FRAMEWORK_GUIDE.md).
 
 ---
 
