@@ -51,12 +51,11 @@ test.describe('Visual Regression Tests', () => {
   test('Setup Screen - Difficulty selector', async ({ page }) => {
     await page.waitForLoadState('networkidle');
 
-    // Click on difficulty selector
-    const difficultyButtons = page.getByRole('button', { name: /easy|medium|hard|mixed/i });
-    const mediumButton = difficultyButtons.filter({ hasText: /medium/i }).first();
+    // Click on difficulty selector (UI uses Beginner, Standard, Expert, Progressive)
+    const standardButton = page.getByRole('button', { name: /standard/i });
 
-    if (await mediumButton.isVisible()) {
-      await mediumButton.click();
+    if (await standardButton.isVisible()) {
+      await standardButton.click();
       await expect(page).toHaveScreenshot('setup-screen-difficulty-selected.png');
     }
   });

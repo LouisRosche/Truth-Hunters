@@ -28,13 +28,28 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Check for baseline screenshots
+        id: baselines
+        run: |
+          if find e2e -name "*.png" 2>/dev/null | grep -q .; then
+            echo "exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "exist=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No baseline screenshots found. Run 'npx playwright test --update-snapshots' locally and commit the screenshots."
+          fi
+
       - name: Run Playwright visual tests
+        if: steps.baselines.outputs.exist == 'true'
         run: npx playwright test
         env:
           CI: true
 
+      - name: Skip visual tests (no baselines)
+        if: steps.baselines.outputs.exist == 'false'
+        run: echo "⏭️ Skipping visual regression tests - no baseline screenshots committed yet"
+
       - name: Upload test results
-        if: always()
+        if: always() && steps.baselines.outputs.exist == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -42,7 +57,7 @@ jobs:
           retention-days: 14
 
       - name: Upload visual diff artifacts
-        if: failure()
+        if: failure() && steps.baselines.outputs.exist == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: visual-diffs
@@ -52,7 +67,7 @@ jobs:
           retention-days: 7
 
       - name: Comment PR with visual changes
-        if: github.event_name == 'pull_request' && failure()
+        if: github.event_name == 'pull_request' && failure() && steps.baselines.outputs.exist == 'true'
         uses: actions/github-script@v7
         with:
           script: |
