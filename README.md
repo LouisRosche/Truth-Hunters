@@ -34,7 +34,7 @@ Quick links:
 - [Contributing Guidelines](CONTRIBUTING.md) - Code contributions, claim submissions, bug reports
 - [Firebase Setup](docs/FIREBASE_SETUP.md) - Class-wide leaderboards setup for IT admins
 - [Internationalization](docs/I18N_GUIDE.md) - Adding translations and language support
-- [Audit Framework](AUDIT_FRAMEWORK.md) - Universal repository evaluation methodology
+- [Audit Framework](docs/audit/AUDIT_FRAMEWORK.md) - Universal repository evaluation methodology
 
 ## Research Foundation
 
@@ -91,7 +91,7 @@ Truth-Hunters/
 │   │   ├── DebriefScreen.jsx
 │   │   └── ...
 │   ├── data/           # Game data
-│   │   ├── claims.js   # Claims database (94 claims)
+│   │   ├── claims.js   # Claims database (734 claims)
 │   │   ├── achievements.js
 │   │   └── constants.js
 │   ├── hooks/          # Custom React hooks

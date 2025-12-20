@@ -38,14 +38,14 @@
 ### Repository Audit Framework
 A universal, context-aware framework for evaluating any GitHub repository:
 
-- **[AUDIT_FRAMEWORK.md](AUDIT_FRAMEWORK.md)** - Core framework (evaluation criteria, domain-specific standards)
-- **[AUDIT_TEMPLATE.md](AUDIT_TEMPLATE.md)** - Template for conducting an audit
+- **[docs/audit/AUDIT_FRAMEWORK.md](docs/audit/AUDIT_FRAMEWORK.md)** - Core framework (evaluation criteria, domain-specific standards)
+- **[docs/audit/AUDIT_TEMPLATE.md](docs/audit/AUDIT_TEMPLATE.md)** - Template for conducting an audit
 - **[docs/AUDIT_FRAMEWORK_GUIDE.md](docs/AUDIT_FRAMEWORK_GUIDE.md)** - Comprehensive usage guide
-- **[audit-tools/README.md](audit-tools/README.md)** - Automation scripts for audits
+- **[docs/audit/audit-tools/README.md](docs/audit/audit-tools/README.md)** - Automation scripts for audits
 
 ### This Repository's Audit
-- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** - Complete audit of Truth Hunters repository
-- **[AUDIT_IMPLEMENTATION_STATUS.md](AUDIT_IMPLEMENTATION_STATUS.md)** - Implementation status of audit recommendations
+- **[docs/audit/AUDIT_REPORT.md](docs/audit/AUDIT_REPORT.md)** - Complete audit of Truth Hunters repository
+- **[docs/audit/AUDIT_IMPLEMENTATION_STATUS.md](docs/audit/AUDIT_IMPLEMENTATION_STATUS.md)** - Implementation status of audit recommendations
 
 ---
 
@@ -72,9 +72,9 @@ A universal, context-aware framework for evaluating any GitHub repository:
 | Contribute code or claims | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Set up Firebase | [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) |
 | Add translations | [docs/I18N_GUIDE.md](docs/I18N_GUIDE.md) |
-| Audit a repository | [AUDIT_FRAMEWORK.md](AUDIT_FRAMEWORK.md) |
-| Use audit tools | [audit-tools/README.md](audit-tools/README.md) |
-| See our audit results | [AUDIT_REPORT.md](AUDIT_REPORT.md) |
+| Audit a repository | [docs/audit/AUDIT_FRAMEWORK.md](docs/audit/AUDIT_FRAMEWORK.md) |
+| Use audit tools | [docs/audit/audit-tools/README.md](docs/audit/audit-tools/README.md) |
+| See our audit results | [docs/audit/AUDIT_REPORT.md](docs/audit/AUDIT_REPORT.md) |
 
 ---
 
@@ -99,7 +99,8 @@ All documentation in this repository follows these principles:
 - Fixed repository naming inconsistency (TruthDetector → Truth-Hunters)
 - Fixed claims count in README (726 → 734)
 - Removed outdated IMPLEMENTATION_STATUS.md (contained incorrect Vite 8 reference)
-- Fixed Vite version reference in AUDIT_REPORT.md (Vite 7 → Vite 6)
+- Fixed Vite version reference in docs/audit/AUDIT_REPORT.md (Vite 7 → Vite 6)
+- Reorganized audit files to docs/audit/ subdirectory
 - Created DOCUMENTATION.md for centralized documentation index
 - Consolidated audit framework documentation organization
 

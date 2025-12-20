@@ -247,7 +247,7 @@ For added security, restrict your Firebase API key to your domain:
    - Add your domain:
      ```
      https://your-school-site.com/*
-     https://your-github-username.github.io/TruthDetector/*
+     https://your-github-username.github.io/Truth-Hunters/*
      ```
 7. Click **Save**
 
@@ -515,10 +515,10 @@ Truth Hunters DOES NOT store:
 
 **Documentation:**
 - Firebase official docs: [https://firebase.google.com/docs](https://firebase.google.com/docs)
-- Truth Hunters README: [GitHub Repository](https://github.com/LouisRosche/TruthDetector)
+- Truth Hunters README: [GitHub Repository](https://github.com/LouisRosche/Truth-Hunters)
 
 **Community:**
-- Open an issue: [GitHub Issues](https://github.com/LouisRosche/TruthDetector/issues)
+- Open an issue: [GitHub Issues](https://github.com/LouisRosche/Truth-Hunters/issues)
 - Tag with `firebase` or `setup-help`
 
 **Firebase Support:**

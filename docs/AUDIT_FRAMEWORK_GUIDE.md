@@ -1,9 +1,9 @@
 # Universal GitHub Repository Audit Framework - Usage Guide
 
 **Version:** 1.0
-**Last Updated:** December 20, 2025
+**Last Updated:** December 20, 2024
 
-This guide helps auditors use the [Universal GitHub Repository Audit Framework](../AUDIT_FRAMEWORK.md) effectively to conduct comprehensive, context-aware repository evaluations.
+This guide helps auditors use the [Universal GitHub Repository Audit Framework](audit/AUDIT_FRAMEWORK.md) effectively to conduct comprehensive, context-aware repository evaluations.
 
 ---
 
@@ -24,13 +24,13 @@ This guide helps auditors use the [Universal GitHub Repository Audit Framework](
 ### What You Need
 
 - [ ] Access to the repository to audit
-- [ ] [AUDIT_TEMPLATE.md](../AUDIT_TEMPLATE.md) (copy this for your audit)
-- [ ] [AUDIT_FRAMEWORK.md](../AUDIT_FRAMEWORK.md) (reference document)
+- [ ] [AUDIT_TEMPLATE.md](audit/AUDIT_TEMPLATE.md) (copy this for your audit)
+- [ ] [AUDIT_FRAMEWORK.md](audit/AUDIT_FRAMEWORK.md) (reference document)
 - [ ] 2-8 hours (depending on repository complexity)
 
 ### Basic Workflow
 
-1. **Copy the template**: Create a copy of `AUDIT_TEMPLATE.md` for your audit
+1. **Copy the template**: Create a copy of `docs/audit/AUDIT_TEMPLATE.md` for your audit
 2. **Classify the project**: Complete Section 1 (Context Classification)
 3. **Review the code**: Clone/browse the repository
 4. **Evaluate each criterion**: Use framework Section 1-8 as guides
@@ -760,9 +760,9 @@ done
 
 ### Questions?
 
-- Check the main [AUDIT_FRAMEWORK.md](../AUDIT_FRAMEWORK.md) for detailed criteria
-- Review the [AUDIT_TEMPLATE.md](../AUDIT_TEMPLATE.md) for structure
-- Look at [AUDIT_REPORT.md](../AUDIT_REPORT.md) for a complete example
+- Check the main [AUDIT_FRAMEWORK.md](audit/AUDIT_FRAMEWORK.md) for detailed criteria
+- Review the [AUDIT_TEMPLATE.md](audit/AUDIT_TEMPLATE.md) for structure
+- Look at [AUDIT_REPORT.md](audit/AUDIT_REPORT.md) for a complete example
 
 ### Contributing
 

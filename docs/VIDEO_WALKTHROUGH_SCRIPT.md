@@ -215,7 +215,7 @@ By the end of this video, viewers will be able to:
 > Happy hunting!"
 
 **On-screen Text:**
-- Website URL: `github.com/LouisRosche/TruthDetector`
+- Website URL: `github.com/LouisRosche/Truth-Hunters`
 - Email: [Contact email if provided]
 - "⭐ Star us on GitHub if this helped your class!"
 
@@ -227,7 +227,7 @@ By the end of this video, viewers will be able to:
 
 **End Screen:**
 - Truth Hunters logo
-- Call to Action: "Try it today • github.com/LouisRosche/TruthDetector"
+- Call to Action: "Try it today • github.com/LouisRosche/Truth-Hunters"
 - Social share buttons (if applicable)
 
 ---
@@ -307,7 +307,7 @@ Perfect for:
 
 🔗 Links:
 • Play now: [GitHub Pages URL]
-• Repository: https://github.com/LouisRosche/TruthDetector
+• Repository: https://github.com/LouisRosche/Truth-Hunters
 • Firebase Setup Guide: [Link to docs/FIREBASE_SETUP.md]
 • Contributing: [Link to CONTRIBUTING.md]
 

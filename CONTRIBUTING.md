@@ -191,11 +191,11 @@ If you're a researcher:
 # 1. Fork the repository on GitHub
 
 # 2. Clone your fork
-git clone https://github.com/YOUR_USERNAME/TruthDetector.git
-cd TruthDetector
+git clone https://github.com/YOUR_USERNAME/Truth-Hunters.git
+cd Truth-Hunters
 
 # 3. Add upstream remote
-git remote add upstream https://github.com/LouisRosche/TruthDetector.git
+git remote add upstream https://github.com/LouisRosche/Truth-Hunters.git
 
 # 4. Install dependencies
 npm install
@@ -237,7 +237,7 @@ npm run build
 ## Project Structure
 
 ```
-TruthDetector/
+Truth-Hunters/
 ├── src/
 │   ├── components/          # React components
 │   │   ├── SetupScreen.jsx     # Game setup
@@ -245,7 +245,7 @@ TruthDetector/
 │   │   ├── DebriefScreen.jsx   # Post-game review
 │   │   └── ...                 # Shared components
 │   ├── data/                # Game data
-│   │   ├── claims.js           # Claims database (94 claims)
+│   │   ├── claims.js           # Claims database (734 claims)
 │   │   ├── achievements.js     # Achievement definitions
 │   │   └── constants.js        # Game constants
 │   ├── hooks/               # Custom React hooks
