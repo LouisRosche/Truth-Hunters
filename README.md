@@ -15,7 +15,7 @@ Truth Hunters helps students learn to:
 
 ## Features
 
-- **94 curated claims** across 11 subjects (Biology, History, Physics, and more)
+- **726 curated claims** across 22 subjects (Biology, History, Physics, Media Literacy, and more)
 - **Progressive difficulty** system (easy, medium, hard, or mixed)
 - **Calibration-based tips** that help students learn from their confidence patterns
 - **Confidence staking** with risk/reward scoring
