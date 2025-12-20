@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { FirebaseBackend } from '../services/firebase';
 
 export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, onToggle }) {
@@ -218,3 +219,15 @@ export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, on
     </div>
   );
 }
+
+LiveClassLeaderboard.propTypes = {
+  currentSessionId: PropTypes.string,
+  isMinimized: PropTypes.bool,
+  onToggle: PropTypes.func
+};
+
+LiveClassLeaderboard.defaultProps = {
+  currentSessionId: null,
+  isMinimized: false,
+  onToggle: null
+};

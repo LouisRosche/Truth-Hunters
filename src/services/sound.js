@@ -4,6 +4,8 @@
  * Optimized for Chromebook compatibility
  */
 
+import { logger } from '../utils/logger';
+
 export const SoundManager = {
   ctx: null,
   enabled: true,
@@ -17,7 +19,7 @@ export const SoundManager = {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       }
     } catch (e) {
-      console.warn('Audio not available:', e);
+      logger.warn('Audio not available:', e);
       this.ctx = null;
     }
   },
@@ -107,7 +109,7 @@ export const SoundManager = {
       };
     } catch (e) {
       // Silently fail if audio doesn't work
-      console.warn('Sound playback failed:', e);
+      logger.warn('Sound playback failed:', e);
     }
   },
 

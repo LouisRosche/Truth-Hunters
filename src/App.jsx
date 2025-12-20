@@ -9,6 +9,7 @@ import {
   Header,
   PredictionModal
 } from './components';
+import { logger } from './utils/logger';
 
 // Lazy load screen components for code-splitting
 const SetupScreen = lazy(() => import('./components/SetupScreen').then(m => ({ default: m.SetupScreen })));
@@ -89,42 +90,65 @@ export function App() {
     }
   }, []);
 
+  // Debounced Firebase session update (reduce frequency of updates)
+  const sessionUpdateTimeoutRef = useRef(null);
+
   // Update live session during gameplay for class-wide leaderboard
   useEffect(() => {
     if (!sessionId || !FirebaseBackend.initialized || !FirebaseBackend.getClassCode()) {
       return;
     }
 
-    // Update session during gameplay
+    // Update session during gameplay (debounced to reduce Firebase writes)
     if (gameState.phase === 'playing') {
-      const correctCount = gameState.team.results.filter(r => r.correct).length;
-      const totalRounds = gameState.team.results.length;
-      const accuracy = totalRounds > 0 ? Math.round((correctCount / totalRounds) * 100) : 0;
+      // Clear any pending update
+      if (sessionUpdateTimeoutRef.current) {
+        clearTimeout(sessionUpdateTimeoutRef.current);
+      }
 
-      FirebaseBackend.updateActiveSession(sessionId, {
-        teamName: gameState.team.name,
-        teamAvatar: gameState.team.avatar?.emoji || '🔍',
-        players: gameState.team.players || [],
-        currentScore: gameState.team.score,
-        currentRound: gameState.currentRound,
-        totalRounds: gameState.totalRounds,
-        accuracy
-      }).catch(e => console.warn('Failed to update live session:', e));
+      // Debounce updates to once every 2 seconds to reduce Firebase load
+      sessionUpdateTimeoutRef.current = setTimeout(() => {
+        const correctCount = gameState.team.results.filter(r => r.correct).length;
+        const totalRounds = gameState.team.results.length;
+        const accuracy = totalRounds > 0 ? Math.round((correctCount / totalRounds) * 100) : 0;
+
+        FirebaseBackend.updateActiveSession(sessionId, {
+          teamName: gameState.team.name,
+          teamAvatar: gameState.team.avatar?.emoji || '🔍',
+          players: gameState.team.players || [],
+          currentScore: gameState.team.score,
+          currentRound: gameState.currentRound,
+          totalRounds: gameState.totalRounds,
+          accuracy
+        }).catch(e => logger.warn('Failed to update live session:', e));
+      }, 2000); // 2 second debounce
     }
 
     // Remove session when game ends (debrief phase)
     if (gameState.phase === 'debrief' && sessionId) {
+      // Clear any pending debounced update
+      if (sessionUpdateTimeoutRef.current) {
+        clearTimeout(sessionUpdateTimeoutRef.current);
+      }
+
       FirebaseBackend.removeActiveSession(sessionId).catch(e => {
-        console.error('Failed to remove live session on game end:', e);
+        logger.error('Failed to remove live session on game end:', e);
         // Attempt retry after brief delay
         setTimeout(() => {
           FirebaseBackend.removeActiveSession(sessionId).catch(retryErr => {
-            console.error('Retry failed for session removal:', retryErr);
+            logger.error('Retry failed for session removal:', retryErr);
           });
         }, 1000);
       });
       setSessionId(null);
     }
+
+    // Cleanup function to clear timeout on unmount
+    return () => {
+      if (sessionUpdateTimeoutRef.current) {
+        clearTimeout(sessionUpdateTimeoutRef.current);
+      }
+    };
   }, [sessionId, gameState.phase, gameState.currentRound, gameState.team.score, gameState.team.name, gameState.team.avatar?.emoji, gameState.team.players, gameState.team.results, gameState.totalRounds]);
 
   // Clean up session on unmount or window close
@@ -141,7 +165,7 @@ export function App() {
             } catch (err) {
               retries--;
               if (retries === 0) {
-                console.error('Failed to remove live session after 3 retries:', err);
+                logger.error('Failed to remove live session after 3 retries:', err);
                 // Log to analytics/error tracking if available
                 if (window.navigator.sendBeacon) {
                   // Use sendBeacon for cleanup during page unload
@@ -159,7 +183,7 @@ export function App() {
           }
         } catch (e) {
           // Final fallback - at least log it
-          console.error('Critical: Session cleanup failed completely:', e);
+          logger.error('Critical: Session cleanup failed completely:', e);
         }
       }
     };
@@ -308,7 +332,7 @@ export function App() {
           classSettings = { ...settings, classSeenIds };
         }
       } catch (e) {
-        console.warn('Could not fetch class settings:', e);
+        logger.warn('Could not fetch class settings:', e);
       }
 
       // Fetch approved student-contributed claims from Firebase
@@ -318,7 +342,7 @@ export function App() {
           studentClaims = await FirebaseBackend.getApprovedClaims();
         }
       } catch (e) {
-        console.warn('Could not fetch student claims:', e);
+        logger.warn('Could not fetch student claims:', e);
       }
 
       // Select claims based on difficulty, subjects, grade level, including student contributions
@@ -357,7 +381,7 @@ export function App() {
     if (!pendingGameSettings) return;
     // Validate claims exist before starting
     if (!pendingGameSettings.claims?.length) {
-      console.error('No claims available to start game');
+      logger.error('No claims available to start game');
       setShowPrediction(false);
       setPendingGameSettings(null);
       return;
@@ -377,7 +401,7 @@ export function App() {
         currentRound: 1,
         totalRounds: pendingGameSettings.rounds,
         accuracy: 0
-      }).catch(e => console.warn('Failed to start live session:', e));
+      }).catch(e => logger.warn('Failed to start live session:', e));
     }
 
     setShowPrediction(false);
@@ -490,7 +514,7 @@ export function App() {
           // Also save to Firebase for class-wide leaderboard
           if (FirebaseBackend.initialized) {
             FirebaseBackend.save(gameRecord).catch((e) => {
-              console.warn('Firebase save failed:', e);
+              logger.warn('Firebase save failed:', e);
             });
           }
 
@@ -552,7 +576,7 @@ export function App() {
               const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
               if (achievement) {
                 FirebaseBackend.shareAchievement(achievement, playerInfo).catch(e => {
-                  console.warn('Failed to share achievement:', e);
+                  logger.warn('Failed to share achievement:', e);
                 });
               }
             });
@@ -563,14 +587,14 @@ export function App() {
                 ...achievement,
                 description: `${achievement.description} (Lifetime)`
               }, playerInfo).catch(e => {
-                console.warn('Failed to share lifetime achievement:', e);
+                logger.warn('Failed to share lifetime achievement:', e);
               });
             });
 
             // Record claims as seen by this class (prevents other groups from getting same claims)
             const claimIds = prev.claims.map(c => c.id);
             FirebaseBackend.recordClassSeenClaims(claimIds).catch(e => {
-              console.warn('Failed to record class seen claims:', e);
+              logger.warn('Failed to record class seen claims:', e);
             });
           }
 

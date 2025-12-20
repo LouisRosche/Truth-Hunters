@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { LeaderboardManager } from '../services/leaderboard';
 import { FirebaseBackend } from '../services/firebase';
 import { formatPlayerName } from '../utils/helpers';
+import { logger } from '../utils/logger';
 
 export function LeaderboardView({ onBack }) {
   const [leaderboardTab, setLeaderboardTab] = useState('teams');
@@ -27,7 +28,7 @@ export function LeaderboardView({ onBack }) {
           }
         })
         .catch((e) => {
-          console.warn('Failed to load cloud leaderboard:', e);
+          logger.warn('Failed to load cloud leaderboard:', e);
         })
         .finally(() => {
           if (isMountedRef.current) {

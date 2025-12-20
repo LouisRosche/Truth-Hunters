@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from './Button';
 import { FirebaseBackend } from '../services/firebase';
+import { logger } from '../utils/logger';
 
 export function ClaimModeration({ classCode }) {
   const [pendingClaims, setPendingClaims] = useState([]);
@@ -33,7 +34,7 @@ export function ClaimModeration({ classCode }) {
     } catch (err) {
       if (isMountedRef.current) {
         setError(`Failed to load pending claims: ${err.message}`);
-        console.error('Error loading claims:', err);
+        logger.error('Error loading claims:', err);
       }
     } finally {
       if (isMountedRef.current) {

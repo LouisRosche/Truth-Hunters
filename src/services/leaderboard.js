@@ -6,6 +6,7 @@
 import { sanitizeInput, isContentAppropriate } from '../utils/moderation';
 import { formatPlayerName } from '../utils/helpers';
 import { getTopPlayers as getTopPlayersUtil } from '../utils/leaderboardUtils';
+import { logger } from '../utils/logger';
 
 const STORAGE_KEY = 'truthHunters_leaderboard';
 
@@ -54,7 +55,7 @@ export const LeaderboardManager = {
 
       // Validate that it's an array
       if (!Array.isArray(parsed)) {
-        console.warn('Leaderboard data is not an array, resetting');
+        logger.warn('Leaderboard data is not an array, resetting');
         this.clear();
         return [];
       }
@@ -81,7 +82,7 @@ export const LeaderboardManager = {
 
       // If we filtered out corrupted entries, save the cleaned data
       if (validated.length !== parsed.length) {
-        console.warn(`Removed ${parsed.length - validated.length} corrupted leaderboard entries`);
+        logger.warn(`Removed ${parsed.length - validated.length} corrupted leaderboard entries`);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
         } catch (e) {
@@ -91,7 +92,7 @@ export const LeaderboardManager = {
 
       return validated;
     } catch (e) {
-      console.warn('Failed to load leaderboard (data may be corrupted):', e);
+      logger.warn('Failed to load leaderboard (data may be corrupted):', e);
       // Attempt to clear corrupted data
       try {
         localStorage.removeItem(STORAGE_KEY);
@@ -145,7 +146,7 @@ export const LeaderboardManager = {
         if (quotaError.name === 'QuotaExceededError' ||
             quotaError.code === 22 ||
             quotaError.code === 1014) {
-          console.warn('Storage quota exceeded, reducing stored games');
+          logger.warn('Storage quota exceeded, reducing stored games');
           // Keep only last 50 games
           const reduced = trimmed.slice(-50);
           try {
@@ -161,7 +162,7 @@ export const LeaderboardManager = {
       }
       return true;
     } catch (e) {
-      console.warn('Failed to save to leaderboard:', e);
+      logger.warn('Failed to save to leaderboard:', e);
       return false;
     }
   },
@@ -207,7 +208,7 @@ export const LeaderboardManager = {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
-      console.warn('Failed to clear leaderboard:', e);
+      logger.warn('Failed to clear leaderboard:', e);
     }
   },
 

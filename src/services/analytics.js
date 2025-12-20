@@ -5,6 +5,8 @@
  * Users can opt-out via settings
  */
 
+import { logger } from '../utils/logger';
+
 const ANALYTICS_KEY = 'truthHunters_analytics';
 const ANALYTICS_ENABLED_KEY = 'truthHunters_analytics_enabled';
 
@@ -48,7 +50,7 @@ export const Analytics = {
     try {
       localStorage.setItem(ANALYTICS_ENABLED_KEY, String(enabled));
     } catch (e) {
-      console.warn('Failed to save analytics preference:', e);
+      logger.warn('Failed to save analytics preference:', e);
     }
   },
 
@@ -61,7 +63,7 @@ export const Analytics = {
       const stored = localStorage.getItem(ANALYTICS_KEY);
       return stored ? JSON.parse(stored) : this.getDefaultData();
     } catch (e) {
-      console.warn('Failed to read analytics:', e);
+      logger.warn('Failed to read analytics:', e);
       return this.getDefaultData();
     }
   },
@@ -95,7 +97,7 @@ export const Analytics = {
     try {
       localStorage.setItem(ANALYTICS_KEY, JSON.stringify(data));
     } catch (e) {
-      console.warn('Failed to save analytics:', e);
+      logger.warn('Failed to save analytics:', e);
     }
   },
 
@@ -191,7 +193,7 @@ export const Analytics = {
         break;
 
       default:
-        console.warn('Unknown analytics event:', eventType);
+        logger.warn('Unknown analytics event:', eventType);
     }
 
     this.saveData(data);

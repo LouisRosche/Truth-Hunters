@@ -379,7 +379,7 @@ export const ErrorTracking = {
    * Generate unique error ID
    */
   _generateId() {
-    return `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `err_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   },
 
   /**
@@ -407,7 +407,7 @@ export const ErrorTracking = {
     try {
       let sessionId = sessionStorage.getItem(SESSION_KEY);
       if (!sessionId) {
-        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
         sessionStorage.setItem(SESSION_KEY, sessionId);
       }
       return sessionId;

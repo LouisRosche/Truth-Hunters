@@ -28,6 +28,8 @@
  * - college: Sophisticated, specialized. Age 18+. Expert-level critical thinking.
  */
 
+import { logger } from '../utils/logger';
+
 /**
  * Standardized Error Pattern Taxonomy
  * Every AI-generated claim maps to exactly one pattern
@@ -9941,11 +9943,11 @@ export function validateClaimsDatabase() {
 if (import.meta.env?.DEV) {
   const validation = validateClaimsDatabase();
   if (!validation.valid) {
-    console.warn('Claims database validation failed:', validation);
+    logger.warn('Claims database validation failed:', validation);
   } else {
-    console.log('Claims database validation passed:', validation.totalClaims, 'claims');
-    console.log('Answer distribution:', validation.distribution);
-    console.log('Grade levels:', validation.gradeLevels);
-    console.log('Subjects:', validation.subjects);
+    logger.log('Claims database validation passed:', validation.totalClaims, 'claims');
+    logger.log('Answer distribution:', validation.distribution);
+    logger.log('Grade levels:', validation.gradeLevels);
+    logger.log('Subjects:', validation.subjects);
   }
 }

@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Button } from './Button';
 import { FirebaseBackend } from '../services/firebase';
+import { logger } from '../utils/logger';
 
 export function TeacherSetup({ onBack }) {
   const [classCode, setClassCode] = useState(FirebaseBackend.getClassCode() || '');
@@ -26,7 +27,7 @@ export function TeacherSetup({ onBack }) {
         setFirebaseStatus('error');
       }
     } catch (e) {
-      console.error('Invalid Firebase config:', e);
+      logger.error('Invalid Firebase config:', e);
       setFirebaseStatus('error');
     }
   };

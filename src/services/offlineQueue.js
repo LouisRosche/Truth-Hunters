@@ -64,7 +64,7 @@ export const OfflineQueue = {
   enqueue(type, data) {
     const queue = this.getQueue();
     queue.push({
-      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       type,
       data,
       timestamp: Date.now(),

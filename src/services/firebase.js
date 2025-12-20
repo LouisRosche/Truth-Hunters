@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore';
 import { sanitizeInput } from '../utils/moderation';
 import { aggregatePlayerScores } from '../utils/leaderboardUtils';
+import { logger } from '../utils/logger';
 
 const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
 const FIREBASE_CLASS_SETTINGS_KEY = 'truthHunters_classSettings';
@@ -86,7 +87,7 @@ export const FirebaseBackend = {
       }
       this.classCode = code;
     } catch (e) {
-      console.warn('Failed to save class code:', e);
+      logger.warn('Failed to save class code:', e);
     }
   },
 
@@ -154,7 +155,7 @@ export const FirebaseBackend = {
     try {
       // Check if Firebase is properly configured
       if (!this.isConfigured()) {
-        console.warn('Firebase configuration missing. Please set VITE_FIREBASE_* environment variables.');
+        logger.warn('Firebase configuration missing. Please set VITE_FIREBASE_* environment variables.');
         return false;
       }
 
@@ -170,10 +171,10 @@ export const FirebaseBackend = {
       this.initialized = true;
       this.classCode = this.getClassCode();
 
-      console.log('Firebase backend initialized successfully');
+      logger.log('Firebase backend initialized successfully');
       return true;
     } catch (e) {
-      console.warn('Failed to initialize Firebase:', e);
+      logger.warn('Failed to initialize Firebase:', e);
       this.initialized = false;
       return false;
     }
@@ -215,7 +216,7 @@ export const FirebaseBackend = {
       await addDoc(gamesRef, docData);
       return true;
     } catch (e) {
-      console.warn('Failed to save to Firebase:', e);
+      logger.warn('Failed to save to Firebase:', e);
       return false;
     }
   },
@@ -275,7 +276,7 @@ export const FirebaseBackend = {
 
       return results;
     } catch (e) {
-      console.warn('Failed to fetch from Firebase:', e);
+      logger.warn('Failed to fetch from Firebase:', e);
       return [];
     }
   },
@@ -327,7 +328,7 @@ export const FirebaseBackend = {
 
       return results;
     } catch (e) {
-      console.warn('Failed to fetch players from Firebase:', e);
+      logger.warn('Failed to fetch players from Firebase:', e);
       return [];
     }
   },
@@ -453,7 +454,7 @@ export const FirebaseBackend = {
 
       return { success: true, id: docRef.id };
     } catch (e) {
-      console.warn('Failed to submit claim:', e);
+      logger.warn('Failed to submit claim:', e);
       return { success: false, error: e.message };
     }
   },
@@ -496,7 +497,7 @@ export const FirebaseBackend = {
         timestamp: doc.data().submittedAt?.toMillis() || Date.now()
       }));
     } catch (e) {
-      console.warn('Failed to fetch pending claims:', e);
+      logger.warn('Failed to fetch pending claims:', e);
       return [];
     }
   },
@@ -553,7 +554,7 @@ export const FirebaseBackend = {
         timestamp: doc.data().submittedAt?.toMillis() || Date.now()
       }));
     } catch (e) {
-      console.warn('Failed to fetch submitted claims:', e);
+      logger.warn('Failed to fetch submitted claims:', e);
       return [];
     }
   },
@@ -580,7 +581,7 @@ export const FirebaseBackend = {
 
       return { success: true };
     } catch (e) {
-      console.warn('Failed to review claim:', e);
+      logger.warn('Failed to review claim:', e);
       return { success: false, error: e.message };
     }
   },
@@ -642,7 +643,7 @@ export const FirebaseBackend = {
         })
         .filter(claim => claim !== null);
     } catch (e) {
-      console.warn('Failed to fetch approved claims:', e);
+      logger.warn('Failed to fetch approved claims:', e);
       return [];
     }
   },
@@ -676,7 +677,7 @@ export const FirebaseBackend = {
         reviewedTimestamp: doc.data().reviewedAt?.toMillis() || null
       }));
     } catch (e) {
-      console.warn('Failed to fetch student claims:', e);
+      logger.warn('Failed to fetch student claims:', e);
       return [];
     }
   },
@@ -709,7 +710,7 @@ export const FirebaseBackend = {
       await addDoc(reflectionsRef, docData);
       return true;
     } catch (e) {
-      console.warn('Failed to save reflection to Firebase:', e);
+      logger.warn('Failed to save reflection to Firebase:', e);
       return false;
     }
   },
@@ -750,7 +751,7 @@ export const FirebaseBackend = {
         timestamp: doc.data().createdAt?.toMillis() || Date.now()
       }));
     } catch (e) {
-      console.warn('Failed to fetch reflections from Firebase:', e);
+      logger.warn('Failed to fetch reflections from Firebase:', e);
       return [];
     }
   },
@@ -768,7 +769,7 @@ export const FirebaseBackend = {
    */
   subscribeToPendingClaims(callback, classFilter = null) {
     if (!this.initialized || !this.db) {
-      console.warn('Firebase not initialized for real-time subscription');
+      logger.warn('Firebase not initialized for real-time subscription');
       return () => {};
     }
 
@@ -807,13 +808,13 @@ export const FirebaseBackend = {
         }));
         callback(claims);
       }, (error) => {
-        console.warn('Real-time claims subscription error:', error);
+        logger.warn('Real-time claims subscription error:', error);
       });
 
       this._listeners['pendingClaims'] = unsubscribe;
       return unsubscribe;
     } catch (e) {
-      console.warn('Failed to set up real-time subscription:', e);
+      logger.warn('Failed to set up real-time subscription:', e);
       return () => {};
     }
   },
@@ -857,13 +858,13 @@ export const FirebaseBackend = {
         }));
         callback(achievements);
       }, (error) => {
-        console.warn('Real-time achievements subscription error:', error);
+        logger.warn('Real-time achievements subscription error:', error);
       });
 
       this._listeners['classAchievements'] = unsubscribe;
       return unsubscribe;
     } catch (e) {
-      console.warn('Failed to set up achievements subscription:', e);
+      logger.warn('Failed to set up achievements subscription:', e);
       return () => {};
     }
   },
@@ -914,7 +915,7 @@ export const FirebaseBackend = {
 
       return true;
     } catch (e) {
-      console.warn('Failed to update active session:', e);
+      logger.warn('Failed to update active session:', e);
       return false;
     }
   },
@@ -933,7 +934,7 @@ export const FirebaseBackend = {
       await deleteDoc(sessionDoc);
       return true;
     } catch (e) {
-      console.warn('Failed to remove active session:', e);
+      logger.warn('Failed to remove active session:', e);
       return false;
     }
   },
@@ -947,7 +948,7 @@ export const FirebaseBackend = {
    */
   subscribeToLiveLeaderboard(callback, classFilter = null) {
     if (!this.initialized || !this.db) {
-      console.warn('Firebase not initialized for live leaderboard');
+      logger.warn('Firebase not initialized for live leaderboard');
       return () => {};
     }
 
@@ -980,14 +981,14 @@ export const FirebaseBackend = {
         }));
         callback(sessions);
       }, (error) => {
-        console.warn('Live leaderboard subscription error:', error);
+        logger.warn('Live leaderboard subscription error:', error);
         callback([]);
       });
 
       this._listeners['liveLeaderboard'] = unsubscribe;
       return unsubscribe;
     } catch (e) {
-      console.warn('Failed to set up live leaderboard subscription:', e);
+      logger.warn('Failed to set up live leaderboard subscription:', e);
       return () => {};
     }
   },
@@ -1015,7 +1016,7 @@ export const FirebaseBackend = {
       }
       return this._getDefaultClassSettings();
     } catch (e) {
-      console.warn('Failed to fetch class settings:', e);
+      logger.warn('Failed to fetch class settings:', e);
       return this._getDefaultClassSettings();
     }
   },
@@ -1048,7 +1049,7 @@ export const FirebaseBackend = {
 
       return { success: true };
     } catch (e) {
-      console.warn('Failed to save class settings:', e);
+      logger.warn('Failed to save class settings:', e);
       return { success: false, error: e.message };
     }
   },
@@ -1101,7 +1102,7 @@ export const FirebaseBackend = {
       }
       return [];
     } catch (e) {
-      console.warn('Failed to fetch class seen claims:', e);
+      logger.warn('Failed to fetch class seen claims:', e);
       return [];
     }
   },
@@ -1143,7 +1144,7 @@ export const FirebaseBackend = {
 
       return { success: true };
     } catch (e) {
-      console.warn('Failed to record class seen claims:', e);
+      logger.warn('Failed to record class seen claims:', e);
       return { success: false, error: e.message };
     }
   },
@@ -1167,7 +1168,7 @@ export const FirebaseBackend = {
       await setDoc(seenDoc, { classCode: code, date: today, claimIds: [], updatedAt: serverTimestamp() });
       return { success: true };
     } catch (e) {
-      console.warn('Failed to clear class seen claims:', e);
+      logger.warn('Failed to clear class seen claims:', e);
       return { success: false, error: e.message };
     }
   },
@@ -1249,7 +1250,7 @@ export const FirebaseBackend = {
         }
       };
     } catch (e) {
-      console.warn('Failed to export class data:', e);
+      logger.warn('Failed to export class data:', e);
       return { success: false, error: e.message, data: null };
     }
   },
@@ -1285,7 +1286,7 @@ export const FirebaseBackend = {
 
       return { success: true };
     } catch (e) {
-      console.warn('Failed to share achievement:', e);
+      logger.warn('Failed to share achievement:', e);
       return { success: false, error: e.message };
     }
   },
@@ -1319,7 +1320,7 @@ export const FirebaseBackend = {
         timestamp: doc.data().earnedAt?.toMillis() || Date.now()
       }));
     } catch (e) {
-      console.warn('Failed to fetch class achievements:', e);
+      logger.warn('Failed to fetch class achievements:', e);
       return [];
     }
   },

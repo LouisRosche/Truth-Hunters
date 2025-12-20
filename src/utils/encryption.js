@@ -11,6 +11,8 @@
  * - Web Crypto API
  */
 
+import { logger } from './logger';
+
 /**
  * Generate a session-based encryption key
  * Key persists for session but changes between sessions
@@ -113,7 +115,7 @@ export const SecureStorage = {
       localStorage.setItem(key, encrypted);
       return true;
     } catch (e) {
-      console.warn(`[SecureStorage] Failed to save ${key}:`, e);
+      logger.warn(`[SecureStorage] Failed to save ${key}:`, e);
       return false;
     }
   },
@@ -133,7 +135,7 @@ export const SecureStorage = {
       const decrypted = xorDecrypt(encrypted, encryptionKey);
       return JSON.parse(decrypted);
     } catch (e) {
-      console.warn(`[SecureStorage] Failed to read ${key}:`, e);
+      logger.warn(`[SecureStorage] Failed to read ${key}:`, e);
       return defaultValue;
     }
   },
@@ -147,7 +149,7 @@ export const SecureStorage = {
       localStorage.removeItem(key);
       return true;
     } catch (e) {
-      console.warn(`[SecureStorage] Failed to remove ${key}:`, e);
+      logger.warn(`[SecureStorage] Failed to remove ${key}:`, e);
       return false;
     }
   },
@@ -160,7 +162,7 @@ export const SecureStorage = {
       localStorage.clear();
       return true;
     } catch (e) {
-      console.warn('[SecureStorage] Failed to clear storage:', e);
+      logger.warn('[SecureStorage] Failed to clear storage:', e);
       return false;
     }
   },
@@ -180,14 +182,14 @@ export const SecureStorage = {
         const data = JSON.parse(existing);
         // If successful, it's unencrypted - re-save as encrypted
         this.setItem(key, data);
-        console.log(`[SecureStorage] Migrated ${key} to encrypted storage`);
+        logger.log(`[SecureStorage] Migrated ${key} to encrypted storage`);
         return true;
       } catch {
         // Already encrypted or invalid - leave as is
         return false;
       }
     } catch (e) {
-      console.warn(`[SecureStorage] Failed to migrate ${key}:`, e);
+      logger.warn(`[SecureStorage] Failed to migrate ${key}:`, e);
       return false;
     }
   },
@@ -226,7 +228,7 @@ export function migrateAllToEncrypted() {
   });
 
   if (migratedCount > 0) {
-    console.log(`[SecureStorage] Migrated ${migratedCount} items to encrypted storage`);
+    logger.log(`[SecureStorage] Migrated ${migratedCount} items to encrypted storage`);
   }
 
   return migratedCount;

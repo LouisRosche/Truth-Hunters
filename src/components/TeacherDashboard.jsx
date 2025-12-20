@@ -8,6 +8,7 @@ import { Button } from './Button';
 import { FirebaseBackend } from '../services/firebase';
 import { LeaderboardManager } from '../services/leaderboard';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useToast } from './Toast';
 import { getSubjects } from '../data/claims';
 
 const ALL_SUBJECTS = getSubjects();
@@ -76,6 +77,7 @@ export function TeacherDashboard({ onBack }) {
   const [reviewNote, setReviewNote] = useState('');
   const [claimFilter, setClaimFilter] = useState('pending'); // pending, approved, rejected, all
   const isOnline = useOnlineStatus();
+  const { showToast } = useToast();
 
   // Class settings state
   const [classSettings, setClassSettings] = useState(null);
@@ -1351,9 +1353,9 @@ export function TeacherDashboard({ onBack }) {
                 onClick={async () => {
                   const result = await FirebaseBackend.clearClassSeenClaims(classCode);
                   if (result.success) {
-                    alert('Class seen claims cleared! Groups will now get fresh claims.');
+                    showToast('Class seen claims cleared! Groups will now get fresh claims.', 'success');
                   } else {
-                    alert('Failed to clear: ' + (result.error || 'Unknown error'));
+                    showToast('Failed to clear: ' + (result.error || 'Unknown error'), 'error');
                   }
                 }}
                 disabled={!isOnline || !classCode}

@@ -6,7 +6,8 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Disable source maps in production for security and smaller bundle size
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {

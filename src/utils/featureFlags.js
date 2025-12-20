@@ -6,6 +6,8 @@
  * Useful for A/B testing, gradual rollouts, and emergency shutoffs
  */
 
+import { logger } from './logger';
+
 /**
  * Default feature flags
  * Can be overridden by environment variables or localStorage
@@ -83,7 +85,7 @@ export const FeatureFlags = {
     }
 
     this.initialized = true;
-    console.log('[FeatureFlags] Initialized:', this.flags);
+    logger.log('[FeatureFlags] Initialized:', this.flags);
   },
 
   /**
@@ -121,7 +123,7 @@ export const FeatureFlags = {
         this.flags = { ...this.flags, ...overrides };
       }
     } catch (e) {
-      console.warn('[FeatureFlags] Failed to load from storage:', e);
+      logger.warn('[FeatureFlags] Failed to load from storage:', e);
     }
   },
 
@@ -185,7 +187,7 @@ export const FeatureFlags = {
     try {
       localStorage.setItem('truthHunters_featureFlags', JSON.stringify(this.flags));
     } catch (e) {
-      console.warn('[FeatureFlags] Failed to save to storage:', e);
+      logger.warn('[FeatureFlags] Failed to save to storage:', e);
     }
   },
 
@@ -209,7 +211,7 @@ export const FeatureFlags = {
       try {
         callback(featureName, newValue);
       } catch (e) {
-        console.warn('[FeatureFlags] Listener error:', e);
+        logger.warn('[FeatureFlags] Listener error:', e);
       }
     });
   },
@@ -235,7 +237,7 @@ export const FeatureFlags = {
     } catch (e) {
       // Ignore
     }
-    console.log('[FeatureFlags] Reset to defaults');
+    logger.log('[FeatureFlags] Reset to defaults');
   },
 
   /**
@@ -291,15 +293,12 @@ export function debugFlags() {
   const all = FeatureFlags.getAll();
   const stats = FeatureFlags.getStats();
 
-  console.group('🚩 Feature Flags');
-  console.log('Statistics:', stats);
-  console.table(
-    Object.entries(all).map(([name, enabled]) => ({
-      Feature: name,
-      Enabled: enabled ? '✅' : '❌'
-    }))
-  );
-  console.groupEnd();
+  logger.log('🚩 Feature Flags');
+  logger.log('Statistics:', stats);
+  logger.log('Features:', Object.entries(all).map(([name, enabled]) => ({
+    Feature: name,
+    Enabled: enabled ? '✅' : '❌'
+  })));
 }
 
 // Auto-initialize
@@ -309,7 +308,7 @@ FeatureFlags.init();
 if (import.meta.env.MODE === 'development' && typeof window !== 'undefined') {
   window.FeatureFlags = FeatureFlags;
   window.debugFlags = debugFlags;
-  console.log('💡 Debug helpers available: window.FeatureFlags, window.debugFlags()');
+  logger.log('💡 Debug helpers available: window.FeatureFlags, window.debugFlags()');
 }
 
 /**

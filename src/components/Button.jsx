@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 
 export function Button({
   children,
@@ -81,3 +82,24 @@ export function Button({
     </button>
   );
 }
+
+Button.propTypes = {
+  children: PropTypes.node.isRequired,
+  onClick: PropTypes.func,
+  variant: PropTypes.oneOf(['primary', 'secondary', 'danger']),
+  disabled: PropTypes.bool,
+  fullWidth: PropTypes.bool,
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  ariaLabel: PropTypes.string,
+  preventDoubleClickMs: PropTypes.number
+};
+
+Button.defaultProps = {
+  onClick: null,
+  variant: 'primary',
+  disabled: false,
+  fullWidth: false,
+  size: 'md',
+  ariaLabel: null,
+  preventDoubleClickMs: 500
+};

@@ -3,9 +3,11 @@
  * Displays a vertical carousel wheel effect leaderboard
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { LeaderboardManager } from '../services/leaderboard';
 import { FirebaseBackend } from '../services/firebase';
+import { logger } from '../utils/logger';
 
 export function ScrollingLeaderboard({ onViewFull }) {
   const [entries, setEntries] = useState([]);
@@ -24,7 +26,7 @@ export function ScrollingLeaderboard({ onViewFull }) {
         try {
           data = await FirebaseBackend.getTopTeams(20);
         } catch (e) {
-          console.warn('Firebase leaderboard fetch failed:', e);
+          logger.warn('Firebase leaderboard fetch failed:', e);
         }
       }
 
@@ -62,8 +64,8 @@ export function ScrollingLeaderboard({ onViewFull }) {
     return () => clearInterval(interval);
   }, [isPaused, entries.length, advanceCarousel]);
 
-  // Calculate visible items with carousel wheel effect
-  const getVisibleItems = () => {
+  // Calculate visible items with carousel wheel effect (memoized for performance)
+  const visibleItems = useMemo(() => {
     if (entries.length === 0) return [];
 
     const visibleCount = 7; // Number of visible slots
@@ -95,7 +97,7 @@ export function ScrollingLeaderboard({ onViewFull }) {
     }
 
     return items;
-  };
+  }, [entries, currentIndex]);
 
   if (entries.length === 0) {
     return (
@@ -124,8 +126,6 @@ export function ScrollingLeaderboard({ onViewFull }) {
       </div>
     );
   }
-
-  const visibleItems = getVisibleItems();
 
   return (
     <div
@@ -319,3 +319,11 @@ export function ScrollingLeaderboard({ onViewFull }) {
     </div>
   );
 }
+
+ScrollingLeaderboard.propTypes = {
+  onViewFull: PropTypes.func
+};
+
+ScrollingLeaderboard.defaultProps = {
+  onViewFull: null
+};

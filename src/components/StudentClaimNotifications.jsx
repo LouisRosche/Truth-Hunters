@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FirebaseBackend } from '../services/firebase';
 import { PlayerProfile } from '../services/playerProfile';
+import { logger } from '../utils/logger';
 
 export function StudentClaimNotifications({ onClose }) {
   const [claims, setClaims] = useState([]);
@@ -37,7 +38,7 @@ export function StudentClaimNotifications({ onClose }) {
         setClaims(results);
       }
     } catch (e) {
-      console.warn('Failed to load claims:', e);
+      logger.warn('Failed to load claims:', e);
       if (isMountedRef.current) {
         setError('Could not load your submissions. Please try again.');
         setClaims([]);

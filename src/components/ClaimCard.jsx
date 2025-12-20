@@ -3,7 +3,10 @@
  * Displays a claim with optional answer reveal
  */
 
-export function ClaimCard({ claim, showAnswer = false }) {
+import { memo } from 'react';
+import PropTypes from 'prop-types';
+
+function ClaimCardComponent({ claim, showAnswer = false }) {
   return (
     <div
       className="animate-in"
@@ -161,3 +164,29 @@ export function ClaimCard({ claim, showAnswer = false }) {
     </div>
   );
 }
+
+// PropTypes validation
+ClaimCardComponent.propTypes = {
+  claim: PropTypes.shape({
+    id: PropTypes.string,
+    text: PropTypes.string.isRequired,
+    answer: PropTypes.oneOf(['TRUE', 'FALSE', 'MIXED']).isRequired,
+    difficulty: PropTypes.oneOf(['easy', 'medium', 'hard', 'expert']),
+    subject: PropTypes.string,
+    source: PropTypes.string,
+    contributor: PropTypes.string,
+    errorPattern: PropTypes.string,
+    explanation: PropTypes.string
+  }).isRequired,
+  showAnswer: PropTypes.bool
+};
+
+ClaimCardComponent.defaultProps = {
+  showAnswer: false
+};
+
+// Memoize to prevent re-renders when props haven't changed
+export const ClaimCard = memo(ClaimCardComponent);
+
+// Also export as default for flexibility
+export default ClaimCard;

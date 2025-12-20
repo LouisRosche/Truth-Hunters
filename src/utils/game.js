@@ -6,6 +6,7 @@
 import { CLAIMS_DATABASE, getFilteredClaims } from '../data/claims';
 import { SUBJECT_HINTS } from '../data/constants';
 import { shuffleArray } from './generic';
+import { logger } from './logger';
 
 /**
  * Select claims based on difficulty, grade level, and optional subject filter
@@ -114,7 +115,7 @@ export function selectClaimsByDifficulty(difficulty, count, subjects = [], previ
   // CRITICAL: If subject filter resulted in too few claims, fall back to full database
   // This prevents the game from breaking mid-way when there aren't enough claims
   if (selectedClaims.length < count && subjects && subjects.length > 0) {
-    console.warn(`Only ${selectedClaims.length} claims found for subjects [${subjects.join(', ')}], falling back to full database`);
+    logger.warn(`Only ${selectedClaims.length} claims found for subjects [${subjects.join(', ')}], falling back to full database`);
     const fullPool = [...CLAIMS_DATABASE, ...additionalClaims].filter(c => !usedIds.has(c.id));
     const additional = selectUnique(fullPool, count - selectedClaims.length, false);
     selectedClaims.push(...additional);

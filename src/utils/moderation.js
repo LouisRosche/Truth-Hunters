@@ -5,6 +5,8 @@
  * Pre-compiled regex for performance
  */
 
+import { logger } from './logger';
+
 /**
  * Words that must be blocked - uses word boundary matching
  * These are unambiguous bad words that won't cause false positives
@@ -209,7 +211,7 @@ export function sanitizeHTML(html, maxLength = 1000) {
       }
     }
   } catch (e) {
-    console.warn('DOMPurify not available, using fallback sanitization:', e);
+    logger.warn('DOMPurify not available, using fallback sanitization:', e);
   }
 
   // Apply basic sanitization as defense-in-depth
