@@ -250,87 +250,108 @@ export function SetupScreen({ onStart, isLoading = false }) {
   // Main Setup View - with scrolling leaderboard on left for larger screens
   return (
     <div className="viewport-container" style={{ display: 'flex', justifyContent: 'center', gap: '2rem', padding: '1.5rem' }}>
-      {/* Chromebook compact CSS */}
+      {/* Chromebook compact CSS - ZERO SCROLL */}
       <style>{`
         @media (max-width: 1366px) and (max-height: 768px) {
           .viewport-container {
-            padding: 0.5rem !important;
-            gap: 0.5rem !important;
-            height: 100vh;
-            overflow: hidden;
+            padding: 0.2rem !important;
+            gap: 0.2rem !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow: hidden !important;
           }
 
-          /* Make setup form scrollable */
+          /* NO SCROLL - Grid layout */
           .setup-form-container {
-            height: 100vh;
-            overflow-y: auto;
-            padding: 0.5rem;
+            height: calc(100vh - 0.4rem) !important;
+            max-height: calc(100vh - 0.4rem) !important;
+            overflow: hidden !important;
+            padding: 0.2rem !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            grid-template-rows: auto auto 1fr auto !important;
+            gap: 0.2rem !important;
           }
 
-          /* Ultra-compact all cards */
+          /* ULTRA-compact all cards */
           .setup-form-container > div {
-            padding: 0.5rem !important;
-            margin-bottom: 0.375rem !important;
+            padding: 0.2rem !important;
+            margin-bottom: 0.1rem !important;
           }
 
-          /* Compact header */
+          /* TINY header */
           .setup-form-container h1 {
-            font-size: 1.25rem !important;
-            margin-bottom: 0.25rem !important;
+            font-size: 0.8rem !important;
+            margin-bottom: 0.1rem !important;
           }
 
           .setup-form-container h2 {
-            font-size: 0.75rem !important;
+            font-size: 0.5rem !important;
           }
 
-          /* Compact inputs */
+          .setup-form-container p {
+            font-size: 0.6rem !important;
+            margin: 0 !important;
+          }
+
+          /* TINY inputs */
           .setup-form-container input,
           .setup-form-container select,
           .setup-form-container textarea {
-            min-height: 32px !important;
-            padding: 0.25rem 0.5rem !important;
-            font-size: 0.8125rem !important;
-            margin-bottom: 0.375rem !important;
+            min-height: 20px !important;
+            padding: 0.1rem 0.2rem !important;
+            font-size: 0.6rem !important;
+            margin-bottom: 0.1rem !important;
           }
 
-          /* Compact buttons */
+          /* TINY buttons */
           .setup-form-container button {
-            min-height: 32px !important;
-            padding: 0.25rem 0.5rem !important;
-            font-size: 0.75rem !important;
+            min-height: 20px !important;
+            padding: 0.1rem 0.2rem !important;
+            font-size: 0.6rem !important;
           }
 
-          /* Compact grid layouts */
+          /* TINY grid layouts */
           .setup-form-container [style*="grid"] {
-            gap: 0.25rem !important;
+            gap: 0.1rem !important;
           }
 
-          /* Hide welcome banner on small screens */
-          .setup-form-container > div:nth-child(2) {
-            padding: 0.5rem !important;
-            margin-bottom: 0.375rem !important;
-          }
-
-          /* Collapse how to play by default */
-          .setup-form-container [style*="HOW TO PLAY"] {
-            font-size: 0.6875rem !important;
-          }
-
-          /* Ultra-compact player inputs */
-          .setup-form-container [aria-label*="Player"] {
-            padding: 0.375rem !important;
-            font-size: 0.75rem !important;
-          }
-
-          /* Compact mascot grid */
-          .setup-form-container [title*="mascot"] {
-            padding: 0.25rem !important;
-          }
-
-          /* Hide emoji mascot on compact */
+          /* Hide emoji completely */
+          .setup-form-container [style*="fontSize: '3rem'"],
           .setup-form-container > div:first-child > div:first-child {
-            font-size: 2rem !important;
-            margin-bottom: 0.25rem !important;
+            display: none !important;
+          }
+
+          /* Hide "How to Play" section entirely */
+          .setup-form-container [style*="HOW TO PLAY"] {
+            display: none !important;
+          }
+
+          /* Hide welcome banner */
+          .setup-form-container > div:nth-child(2) {
+            display: none !important;
+          }
+
+          /* TINY player inputs */
+          .setup-form-container [aria-label*="Player"] {
+            padding: 0.1rem !important;
+            font-size: 0.6rem !important;
+          }
+
+          /* TINY mascot grid */
+          .setup-form-container [title*="mascot"] {
+            padding: 0.1rem !important;
+            font-size: 0.8rem !important;
+          }
+
+          /* Hide tip section */
+          .setup-form-container > div:last-child {
+            display: none !important;
+          }
+
+          /* Hide all secondary buttons */
+          .leaderboard-mobile-btn {
+            display: none !important;
           }
         }
       `}</style>

@@ -174,91 +174,97 @@ Play Truth Hunters and test your fact-checking skills!`;
 
   return (
     <div className="viewport-container" style={{ maxWidth: '800px', margin: '0 auto', padding: '1.5rem' }}>
-      {/* Chromebook compact CSS */}
+      {/* Chromebook ZERO SCROLL CSS */}
       <style>{`
         @media (max-width: 1366px) and (max-height: 768px) {
           .viewport-container {
-            padding: 0.5rem !important;
-            height: 100vh;
-            overflow-y: auto;
+            padding: 0.2rem !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow: hidden !important;
+            display: grid !important;
+            grid-template-rows: auto auto 1fr auto !important;
+            gap: 0.2rem !important;
           }
 
-          /* Compact final score */
+          /* ULTRA-compact final score */
           .viewport-container > div:first-child {
-            padding: 1rem !important;
-            margin-bottom: 0.5rem !important;
+            padding: 0.3rem !important;
+            margin: 0 !important;
           }
 
           .viewport-container > div:first-child .mono[style*="4rem"] {
-            font-size: 2.5rem !important;
+            font-size: 1.5rem !important;
+            line-height: 1 !important;
           }
 
-          /* Compact stats grid */
-          .viewport-container [style*="grid-template-columns"] {
-            gap: 0.375rem !important;
+          .viewport-container > div:first-child div {
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
-          .viewport-container [style*="grid-template-columns"] > div {
-            padding: 0.5rem !important;
+          /* HIDE stats grid - too much space */
+          .viewport-container [style*="grid-template-columns"]:first-of-type {
+            display: none !important;
           }
 
-          .viewport-container [style*="grid-template-columns"] .mono {
-            font-size: 1rem !important;
-          }
-
-          /* Collapse achievements by default */
+          /* HIDE achievements - save space */
           .viewport-container [style*="ACHIEVEMENTS"] {
-            margin-bottom: 0.5rem !important;
-            padding: 0.75rem !important;
+            display: none !important;
           }
 
-          /* Compact round breakdown */
+          /* HIDE round breakdown - save space */
           .viewport-container [style*="ROUND BREAKDOWN"] {
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 0.75rem !important;
-            margin-bottom: 0.5rem !important;
+            display: none !important;
           }
 
-          .viewport-container [style*="ROUND BREAKDOWN"] > div > div {
-            padding: 0.375rem !important;
-            margin-bottom: 0.25rem !important;
-          }
-
-          /* Collapse AI patterns by default */
+          /* HIDE AI patterns - save space */
           .viewport-container [style*="AI ERROR PATTERNS"] {
-            max-height: 150px;
-            overflow-y: auto;
-            padding: 0.75rem !important;
-            margin-bottom: 0.5rem !important;
+            display: none !important;
           }
 
-          /* Compact reflection section */
+          /* Compact reflection section - ONLY thing shown */
           .viewport-container [style*="TEAM REFLECTION"] {
-            padding: 0.75rem !important;
-            margin-bottom: 0.5rem !important;
+            padding: 0.2rem !important;
+            margin: 0 !important;
+            overflow: hidden !important;
           }
 
           .viewport-container textarea {
-            min-height: 40px !important;
-            font-size: 0.75rem !important;
-            padding: 0.375rem !important;
+            min-height: 30px !important;
+            font-size: 0.6rem !important;
+            padding: 0.1rem !important;
           }
 
-          /* Compact buttons */
+          /* TINY buttons */
           .viewport-container button {
-            min-height: 32px !important;
-            padding: 0.375rem 0.625rem !important;
-            font-size: 0.75rem !important;
+            min-height: 20px !important;
+            padding: 0.1rem 0.2rem !important;
+            font-size: 0.6rem !important;
           }
 
           /* Compact actions */
           .viewport-container .no-print {
-            gap: 0.375rem !important;
+            gap: 0.1rem !important;
+          }
+
+          .viewport-container .no-print > div {
+            display: flex !important;
+            gap: 0.1rem !important;
+          }
+
+          /* Hide print button - save space */
+          .viewport-container .no-print button:last-child {
+            display: none !important;
           }
 
           /* Hide research attribution */
           .viewport-container > div:last-child {
+            display: none !important;
+          }
+
+          /* Hide ALL extra content */
+          .viewport-container > div:nth-child(n+5) {
             display: none !important;
           }
         }
