@@ -16,3 +16,8 @@ export { SoloStatsView } from './SoloStatsView';
 export { ClaimSubmissionForm } from './ClaimSubmissionForm';
 export { StudentClaimNotifications } from './StudentClaimNotifications';
 export { LiveClassLeaderboard } from './LiveClassLeaderboard';
+
+// S-tier UX components
+export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
+export { LoadingSkeleton } from './LoadingSkeleton';
+export { EmptyState } from './EmptyState';
