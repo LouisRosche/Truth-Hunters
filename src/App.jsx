@@ -1094,21 +1094,6 @@ export function App() {
           Truth Hunters • Research-based epistemic training for middle schoolers •{' '}
           {gameState.team.avatar?.emoji || '🔍'}
         </p>
-        <a
-          href="?teacher=true"
-          className="mono"
-          style={{
-            fontSize: '0.625rem',
-            color: 'var(--accent-violet)',
-            textDecoration: 'none',
-            opacity: 0.7,
-            transition: 'opacity 0.2s ease'
-          }}
-          onMouseEnter={(e) => { e.target.style.opacity = '1'; }}
-          onMouseLeave={(e) => { e.target.style.opacity = '0.7'; }}
-        >
-          Teacher Dashboard
-        </a>
       </footer>
     </ErrorBoundary>
   );

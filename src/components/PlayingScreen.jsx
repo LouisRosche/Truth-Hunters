@@ -403,110 +403,110 @@ export function PlayingScreen({
           }
         }
 
-        /* AGGRESSIVE NO-SCROLL MODE - Chromebook 1366x768 */
+        /* ULTRA-AGGRESSIVE ZERO-SCROLL MODE - Chromebook 1366x768 */
         @media (max-width: 1366px) and (max-height: 768px) {
-          /* Force viewport height lock */
-          .viewport-container > div:first-child {
-            max-height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+          /* Force viewport height lock - ABSOLUTE */
+          .viewport-container {
+            max-height: 100vh !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+            display: grid !important;
+            grid-template-rows: auto minmax(0, 1fr) auto !important;
+            padding: 0.1rem !important;
+            gap: 0.1rem !important;
           }
 
-          /* Reduce ALL margins and padding */
+          .viewport-container > * {
+            overflow: hidden !important;
+          }
+
+          /* Reduce ALL margins and padding - EXTREME */
           .viewport-container * {
-            margin-bottom: 0.25rem !important;
+            margin-bottom: 0.1rem !important;
+            margin-top: 0 !important;
           }
 
           .viewport-container > div {
-            padding: 0.375rem !important;
+            padding: 0.1rem !important;
           }
 
-          /* Progress bar - make tiny */
+          /* Progress bar - HIDE completely */
           .viewport-container > div > div:first-child {
-            height: 2px !important;
-            margin-bottom: 0.25rem !important;
-          }
-
-          /* Hide less critical elements */
-          .viewport-container .animate-shake,
-          .viewport-container [style*="keyboard"],
-          .viewport-container [style*="Previous rounds"] {
             display: none !important;
           }
 
-          /* Compact calibration tracker */
-          .viewport-container .mono[style*="Predicted"] {
-            font-size: 0.5625rem !important;
-            padding: 0.125rem 0.375rem !important;
+          /* HIDE ALL non-essential elements */
+          .viewport-container .animate-shake,
+          .viewport-container [style*="keyboard"],
+          .viewport-container [style*="Previous rounds"],
+          .viewport-container [style*="Calibration"],
+          .viewport-container [style*="Predicted"],
+          .viewport-container [style*="difficulty"] {
+            display: none !important;
           }
 
-          /* Compact timer and round display */
+          /* TINY timer and round display */
           .viewport-container .mono[style*="Time remaining"],
           .viewport-container .mono[role="timer"] {
-            font-size: 0.5625rem !important;
-            padding: 0.125rem 0.375rem !important;
+            font-size: 0.5rem !important;
+            padding: 0.05rem 0.1rem !important;
           }
 
-          /* Make claim card scrollable with fixed height */
+          /* Claim card - NO SCROLL, fixed height */
           .viewport-container [style*="claim"] {
-            max-height: 150px !important;
-            overflow-y: auto !important;
-            padding: 0.5rem !important;
-            margin-bottom: 0.375rem !important;
-            font-size: 0.875rem !important;
+            max-height: 120px !important;
+            overflow: hidden !important;
+            padding: 0.2rem !important;
+            margin: 0 !important;
+            font-size: 0.65rem !important;
+            line-height: 1.1 !important;
           }
 
-          /* Compact buttons */
+          /* TINY buttons */
           .viewport-container button {
-            min-height: 32px !important;
-            padding: 0.25rem 0.5rem !important;
-            font-size: 0.75rem !important;
+            min-height: 18px !important;
+            padding: 0.1rem 0.2rem !important;
+            font-size: 0.6rem !important;
           }
 
-          /* Ultra-compact voting section */
+          /* ULTRA-compact voting section */
           .voting-grid {
-            gap: 0.25rem !important;
+            gap: 0.1rem !important;
           }
 
           /* Compact result phase */
           .viewport-container [style*="result"] {
-            padding: 0.5rem !important;
-            margin-bottom: 0.375rem !important;
+            padding: 0.2rem !important;
+            margin: 0 !important;
+            font-size: 0.65rem !important;
           }
 
-          /* Hide live leaderboard in compact mode */
+          /* HIDE live leaderboard completely */
           .viewport-container [style*="Live Class Leaderboard"],
           .viewport-container [style*="leaderboard"] {
-            max-height: 80px !important;
-            overflow-y: auto !important;
+            display: none !important;
           }
 
-          /* Compact difficulty badge */
-          .viewport-container .mono[style*="difficulty"] {
-            font-size: 0.5625rem !important;
-            padding: 0.125rem 0.375rem !important;
-          }
-
-          /* Hide hints in compact mode */
+          /* HIDE hints completely */
           .viewport-container [style*="hint"] {
-            max-height: 60px !important;
-            overflow-y: auto !important;
-            font-size: 0.75rem !important;
-            padding: 0.375rem !important;
+            display: none !important;
           }
 
-          /* Make textarea compact */
+          /* TINY textarea */
           .viewport-container textarea {
-            min-height: 40px !important;
-            font-size: 0.75rem !important;
-            padding: 0.375rem !important;
+            min-height: 25px !important;
+            font-size: 0.6rem !important;
+            padding: 0.1rem !important;
           }
 
-          /* Compact streak display */
+          /* HIDE streak display */
           .viewport-container .mono[aria-label*="correct answers"] {
-            font-size: 0.625rem !important;
-            padding: 0.125rem 0.375rem !important;
+            display: none !important;
+          }
+
+          /* Hide round counter emojis/icons */
+          .viewport-container [style*="fontSize: '0.875rem'"] {
+            font-size: 0.5rem !important;
           }
         }
       `}</style>
