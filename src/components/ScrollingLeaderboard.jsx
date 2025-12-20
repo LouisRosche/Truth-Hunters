@@ -12,7 +12,6 @@ export function ScrollingLeaderboard({ onViewFull }) {
   const [isPaused, setIsPaused] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef(null);
-  const animationRef = useRef(null);
   const isMountedRef = useRef(true);
 
   // Load leaderboard data

@@ -460,7 +460,7 @@ Play Truth Hunters and test your fact-checking skills!`;
                       rel="noopener noreferrer"
                       style={{ color: 'var(--accent-cyan)', textDecoration: 'underline' }}
                     >
-                      {claim.citation.length > 50 ? claim.citation.substring(0, 50) + '...' : claim.citation}
+                      {claim.citation?.length > 50 ? claim.citation.substring(0, 50) + '...' : claim.citation}
                     </a>
                   </div>
                 )}
