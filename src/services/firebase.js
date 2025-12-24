@@ -280,11 +280,26 @@ export const FirebaseBackend = {
       const filterClass = classFilter || this.getClassCode();
       const gamesRef = collection(this.db, 'games');
 
+      // PARTIAL FIX: Limit to recent games to reduce data fetched
+      // NOTE: This is still a N+1 query pattern. Proper fix requires:
+      //   1. Server-side Cloud Function to pre-aggregate player stats into 'playerStats' collection
+      //   2. Scheduled aggregation (e.g., every 5 minutes)
+      //   3. Query playerStats collection directly with orderBy('totalScore', 'desc').limit(N)
+      // Current approach: Fetch recent 500 games as compromise between accuracy and performance
       let q;
       if (filterClass) {
-        q = query(gamesRef, where('classCode', '==', filterClass));
+        q = query(
+          gamesRef,
+          where('classCode', '==', filterClass),
+          orderBy('createdAt', 'desc'),
+          limit(500) // Limit to recent 500 games instead of ALL games
+        );
       } else {
-        q = query(gamesRef);
+        q = query(
+          gamesRef,
+          orderBy('createdAt', 'desc'),
+          limit(500)
+        );
       }
 
       const snapshot = await getDocs(q);
