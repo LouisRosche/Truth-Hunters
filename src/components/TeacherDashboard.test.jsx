@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TeacherDashboard } from './TeacherDashboard';
+import { ToastProvider } from './Toast';
 
 // Mock dependencies
 const mockReflections = [
@@ -121,6 +122,11 @@ vi.mock('../data/claims', () => ({
   getSubjects: vi.fn(() => ['Biology', 'History', 'Physics', 'Math'])
 }));
 
+// Helper to render with ToastProvider
+const renderWithToast = (component) => {
+  return render(<ToastProvider>{component}</ToastProvider>);
+};
+
 describe('TeacherDashboard', () => {
   let mockOnBack;
 
@@ -135,12 +141,12 @@ describe('TeacherDashboard', () => {
 
   describe('Initial Rendering', () => {
     it('renders loading state initially', () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
       expect(screen.getByText(/loading/i)).toBeInTheDocument();
     });
 
     it('renders dashboard after loading data', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -150,7 +156,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('displays class code when available', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.getByText(/TEST123/i)).toBeInTheDocument();
@@ -158,7 +164,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('calls onBack when back button is clicked', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -173,7 +179,7 @@ describe('TeacherDashboard', () => {
 
   describe('Tab Navigation', () => {
     it('shows overview tab by default', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -183,7 +189,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('switches to reflections tab', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -196,7 +202,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('switches to claims moderation tab', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -209,7 +215,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('switches to settings tab', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -224,7 +230,7 @@ describe('TeacherDashboard', () => {
 
   describe('Overview Tab', () => {
     it('displays total games played', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -234,7 +240,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('displays average class score', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -245,7 +251,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('shows recent games list', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -258,7 +264,7 @@ describe('TeacherDashboard', () => {
 
   describe('Reflections Tab', () => {
     it('displays student reflections', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -274,7 +280,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('shows team names with reflections', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -290,7 +296,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('displays reflection timestamps', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -307,7 +313,7 @@ describe('TeacherDashboard', () => {
 
   describe('Claim Moderation Tab', () => {
     it('displays pending claims', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -322,7 +328,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('shows claim subject and submitter', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -341,7 +347,7 @@ describe('TeacherDashboard', () => {
     it('allows approving a claim', async () => {
       const { FirebaseBackend } = await import('../services/firebase');
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -367,7 +373,7 @@ describe('TeacherDashboard', () => {
     it('allows rejecting a claim', async () => {
       const { FirebaseBackend } = await import('../services/firebase');
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -391,7 +397,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('filters claims by status', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -410,7 +416,7 @@ describe('TeacherDashboard', () => {
 
   describe('Settings Tab', () => {
     it('displays class settings', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -427,7 +433,7 @@ describe('TeacherDashboard', () => {
     it('allows editing class code', async () => {
       const { FirebaseBackend } = await import('../services/firebase');
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -448,7 +454,7 @@ describe('TeacherDashboard', () => {
     it('allows toggling difficulty settings', async () => {
       const { FirebaseBackend } = await import('../services/firebase');
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -468,7 +474,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('allows toggling subject restrictions', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -499,7 +505,7 @@ describe('TeacherDashboard', () => {
         return originalCreateElement.call(document, tag);
       });
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -533,7 +539,7 @@ describe('TeacherDashboard', () => {
         return originalCreateElement.call(document, tag);
       });
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -559,7 +565,7 @@ describe('TeacherDashboard', () => {
       const { FirebaseBackend } = await import('../services/firebase');
       FirebaseBackend.getClassReflections.mockRejectedValueOnce(new Error('Network error'));
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.getByText(/failed to load data/i)).toBeInTheDocument();
@@ -572,7 +578,7 @@ describe('TeacherDashboard', () => {
 
       useOnlineStatus.mockReturnValue(false);
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -585,7 +591,7 @@ describe('TeacherDashboard', () => {
       const { useOnlineStatus } = await import('../hooks/useOnlineStatus');
       useOnlineStatus.mockReturnValue(false);
 
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.getByText(/offline/i)).toBeInTheDocument();
@@ -595,7 +601,7 @@ describe('TeacherDashboard', () => {
 
   describe('Class Achievements', () => {
     it('displays class-wide achievements', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -608,7 +614,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('shows achievement badges', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -624,7 +630,7 @@ describe('TeacherDashboard', () => {
 
   describe('Accessibility', () => {
     it('has proper ARIA labels for tabs', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -635,7 +641,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('has proper ARIA labels for action buttons', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -646,7 +652,7 @@ describe('TeacherDashboard', () => {
     });
 
     it('is keyboard navigable', async () => {
-      render(<TeacherDashboard onBack={mockOnBack} />);
+      renderWithToast(<TeacherDashboard onBack={mockOnBack} />);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
