@@ -4,7 +4,7 @@
  * Handles Firebase initialization, fallback to local storage, and loading states
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LeaderboardManager } from '../services/leaderboard';
 import { FirebaseBackend } from '../services/firebase';
 import { logger } from '../utils/logger';
@@ -22,27 +22,94 @@ export function useTeamLeaderboard({ limit = 10, autoRefresh = false, classCode 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const isMountedRef = useRef(true);
+  const limitRef = useRef(limit);
+  const classCodeRef = useRef(classCode);
 
-  const fetchTeams = useCallback(async () => {
+  // Update refs when props change
+  limitRef.current = limit;
+  classCodeRef.current = classCode;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    // Stable fetch function using refs to avoid infinite loops
+    const fetchTeams = async () => {
+      if (!isMountedRef.current) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        let data = [];
+
+        // Try Firebase first if initialized
+        if (FirebaseBackend.initialized) {
+          try {
+            data = await FirebaseBackend.getTopTeams(limitRef.current, classCodeRef.current);
+          } catch (e) {
+            logger.warn('Firebase team fetch failed, falling back to local:', e);
+            if (isMountedRef.current) {
+              setError('Cloud leaderboard unavailable');
+            }
+          }
+        }
+
+        // Fallback to local storage if Firebase failed or returned no data
+        if (data.length === 0) {
+          data = LeaderboardManager.getTopTeams(limitRef.current);
+        }
+
+        if (isMountedRef.current) {
+          setTeams(data);
+          setIsLoading(false);
+        }
+      } catch (e) {
+        logger.error('Failed to fetch team leaderboard:', e);
+        if (isMountedRef.current) {
+          setError(e.message);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Initial fetch
+    fetchTeams();
+
+    // Set up auto-refresh if enabled
+    let interval;
+    if (autoRefresh) {
+      interval = setInterval(fetchTeams, 30000); // 30 seconds
+    }
+
+    return () => {
+      isMountedRef.current = false;
+      if (interval) clearInterval(interval);
+    };
+  }, [autoRefresh]); // Only depend on autoRefresh, use refs for other values
+
+  // Manual refresh function
+  const refresh = async () => {
+    if (!isMountedRef.current) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
       let data = [];
 
-      // Try Firebase first if initialized
       if (FirebaseBackend.initialized) {
         try {
-          data = await FirebaseBackend.getTopTeams(limit, classCode);
+          data = await FirebaseBackend.getTopTeams(limitRef.current, classCodeRef.current);
         } catch (e) {
           logger.warn('Firebase team fetch failed, falling back to local:', e);
-          setError('Cloud leaderboard unavailable');
+          if (isMountedRef.current) {
+            setError('Cloud leaderboard unavailable');
+          }
         }
       }
 
-      // Fallback to local storage if Firebase failed or returned no data
       if (data.length === 0) {
-        data = LeaderboardManager.getTopTeams(limit);
+        data = LeaderboardManager.getTopTeams(limitRef.current);
       }
 
       if (isMountedRef.current) {
@@ -56,29 +123,13 @@ export function useTeamLeaderboard({ limit = 10, autoRefresh = false, classCode 
         setIsLoading(false);
       }
     }
-  }, [limit, classCode]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    fetchTeams();
-
-    // Set up auto-refresh if enabled
-    let interval;
-    if (autoRefresh) {
-      interval = setInterval(fetchTeams, 30000); // 30 seconds
-    }
-
-    return () => {
-      isMountedRef.current = false;
-      if (interval) clearInterval(interval);
-    };
-  }, [fetchTeams, autoRefresh]);
+  };
 
   return {
     teams,
     isLoading,
     error,
-    refresh: fetchTeams
+    refresh
   };
 }
 
@@ -94,27 +145,85 @@ export function usePlayerLeaderboard({ limit = 10, classCode = null } = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const isMountedRef = useRef(true);
+  const limitRef = useRef(limit);
+  const classCodeRef = useRef(classCode);
 
-  const fetchPlayers = useCallback(async () => {
+  // Update refs when props change
+  limitRef.current = limit;
+  classCodeRef.current = classCode;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    const fetchPlayers = async () => {
+      if (!isMountedRef.current) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        let data = [];
+
+        // Try Firebase first if initialized
+        if (FirebaseBackend.initialized) {
+          try {
+            data = await FirebaseBackend.getTopPlayers(limitRef.current, classCodeRef.current);
+          } catch (e) {
+            logger.warn('Firebase player fetch failed, falling back to local:', e);
+            if (isMountedRef.current) {
+              setError('Cloud leaderboard unavailable');
+            }
+          }
+        }
+
+        // Fallback to local storage if Firebase failed or returned no data
+        if (data.length === 0) {
+          data = LeaderboardManager.getTopPlayers(limitRef.current);
+        }
+
+        if (isMountedRef.current) {
+          setPlayers(data);
+          setIsLoading(false);
+        }
+      } catch (e) {
+        logger.error('Failed to fetch player leaderboard:', e);
+        if (isMountedRef.current) {
+          setError(e.message);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchPlayers();
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []); // Empty dependency array - use refs for values
+
+  // Manual refresh function
+  const refresh = async () => {
+    if (!isMountedRef.current) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
       let data = [];
 
-      // Try Firebase first if initialized
       if (FirebaseBackend.initialized) {
         try {
-          data = await FirebaseBackend.getTopPlayers(limit, classCode);
+          data = await FirebaseBackend.getTopPlayers(limitRef.current, classCodeRef.current);
         } catch (e) {
           logger.warn('Firebase player fetch failed, falling back to local:', e);
-          setError('Cloud leaderboard unavailable');
+          if (isMountedRef.current) {
+            setError('Cloud leaderboard unavailable');
+          }
         }
       }
 
-      // Fallback to local storage if Firebase failed or returned no data
       if (data.length === 0) {
-        data = LeaderboardManager.getTopPlayers(limit);
+        data = LeaderboardManager.getTopPlayers(limitRef.current);
       }
 
       if (isMountedRef.current) {
@@ -128,22 +237,13 @@ export function usePlayerLeaderboard({ limit = 10, classCode = null } = {}) {
         setIsLoading(false);
       }
     }
-  }, [limit, classCode]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    fetchPlayers();
-
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [fetchPlayers]);
+  };
 
   return {
     players,
     isLoading,
     error,
-    refresh: fetchPlayers
+    refresh
   };
 }
 
@@ -151,20 +251,27 @@ export function usePlayerLeaderboard({ limit = 10, classCode = null } = {}) {
  * Hook for subscribing to live game sessions (real-time leaderboard)
  * @param {Object} options - Configuration options
  * @param {string} options.classCode - Class code filter (uses stored class code if not provided)
- * @returns {Object} { sessions, isLoading, error }
+ * @returns {Object} { sessions, isLoading, error, hasFirebase }
  */
 export function useLiveLeaderboard({ classCode = null } = {}) {
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasFirebase, setHasFirebase] = useState(false);
+  const classCodeRef = useRef(classCode);
+
+  // Update ref when prop changes
+  classCodeRef.current = classCode;
 
   useEffect(() => {
     // Don't subscribe if Firebase isn't initialized
     if (!FirebaseBackend.initialized) {
       setIsLoading(false);
+      setHasFirebase(false);
       return;
     }
 
+    setHasFirebase(true);
     setIsLoading(true);
     setError(null);
 
@@ -174,7 +281,7 @@ export function useLiveLeaderboard({ classCode = null } = {}) {
         setSessions(updatedSessions);
         setIsLoading(false);
       },
-      classCode
+      classCodeRef.current
     );
 
     return () => {
@@ -182,11 +289,12 @@ export function useLiveLeaderboard({ classCode = null } = {}) {
         unsubscribe();
       }
     };
-  }, [classCode]);
+  }, []); // Empty dependency array - use refs for values
 
   return {
     sessions,
     isLoading,
-    error
+    error,
+    hasFirebase
   };
 }
