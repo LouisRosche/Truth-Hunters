@@ -3,47 +3,16 @@
  * Displays local and cloud leaderboards with team/player tabs
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { LeaderboardManager } from '../services/leaderboard';
-import { FirebaseBackend } from '../services/firebase';
+import { useState } from 'react';
+import { useTeamLeaderboard, usePlayerLeaderboard } from '../hooks/useLeaderboard';
 import { formatPlayerName } from '../utils/helpers';
-import { logger } from '../utils/logger';
 
 export function LeaderboardView({ onBack }) {
   const [leaderboardTab, setLeaderboardTab] = useState('teams');
-  const [cloudTeams, setCloudTeams] = useState([]);
-  const [cloudPlayers, setCloudPlayers] = useState([]);
-  const [loadingCloud, setLoadingCloud] = useState(false);
-  const isMountedRef = useRef(true);
 
-  // Load cloud leaderboard when Firebase is connected
-  useEffect(() => {
-    if (FirebaseBackend.initialized) {
-      setLoadingCloud(true);
-      Promise.all([FirebaseBackend.getTopTeams(10), FirebaseBackend.getTopPlayers(10)])
-        .then(([teams, players]) => {
-          if (isMountedRef.current) {
-            setCloudTeams(teams);
-            setCloudPlayers(players);
-          }
-        })
-        .catch((e) => {
-          logger.warn('Failed to load cloud leaderboard:', e);
-        })
-        .finally(() => {
-          if (isMountedRef.current) {
-            setLoadingCloud(false);
-          }
-        });
-    }
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // Local leaderboard data
-  const topTeams = useMemo(() => LeaderboardManager.getTopTeams(10), []);
-  const topPlayers = useMemo(() => LeaderboardManager.getTopPlayers(10), []);
+  // Use unified hooks for consistent data fetching
+  const { teams, isLoading: loadingTeams } = useTeamLeaderboard({ limit: 10 });
+  const { players, isLoading: loadingPlayers } = usePlayerLeaderboard({ limit: 10 });
 
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto', padding: '1.5rem' }}>
@@ -121,19 +90,21 @@ export function LeaderboardView({ onBack }) {
         }}
       >
         {(() => {
-          const displayData =
-            leaderboardTab === 'teams'
-              ? FirebaseBackend.initialized && cloudTeams.length > 0
-                ? cloudTeams
-                : topTeams
-              : FirebaseBackend.initialized && cloudPlayers.length > 0
-              ? cloudPlayers
-              : topPlayers;
+          const displayData = leaderboardTab === 'teams' ? teams : players;
+          const isLoading = leaderboardTab === 'teams' ? loadingTeams : loadingPlayers;
+
+          if (isLoading) {
+            return (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading...
+              </div>
+            );
+          }
 
           if (displayData.length === 0) {
             return (
               <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                {loadingCloud ? 'Loading...' : 'No games played yet. Be the first!'}
+                No games played yet. Be the first!
               </div>
             );
           }

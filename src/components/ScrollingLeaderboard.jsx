@@ -3,51 +3,45 @@
  * Simple, clean vertical list with auto-refresh
  */
 
-import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { LeaderboardManager } from '../services/leaderboard';
-import { FirebaseBackend } from '../services/firebase';
-import { logger } from '../utils/logger';
+import { useTeamLeaderboard } from '../hooks/useLeaderboard';
 
 export function ScrollingLeaderboard({ onViewFull }) {
-  const [entries, setEntries] = useState([]);
-  const isMountedRef = useRef(true);
+  // Use unified hook with auto-refresh enabled
+  const { teams, isLoading } = useTeamLeaderboard({
+    limit: 10,
+    autoRefresh: true
+  });
 
-  // Load leaderboard data
-  useEffect(() => {
-    const loadLeaderboard = async () => {
-      let data = [];
+  if (isLoading) {
+    return (
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: '12px',
+        padding: '1rem',
+        height: '100%'
+      }}>
+        <h3 className="mono" style={{
+          fontSize: '0.75rem',
+          color: 'var(--accent-amber)',
+          marginBottom: '1rem'
+        }}>
+          🏆 LEADERBOARD
+        </h3>
+        <p style={{
+          color: 'var(--text-muted)',
+          fontSize: '0.8125rem',
+          textAlign: 'center',
+          marginTop: '2rem'
+        }}>
+          Loading...
+        </p>
+      </div>
+    );
+  }
 
-      // Try Firebase first, fallback to local
-      if (FirebaseBackend.initialized) {
-        try {
-          data = await FirebaseBackend.getTopTeams(10);
-        } catch (e) {
-          logger.warn('Firebase leaderboard fetch failed:', e);
-        }
-      }
-
-      // Fallback to local leaderboard
-      if (data.length === 0) {
-        data = LeaderboardManager.getTopTeams(10);
-      }
-
-      if (isMountedRef.current) {
-        setEntries(data);
-      }
-    };
-
-    loadLeaderboard();
-
-    // Refresh every 30 seconds
-    const interval = setInterval(loadLeaderboard, 30000);
-    return () => {
-      isMountedRef.current = false;
-      clearInterval(interval);
-    };
-  }, []);
-
-  if (entries.length === 0) {
+  if (teams.length === 0) {
     return (
       <div style={{
         background: 'var(--bg-card)',
@@ -106,7 +100,7 @@ export function ScrollingLeaderboard({ onViewFull }) {
         gap: '0.5rem',
         overflow: 'auto'
       }}>
-        {entries.map((entry, index) => (
+        {teams.map((entry, index) => (
           <div
             key={entry.id || index}
             className="animate-in"

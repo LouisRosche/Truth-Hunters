@@ -4,33 +4,13 @@
  * Displays during gameplay to show student progress
  */
 
-import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useLiveLeaderboard } from '../hooks/useLeaderboard';
 import { FirebaseBackend } from '../services/firebase';
 
 export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, onToggle }) {
-  const [sessions, setSessions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Subscribe to live leaderboard updates
-  useEffect(() => {
-    if (!FirebaseBackend.initialized) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    const unsubscribe = FirebaseBackend.subscribeToLiveLeaderboard((updatedSessions) => {
-      setSessions(updatedSessions);
-      setIsLoading(false);
-    });
-
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
-  }, []);
+  // Use unified hook for live sessions
+  const { sessions, isLoading } = useLiveLeaderboard();
 
   // Don't render if Firebase isn't available or no class code
   if (!FirebaseBackend.initialized || !FirebaseBackend.getClassCode()) {

@@ -252,79 +252,51 @@ export const FirebaseBackend = {
       }
 
       const snapshot = await getDocs(q);
-      let results = snapshot.docs.map(doc => ({
+      const results = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         timestamp: doc.data().createdAt?.toMillis() || Date.now()
       }));
 
-      // If class-specific leaderboard is empty, fall back to PUBLIC games
-      if (results.length === 0 && filterClass && filterClass !== 'PUBLIC') {
-        const publicQuery = query(
-          gamesRef,
-          where('classCode', '==', 'PUBLIC'),
-          orderBy('score', 'desc'),
-          limit(limitCount)
-        );
-        const publicSnapshot = await getDocs(publicQuery);
-        results = publicSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().createdAt?.toMillis() || Date.now()
-        }));
-      }
-
       return results;
     } catch (e) {
-      logger.warn('Failed to fetch from Firebase:', e);
+      logger.warn('Failed to fetch teams from Firebase:', e);
       return [];
     }
   },
 
   /**
    * Get top players aggregated from Firestore
-   * @param {number} limitCount
+   * @param {number} limitCount - Number of players to fetch
+   * @param {string} classFilter - Optional class code filter
    */
-  async getTopPlayers(limitCount = 10) {
+  async getTopPlayers(limitCount = 10, classFilter = null) {
     if (!this.initialized || !this.db) {
       return [];
     }
 
     try {
-      const classCode = this.getClassCode();
+      const filterClass = classFilter || this.getClassCode();
       const gamesRef = collection(this.db, 'games');
 
       let q;
-      if (classCode) {
-        q = query(gamesRef, where('classCode', '==', classCode));
+      if (filterClass) {
+        q = query(gamesRef, where('classCode', '==', filterClass));
       } else {
         q = query(gamesRef);
       }
 
       const snapshot = await getDocs(q);
       // Convert Firestore docs to game records
-      let games = snapshot.docs.map(doc => ({
+      const games = snapshot.docs.map(doc => ({
         ...doc.data(),
         score: doc.data().score || 0,
         players: doc.data().players || []
       }));
 
       // Use shared aggregation logic
-      let aggregated = aggregatePlayerScores(games);
-      let results = aggregated.slice(0, limitCount);
-
-      // If class-specific results are empty, fall back to PUBLIC games
-      if (results.length === 0 && classCode && classCode !== 'PUBLIC') {
-        const publicQuery = query(gamesRef, where('classCode', '==', 'PUBLIC'));
-        const publicSnapshot = await getDocs(publicQuery);
-        const publicGames = publicSnapshot.docs.map(doc => ({
-          ...doc.data(),
-          score: doc.data().score || 0,
-          players: doc.data().players || []
-        }));
-        const publicAggregated = aggregatePlayerScores(publicGames);
-        results = publicAggregated.slice(0, limitCount);
-      }
+      const aggregated = aggregatePlayerScores(games);
+      const results = aggregated.slice(0, limitCount);
 
       return results;
     } catch (e) {
