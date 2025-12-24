@@ -19,7 +19,8 @@ import {
   limit,
   serverTimestamp,
   onSnapshot,
-  doc
+  doc,
+  runTransaction
 } from 'firebase/firestore';
 import { sanitizeInput } from '../utils/moderation';
 import { aggregatePlayerScores } from '../utils/leaderboardUtils';
@@ -730,8 +731,10 @@ export const FirebaseBackend = {
 
   // ==================== REAL-TIME LISTENERS ====================
 
-  // Store active listener unsubscribe functions
+  // FIXED: Store active listener unsubscribe functions as arrays to support multiple subscribers
+  // Previous design only allowed one subscriber per type, causing memory leaks
   _listeners: {},
+  _nextListenerId: 0,
 
   /**
    * Subscribe to real-time pending claims updates
@@ -743,11 +746,6 @@ export const FirebaseBackend = {
     if (!this.initialized || !this.db) {
       logger.warn('Firebase not initialized for real-time subscription');
       return () => {};
-    }
-
-    // Unsubscribe from existing listener to prevent memory leaks
-    if (this._listeners['pendingClaims']) {
-      this._listeners['pendingClaims']();
     }
 
     try {
@@ -783,8 +781,18 @@ export const FirebaseBackend = {
         logger.warn('Real-time claims subscription error:', error);
       });
 
-      this._listeners['pendingClaims'] = unsubscribe;
-      return unsubscribe;
+      // FIXED: Store listener with unique ID to support multiple subscribers
+      const listenerId = this._nextListenerId++;
+      const listenerKey = `pendingClaims_${listenerId}`;
+      this._listeners[listenerKey] = unsubscribe;
+
+      // Return cleanup function that only removes this specific listener
+      return () => {
+        if (this._listeners[listenerKey]) {
+          this._listeners[listenerKey]();
+          delete this._listeners[listenerKey];
+        }
+      };
     } catch (e) {
       logger.warn('Failed to set up real-time subscription:', e);
       return () => {};
@@ -800,11 +808,6 @@ export const FirebaseBackend = {
   subscribeToClassAchievements(callback, classFilter = null) {
     if (!this.initialized || !this.db) {
       return () => {};
-    }
-
-    // Unsubscribe from existing listener to prevent memory leaks
-    if (this._listeners['classAchievements']) {
-      this._listeners['classAchievements']();
     }
 
     try {
@@ -833,8 +836,18 @@ export const FirebaseBackend = {
         logger.warn('Real-time achievements subscription error:', error);
       });
 
-      this._listeners['classAchievements'] = unsubscribe;
-      return unsubscribe;
+      // FIXED: Store listener with unique ID to support multiple subscribers
+      const listenerId = this._nextListenerId++;
+      const listenerKey = `classAchievements_${listenerId}`;
+      this._listeners[listenerKey] = unsubscribe;
+
+      // Return cleanup function that only removes this specific listener
+      return () => {
+        if (this._listeners[listenerKey]) {
+          this._listeners[listenerKey]();
+          delete this._listeners[listenerKey];
+        }
+      };
     } catch (e) {
       logger.warn('Failed to set up achievements subscription:', e);
       return () => {};
@@ -924,11 +937,6 @@ export const FirebaseBackend = {
       return () => {};
     }
 
-    // Unsubscribe from existing listener to prevent memory leaks
-    if (this._listeners['liveLeaderboard']) {
-      this._listeners['liveLeaderboard']();
-    }
-
     try {
       const filterClass = classFilter || this.getClassCode();
       if (!filterClass) {
@@ -957,8 +965,18 @@ export const FirebaseBackend = {
         callback([]);
       });
 
-      this._listeners['liveLeaderboard'] = unsubscribe;
-      return unsubscribe;
+      // FIXED: Store listener with unique ID to support multiple subscribers
+      const listenerId = this._nextListenerId++;
+      const listenerKey = `liveLeaderboard_${listenerId}`;
+      this._listeners[listenerKey] = unsubscribe;
+
+      // Return cleanup function that only removes this specific listener
+      return () => {
+        if (this._listeners[listenerKey]) {
+          this._listeners[listenerKey]();
+          delete this._listeners[listenerKey];
+        }
+      };
     } catch (e) {
       logger.warn('Failed to set up live leaderboard subscription:', e);
       return () => {};
@@ -1095,23 +1113,27 @@ export const FirebaseBackend = {
     try {
       const today = new Date().toISOString().split('T')[0];
       const docId = `${code}_${today}`;
-
       const seenDoc = doc(this.db, 'classSeenClaims', docId);
-      const snapshot = await getDoc(seenDoc);
 
-      let existingIds = [];
-      if (snapshot.exists()) {
-        existingIds = snapshot.data().claimIds || [];
-      }
+      // FIXED: Use transaction to prevent race conditions when multiple games finish simultaneously
+      // This ensures atomic read-modify-write operations
+      await runTransaction(this.db, async (transaction) => {
+        const snapshot = await transaction.get(seenDoc);
 
-      // Merge new IDs (avoid duplicates)
-      const allIds = [...new Set([...existingIds, ...claimIds])];
+        let existingIds = [];
+        if (snapshot.exists()) {
+          existingIds = snapshot.data().claimIds || [];
+        }
 
-      await setDoc(seenDoc, {
-        classCode: code,
-        date: today,
-        claimIds: allIds,
-        updatedAt: serverTimestamp()
+        // Merge new IDs (avoid duplicates)
+        const allIds = [...new Set([...existingIds, ...claimIds])];
+
+        transaction.set(seenDoc, {
+          classCode: code,
+          date: today,
+          claimIds: allIds,
+          updatedAt: serverTimestamp()
+        });
       });
 
       return { success: true };
