@@ -103,7 +103,7 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
         display: 'flex',
         flexDirection: 'column',
         gap: '0.375rem',
-        overflow: 'auto'
+        overflow: 'hidden'
       }}>
         {teams.map((entry, index) => (
           <div

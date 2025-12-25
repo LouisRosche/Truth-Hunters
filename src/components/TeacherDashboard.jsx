@@ -408,14 +408,14 @@ export function TeacherDashboard({ onBack }) {
   };
 
   return (
-    <div className="viewport-container" style={{ maxWidth: '900px', margin: '0 auto', padding: '1.5rem' }}>
+    <div className="viewport-container" style={{ maxWidth: '900px', height: '100%', margin: '0 auto', padding: '1.5rem' }}>
       {/* Chromebook compact CSS */}
       <style>{`
         @media (max-width: 1366px) and (max-height: 768px) {
           .viewport-container {
             padding: 0.5rem !important;
-            height: 100vh;
-            overflow-y: auto;
+            height: 100%;
+            overflow: hidden;
           }
 
           /* Compact header */

@@ -21,7 +21,7 @@ function LeaderboardViewComponent({ onBack }) {
   const error = leaderboardTab === 'teams' ? errorTeams : errorPlayers;
 
   return (
-    <div style={{ maxWidth: '100%', margin: '0 auto', padding: '1rem', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ maxWidth: '100%', height: '100%', margin: '0 auto', padding: '1rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

@@ -677,9 +677,7 @@ export function PlayingScreen({
             padding: '0.5rem',
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
-            borderRadius: '6px',
-            maxHeight: '150px',
-            overflowY: 'auto'
+            borderRadius: '6px'
           }}
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>

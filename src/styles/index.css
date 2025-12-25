@@ -85,7 +85,9 @@ body {
 }
 
 #root {
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -465,26 +467,28 @@ a:focus-visible {
 
 /* Viewport-locked container for all screens */
 .viewport-container {
-  height: 100vh;
-  max-height: 100vh;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* Scrollable content within viewport */
+/* Scrollable content within viewport - no longer needed, removed to prevent scrolling */
 .scroll-container {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   overflow-x: hidden;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Grid layout that fits within viewport */
 .viewport-grid {
   display: grid;
-  height: 100vh;
-  max-height: 100vh;
+  height: 100%;
+  max-height: 100%;
   grid-template-rows: auto 1fr auto;
   overflow: hidden;
 }

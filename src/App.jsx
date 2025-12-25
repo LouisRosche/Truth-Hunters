@@ -686,7 +686,7 @@ export function App() {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            height: '100vh',
+            flex: 1,
             color: 'var(--text-muted)'
           }}>
             Loading Teacher Dashboard...
@@ -740,13 +740,13 @@ export function App() {
         onShowHelp={() => setShowHelp(true)}
       />
 
-      <main id="main-content" role="main" style={{ flex: 1 }}>
+      <main id="main-content" role="main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Suspense fallback={
           <div style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            height: '50vh',
+            flex: 1,
             color: 'var(--text-muted)'
           }}>
             Loading...
@@ -842,8 +842,10 @@ export function App() {
               padding: '1.5rem',
               maxWidth: '500px',
               width: '100%',
-              maxHeight: '80vh',
-              overflow: 'auto'
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>

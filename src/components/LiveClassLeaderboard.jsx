@@ -194,7 +194,7 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
 
       {/* Leaderboard entries - Compact grid */}
       {!isLoading && filteredSessions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', maxHeight: '200px', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
           {filteredSessions.map((session, index) => {
             const isCurrentTeam = session.sessionId === currentSessionId;
             return (
