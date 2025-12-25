@@ -15,13 +15,21 @@ export function useTimer(initialTime, onComplete) {
   const [time, setTime] = useState(initialTime);
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+
+  // Use refs to prevent stale closures in callbacks
   const callbackRef = useRef(onComplete);
+  const initialTimeRef = useRef(initialTime);
   const visibilityTimeoutRef = useRef(null);
   const wasHiddenRef = useRef(false);
 
+  // Keep refs in sync with latest prop values
   useEffect(() => {
     callbackRef.current = onComplete;
   }, [onComplete]);
+
+  useEffect(() => {
+    initialTimeRef.current = initialTime;
+  }, [initialTime]);
 
   // Handle tab visibility - pause when hidden with debouncing to prevent race conditions
   useEffect(() => {
@@ -69,12 +77,14 @@ export function useTimer(initialTime, onComplete) {
     return () => clearInterval(interval);
   }, [isActive, isPaused]);
 
+  // Callbacks are now completely stable (no dependencies) thanks to refs
   const start = useCallback(() => setIsActive(true), []);
   const pause = useCallback(() => setIsActive(false), []);
   const reset = useCallback((newTime) => {
-    setTime(newTime ?? initialTime);
+    setTime(newTime ?? initialTimeRef.current);
     setIsActive(false);
-  }, [initialTime]);
+    setIsPaused(false);
+  }, []);
 
   return { time, isActive, isPaused, start, pause, reset };
 }

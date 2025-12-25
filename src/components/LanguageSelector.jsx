@@ -4,6 +4,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
+import PropTypes from 'prop-types';
 import { SUPPORTED_LANGUAGES } from '../i18n/config';
 
 export function LanguageSelector({ compact = false }) {
@@ -111,3 +112,12 @@ export function LanguageSelector({ compact = false }) {
     </div>
   );
 }
+
+
+LanguageSelector.propTypes = {
+  compact: PropTypes.bool
+};
+
+LanguageSelector.defaultProps = {
+  compact: false
+};

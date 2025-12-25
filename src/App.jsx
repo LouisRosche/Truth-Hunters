@@ -151,6 +151,8 @@ export function App() {
     };
     // FIXED: Use stable primitive values instead of object/array references to prevent infinite loops
     // Only update when meaningful state changes occur (round, score, phase)
+    // We intentionally use primitive values (length, emoji string) to avoid excessive Firebase writes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sessionId,
     gameState.phase,
@@ -672,7 +674,13 @@ export function App() {
   // Teacher mode - render dashboard only
   if (isTeacherMode) {
     return (
-      <ErrorBoundary>
+      <ErrorBoundary
+        onReset={() => {
+          // Navigate back to student app
+          window.location.href = window.location.pathname;
+        }}
+        resetLabel="Back to Game"
+      >
         <Suspense fallback={
           <div style={{
             display: 'flex',
@@ -744,37 +752,54 @@ export function App() {
             Loading...
           </div>
         }>
-          {gameState.phase === 'setup' && <SetupScreen onStart={startGame} isLoading={isPreparingGame} />}
+          {gameState.phase === 'setup' && (
+            <ErrorBoundary
+              onReset={restartGame}
+              resetLabel="Reset Setup"
+            >
+              <SetupScreen onStart={startGame} isLoading={isPreparingGame} />
+            </ErrorBoundary>
+          )}
 
           {gameState.phase === 'playing' && gameState.currentClaim && (
-            <PlayingScreen
-              claim={gameState.currentClaim}
-              round={gameState.currentRound}
-              totalRounds={gameState.totalRounds}
-              onSubmit={handleRoundSubmit}
-              difficulty={gameState.difficulty}
-              currentStreak={currentStreak}
-              onUseHint={handleUseHint}
-              teamAvatar={gameState.team.avatar}
-              isPaused={isPaused}
-              previousResults={gameState.team.results}
-              claims={gameState.claims}
-              currentScore={gameState.team.score}
-              predictedScore={gameState.team.predictedScore}
-              sessionId={sessionId}
-              showLiveLeaderboard={showLiveLeaderboard}
-              onToggleLiveLeaderboard={() => setShowLiveLeaderboard(prev => !prev)}
-            />
+            <ErrorBoundary
+              onReset={restartGame}
+              resetLabel="Exit to Setup"
+            >
+              <PlayingScreen
+                claim={gameState.currentClaim}
+                round={gameState.currentRound}
+                totalRounds={gameState.totalRounds}
+                onSubmit={handleRoundSubmit}
+                difficulty={gameState.difficulty}
+                currentStreak={currentStreak}
+                onUseHint={handleUseHint}
+                teamAvatar={gameState.team.avatar}
+                isPaused={isPaused}
+                previousResults={gameState.team.results}
+                claims={gameState.claims}
+                currentScore={gameState.team.score}
+                predictedScore={gameState.team.predictedScore}
+                sessionId={sessionId}
+                showLiveLeaderboard={showLiveLeaderboard}
+                onToggleLiveLeaderboard={() => setShowLiveLeaderboard(prev => !prev)}
+              />
+            </ErrorBoundary>
           )}
 
           {gameState.phase === 'debrief' && (
-            <DebriefScreen
-              team={gameState.team}
-              claims={gameState.claims}
-              onRestart={restartGame}
-              difficulty={gameState.difficulty}
-              teamAvatar={gameState.team.avatar}
-            />
+            <ErrorBoundary
+              onReset={restartGame}
+              resetLabel="Return to Setup"
+            >
+              <DebriefScreen
+                team={gameState.team}
+                claims={gameState.claims}
+                onRestart={restartGame}
+                difficulty={gameState.difficulty}
+                teamAvatar={gameState.team.avatar}
+              />
+            </ErrorBoundary>
           )}
         </Suspense>
       </main>

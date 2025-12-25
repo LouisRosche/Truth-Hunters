@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { PlayerProfile } from '../services/playerProfile';
 import {
@@ -628,3 +629,9 @@ export function SoloStatsView({ onBack, onQuickStart }) {
     </div>
   );
 }
+
+
+SoloStatsView.propTypes = {
+  onBack: PropTypes.func.isRequired,
+  onQuickStart: PropTypes.func.isRequired
+};

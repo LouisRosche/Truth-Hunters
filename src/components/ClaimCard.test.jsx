@@ -118,8 +118,11 @@ describe('ClaimCard', () => {
 
     it('applies animate-in class for animations', () => {
       const { container } = render(<ClaimCard claim={mockClaim} />);
-      const mainDiv = container.firstChild;
+      // The component wraps content in a fragment with style tag first, then the main div
+      const mainDiv = container.querySelector('.animate-in');
+      expect(mainDiv).toBeInTheDocument();
       expect(mainDiv).toHaveClass('animate-in');
+      expect(mainDiv).toHaveClass('claim-card-compact');
     });
   });
 

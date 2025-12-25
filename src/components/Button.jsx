@@ -3,10 +3,10 @@
  * Reusable button with variants and double-click protection
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, memo } from 'react';
 import PropTypes from 'prop-types';
 
-export function Button({
+export const Button = memo(function Button({
   children,
   onClick,
   variant = 'primary',
@@ -81,7 +81,7 @@ export function Button({
       {children}
     </button>
   );
-}
+});
 
 Button.propTypes = {
   children: PropTypes.node.isRequired,

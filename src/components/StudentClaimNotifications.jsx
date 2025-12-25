@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { FirebaseBackend } from '../services/firebase';
 import { PlayerProfile } from '../services/playerProfile';
 import { logger } from '../utils/logger';
@@ -413,3 +414,8 @@ const notificationStyles = `
     color: var(--text-primary);
   }
 `;
+
+
+StudentClaimNotifications.propTypes = {
+  onClose: PropTypes.func.isRequired
+};

@@ -1,15 +1,21 @@
 /**
  * ERROR BOUNDARY
- * Catches and displays React errors gracefully
+ * Catches and displays React errors gracefully with recovery mechanisms
  */
 
 import React from 'react';
+import PropTypes from 'prop-types';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      errorCount: 0
+    };
   }
 
   static getDerivedStateFromError(error) {
@@ -21,7 +27,10 @@ export class ErrorBoundary extends React.Component {
     console.error('Truth Hunters Error:', error);
     console.error('Component stack:', errorInfo?.componentStack);
 
-    this.setState({ errorInfo });
+    this.setState((prevState) => ({
+      errorInfo,
+      errorCount: prevState.errorCount + 1
+    }));
 
     // Attempt to save error to localStorage for debugging (if available)
     const errorLog = {
@@ -29,17 +38,54 @@ export class ErrorBoundary extends React.Component {
       stack: error?.stack,
       componentStack: errorInfo?.componentStack,
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
+      fallbackUI: this.props.fallbackUI || 'default'
     };
     const existingLogs = safeGetItem('truthHunters_errorLog', []);
     existingLogs.push(errorLog);
-    // Keep only last 5 errors
-    safeSetItem('truthHunters_errorLog', existingLogs.slice(-5));
+    // Keep only last 10 errors
+    safeSetItem('truthHunters_errorLog', existingLogs.slice(-10));
+
+    // Call onError callback if provided
+    if (this.props.onError) {
+      try {
+        this.props.onError(error, errorInfo);
+      } catch (callbackError) {
+        console.error('Error in onError callback:', callbackError);
+      }
+    }
   }
+
+  handleRetry = () => {
+    // Reset error state to retry rendering
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    });
+  };
+
+  handleReset = () => {
+    // Clear error and call onReset if provided
+    if (this.props.onReset) {
+      this.props.onReset();
+    }
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      errorCount: 0
+    });
+  };
 
   render() {
     if (this.state.hasError) {
       const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+      // Use custom fallback UI if provided
+      if (this.props.fallbackUI) {
+        return this.props.fallbackUI(this.state.error, this.handleRetry, this.handleReset);
+      }
 
       return (
         <div
@@ -53,12 +99,34 @@ export class ErrorBoundary extends React.Component {
             margin: '2rem auto'
           }}
         >
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
           <h2 style={{ color: 'var(--accent-rose)', marginBottom: '1rem' }}>
-            Something went wrong
+            {this.state.errorCount > 2
+              ? 'Persistent Error Detected'
+              : 'Something went wrong'}
           </h2>
           <p style={{ color: 'var(--text-secondary)', margin: '1rem 0' }}>
-            An unexpected error occurred. Please refresh the page to restart the game.
+            {this.state.errorCount > 2
+              ? 'This component keeps crashing. Please refresh the page or return to the main menu.'
+              : 'An unexpected error occurred. You can try again or refresh the page.'}
           </p>
+
+          {/* Show error message for users */}
+          {this.state.error && (
+            <div
+              style={{
+                background: 'var(--bg-elevated)',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                margin: '1rem 0',
+                fontSize: '0.875rem',
+                color: 'var(--text-secondary)',
+                fontStyle: 'italic'
+              }}
+            >
+              {this.state.error.message || 'Unknown error'}
+            </div>
+          )}
 
           {/* Show error details in development */}
           {isDev && this.state.error && (
@@ -74,32 +142,85 @@ export class ErrorBoundary extends React.Component {
               }}
             >
               <summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>
-                Error Details
+                Error Details (Dev Only)
               </summary>
               <pre style={{ overflow: 'auto', whiteSpace: 'pre-wrap' }}>
                 {this.state.error.toString() + '\n\n' + (this.state.error.stack || '')}
               </pre>
+              {this.state.errorInfo?.componentStack && (
+                <div style={{ marginTop: '1rem' }}>
+                  <strong>Component Stack:</strong>
+                  <pre style={{ overflow: 'auto', whiteSpace: 'pre-wrap', marginTop: '0.5rem' }}>
+                    {this.state.errorInfo.componentStack}
+                  </pre>
+                </div>
+              )}
             </details>
           )}
 
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: 'var(--accent-cyan)',
-              color: 'var(--bg-deep)',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              marginTop: '1rem'
-            }}
-          >
-            Refresh Page
-          </button>
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+            {this.state.errorCount <= 2 && (
+              <button
+                onClick={this.handleRetry}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--accent-cyan)',
+                  color: 'var(--bg-deep)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.875rem'
+                }}
+              >
+                Try Again
+              </button>
+            )}
+            {this.props.onReset && (
+              <button
+                onClick={this.handleReset}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--bg-elevated)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.875rem'
+                }}
+              >
+                {this.props.resetLabel || 'Reset to Setup'}
+              </button>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.875rem'
+              }}
+            >
+              Refresh Page
+            </button>
+          </div>
         </div>
       );
     }
     return this.props.children;
   }
 }
+
+ErrorBoundary.propTypes = {
+  children: PropTypes.node.isRequired,
+  fallbackUI: PropTypes.func,
+  onError: PropTypes.func,
+  onReset: PropTypes.func,
+  resetLabel: PropTypes.string
+};

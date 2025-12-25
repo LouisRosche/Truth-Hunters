@@ -10,11 +10,18 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunk for React
-          'vendor-react': ['react', 'react-dom'],
-          // Firebase in its own chunk (large dependency)
-          'vendor-firebase': ['firebase/app', 'firebase/firestore'],
+        manualChunks: (id) => {
+          // Vendor chunks for large dependencies
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/firebase')) {
+            return 'vendor-firebase';
+          }
+          // Code-split the claims database (large data file ~375KB)
+          if (id.includes('src/data/claims.js')) {
+            return 'claims';
+          }
         },
       },
     },

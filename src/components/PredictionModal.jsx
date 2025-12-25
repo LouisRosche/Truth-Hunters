@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -136,3 +137,14 @@ export function PredictionModal({ onSubmit, totalRounds, difficulty, isStartOfGa
     </div>
   );
 }
+
+PredictionModal.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
+  totalRounds: PropTypes.number.isRequired,
+  difficulty: PropTypes.string.isRequired,
+  isStartOfGame: PropTypes.bool
+};
+
+PredictionModal.defaultProps = {
+  isStartOfGame: true
+};

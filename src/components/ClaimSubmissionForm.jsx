@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { FirebaseBackend } from '../services/firebase';
 import { OfflineQueue } from '../services/offlineQueue';
 import { PlayerProfile } from '../services/playerProfile';
@@ -563,3 +564,13 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
     </div>
   );
 }
+
+
+ClaimSubmissionForm.propTypes = {
+  onClose: PropTypes.func.isRequired,
+  onSubmitSuccess: PropTypes.func
+};
+
+ClaimSubmissionForm.defaultProps = {
+  onSubmitSuccess: null
+};

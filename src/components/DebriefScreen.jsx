@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { AI_ERROR_PATTERNS } from '../data/claims';
@@ -734,3 +735,42 @@ Play Truth Hunters and test your fact-checking skills!`;
     </div>
   );
 }
+
+DebriefScreen.propTypes = {
+  team: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    score: PropTypes.number.isRequired,
+    predictedScore: PropTypes.number.isRequired,
+    results: PropTypes.arrayOf(PropTypes.shape({
+      claimId: PropTypes.string.isRequired,
+      correct: PropTypes.bool.isRequired,
+      points: PropTypes.number.isRequired,
+      teamVerdict: PropTypes.string.isRequired,
+      confidence: PropTypes.number.isRequired,
+      reasoning: PropTypes.string
+    })).isRequired,
+    players: PropTypes.arrayOf(PropTypes.shape({
+      firstName: PropTypes.string,
+      lastInitial: PropTypes.string
+    }))
+  }).isRequired,
+  claims: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    text: PropTypes.string.isRequired,
+    source: PropTypes.string,
+    explanation: PropTypes.string,
+    citation: PropTypes.string,
+    errorPattern: PropTypes.string
+  })).isRequired,
+  onRestart: PropTypes.func.isRequired,
+  difficulty: PropTypes.string,
+  teamAvatar: PropTypes.shape({
+    emoji: PropTypes.string,
+    name: PropTypes.string
+  })
+};
+
+DebriefScreen.defaultProps = {
+  difficulty: 'mixed',
+  teamAvatar: null
+};

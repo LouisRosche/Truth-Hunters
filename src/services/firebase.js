@@ -25,6 +25,7 @@ import {
 import { sanitizeInput } from '../utils/moderation';
 import { aggregatePlayerScores } from '../utils/leaderboardUtils';
 import { logger } from '../utils/logger';
+import { firebaseCache } from './firebaseCache';
 
 const FIREBASE_CLASS_KEY = 'truthHunters_classCode';
 const FIREBASE_CLASS_SETTINGS_KEY = 'truthHunters_classSettings';
@@ -215,6 +216,11 @@ export const FirebaseBackend = {
 
       const gamesRef = collection(this.db, 'games');
       await addDoc(gamesRef, docData);
+
+      // Invalidate leaderboard caches after successful write
+      firebaseCache.invalidate('getTopTeams');
+      firebaseCache.invalidate('getTopPlayers');
+
       return true;
     } catch (e) {
       logger.warn('Failed to save to Firebase:', e);
@@ -223,7 +229,7 @@ export const FirebaseBackend = {
   },
 
   /**
-   * Get top teams from Firestore
+   * Get top teams from Firestore (with caching)
    * @param {number} limitCount - Number of teams to fetch
    * @param {string} classFilter - Optional class code filter
    */
@@ -232,8 +238,14 @@ export const FirebaseBackend = {
       return [];
     }
 
+    // Check cache first (30 second TTL for leaderboard data)
+    const filterClass = classFilter || this.getClassCode();
+    const cached = firebaseCache.get('getTopTeams', limitCount, filterClass);
+    if (cached !== null) {
+      return cached;
+    }
+
     try {
-      const filterClass = classFilter || this.getClassCode();
       const gamesRef = collection(this.db, 'games');
 
       let q;
@@ -259,6 +271,9 @@ export const FirebaseBackend = {
         timestamp: doc.data().createdAt?.toMillis() || Date.now()
       }));
 
+      // Cache for 30 seconds (leaderboard updates frequently)
+      firebaseCache.set('getTopTeams', [limitCount, filterClass], results, 30000);
+
       return results;
     } catch (e) {
       logger.warn('Failed to fetch teams from Firebase:', e);
@@ -267,7 +282,7 @@ export const FirebaseBackend = {
   },
 
   /**
-   * Get top players aggregated from Firestore
+   * Get top players aggregated from Firestore (with caching)
    * @param {number} limitCount - Number of players to fetch
    * @param {string} classFilter - Optional class code filter
    */
@@ -276,8 +291,14 @@ export const FirebaseBackend = {
       return [];
     }
 
+    // Check cache first (60 second TTL for player aggregation - expensive query)
+    const filterClass = classFilter || this.getClassCode();
+    const cached = firebaseCache.get('getTopPlayers', limitCount, filterClass);
+    if (cached !== null) {
+      return cached;
+    }
+
     try {
-      const filterClass = classFilter || this.getClassCode();
       const gamesRef = collection(this.db, 'games');
 
       // PARTIAL FIX: Limit to recent games to reduce data fetched
@@ -313,6 +334,9 @@ export const FirebaseBackend = {
       // Use shared aggregation logic
       const aggregated = aggregatePlayerScores(games);
       const results = aggregated.slice(0, limitCount);
+
+      // Cache for 60 seconds (this is an expensive aggregation query)
+      firebaseCache.set('getTopPlayers', [limitCount, filterClass], results, 60000);
 
       return results;
     } catch (e) {
@@ -1001,7 +1025,7 @@ export const FirebaseBackend = {
   // ==================== CLASS SETTINGS ====================
 
   /**
-   * Get class settings from Firestore
+   * Get class settings from Firestore (with caching)
    * @param {string} classCode - The class code
    */
   async getClassSettings(classCode = null) {
@@ -1012,14 +1036,27 @@ export const FirebaseBackend = {
     const code = classCode || this.getClassCode();
     if (!code) return this._getDefaultClassSettings();
 
+    // Check cache first (5 minute TTL for settings - rarely change)
+    const cached = firebaseCache.get('getClassSettings', code);
+    if (cached !== null) {
+      return cached;
+    }
+
     try {
       const settingsDoc = doc(this.db, 'classSettings', code);
       const snapshot = await getDoc(settingsDoc);
 
+      let result;
       if (snapshot.exists()) {
-        return { ...this._getDefaultClassSettings(), ...snapshot.data() };
+        result = { ...this._getDefaultClassSettings(), ...snapshot.data() };
+      } else {
+        result = this._getDefaultClassSettings();
       }
-      return this._getDefaultClassSettings();
+
+      // Cache for 5 minutes (settings don't change often)
+      firebaseCache.set('getClassSettings', [code], result, 300000);
+
+      return result;
     } catch (e) {
       logger.warn('Failed to fetch class settings:', e);
       return this._getDefaultClassSettings();
@@ -1052,6 +1089,9 @@ export const FirebaseBackend = {
         localStorage.setItem(FIREBASE_CLASS_SETTINGS_KEY, JSON.stringify(settings));
       } catch (e) { /* ignore */ }
 
+      // Invalidate cache after successful write
+      firebaseCache.invalidate('getClassSettings');
+
       return { success: true };
     } catch (e) {
       logger.warn('Failed to save class settings:', e);
@@ -1081,7 +1121,7 @@ export const FirebaseBackend = {
   // ==================== CLASS SEEN CLAIMS TRACKING ====================
 
   /**
-   * Get claims that have been seen by any group in this class today
+   * Get claims that have been seen by any group in this class today (with caching)
    * Prevents different groups from getting the same claims in the same session
    * @param {string} classCode - The class code
    * @returns {Promise<Array<string>>} Array of claim IDs seen today
@@ -1094,18 +1134,31 @@ export const FirebaseBackend = {
     const code = classCode || this.getClassCode();
     if (!code) return [];
 
-    try {
-      // Get today's date as string for partitioning (resets daily)
-      const today = new Date().toISOString().split('T')[0];
-      const docId = `${code}_${today}`;
+    // Get today's date as string for partitioning (resets daily)
+    const today = new Date().toISOString().split('T')[0];
+    const docId = `${code}_${today}`;
 
+    // Check cache first (2 minute TTL for seen claims - updates during gameplay)
+    const cached = firebaseCache.get('getClassSeenClaims', code, today);
+    if (cached !== null) {
+      return cached;
+    }
+
+    try {
       const seenDoc = doc(this.db, 'classSeenClaims', docId);
       const snapshot = await getDoc(seenDoc);
 
+      let result;
       if (snapshot.exists()) {
-        return snapshot.data().claimIds || [];
+        result = snapshot.data().claimIds || [];
+      } else {
+        result = [];
       }
-      return [];
+
+      // Cache for 2 minutes (updates during gameplay when games end)
+      firebaseCache.set('getClassSeenClaims', [code, today], result, 120000);
+
+      return result;
     } catch (e) {
       logger.warn('Failed to fetch class seen claims:', e);
       return [];
@@ -1150,6 +1203,9 @@ export const FirebaseBackend = {
           updatedAt: serverTimestamp()
         });
       });
+
+      // Invalidate cache after successful write
+      firebaseCache.invalidate('getClassSeenClaims');
 
       return { success: true };
     } catch (e) {

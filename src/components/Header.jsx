@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 export function Header({ score, round, totalRounds, phase, presentationMode, onTogglePresentationMode, onExitGame, soundEnabled, onToggleSound, analyticsEnabled, onToggleAnalytics, onTogglePause, isPaused, onShowHelp }) {
@@ -409,3 +410,34 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
     </>
   );
 }
+
+Header.propTypes = {
+  score: PropTypes.number,
+  round: PropTypes.number,
+  totalRounds: PropTypes.number,
+  phase: PropTypes.oneOf(['setup', 'playing', 'debrief']).isRequired,
+  presentationMode: PropTypes.bool.isRequired,
+  onTogglePresentationMode: PropTypes.func.isRequired,
+  onExitGame: PropTypes.func,
+  soundEnabled: PropTypes.bool,
+  onToggleSound: PropTypes.func,
+  analyticsEnabled: PropTypes.bool,
+  onToggleAnalytics: PropTypes.func,
+  onTogglePause: PropTypes.func,
+  isPaused: PropTypes.bool,
+  onShowHelp: PropTypes.func
+};
+
+Header.defaultProps = {
+  score: 0,
+  round: 0,
+  totalRounds: 0,
+  onExitGame: null,
+  soundEnabled: true,
+  onToggleSound: null,
+  analyticsEnabled: false,
+  onToggleAnalytics: null,
+  onTogglePause: null,
+  isPaused: false,
+  onShowHelp: null
+};

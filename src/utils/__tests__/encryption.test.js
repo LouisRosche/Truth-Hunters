@@ -31,9 +31,9 @@ describe('SecureStorage', () => {
   });
 
   describe('setItem()', () => {
-    it('should store encrypted data', () => {
+    it('should store encrypted data', async () => {
       const data = { name: 'Alice', score: 100 };
-      const result = SecureStorage.setItem('test', data);
+      const result = await SecureStorage.setItem('test', data);
 
       expect(result).toBe(true);
 
@@ -43,68 +43,68 @@ describe('SecureStorage', () => {
       expect(stored).not.toContain('100');
     });
 
-    it('should handle objects', () => {
+    it('should handle objects', async () => {
       const data = { complex: { nested: { value: 42 } } };
-      SecureStorage.setItem('test', data);
+      await SecureStorage.setItem('test', data);
 
-      const retrieved = SecureStorage.getItem('test');
+      const retrieved = await SecureStorage.getItem('test');
       expect(retrieved).toEqual(data);
     });
 
-    it('should handle arrays', () => {
+    it('should handle arrays', async () => {
       const data = [1, 2, 3, 'four', { five: 5 }];
-      SecureStorage.setItem('test', data);
+      await SecureStorage.setItem('test', data);
 
-      const retrieved = SecureStorage.getItem('test');
+      const retrieved = await SecureStorage.getItem('test');
       expect(retrieved).toEqual(data);
     });
 
-    it('should handle strings', () => {
+    it('should handle strings', async () => {
       const data = 'Hello, World!';
-      SecureStorage.setItem('test', data);
+      await SecureStorage.setItem('test', data);
 
-      const retrieved = SecureStorage.getItem('test');
+      const retrieved = await SecureStorage.getItem('test');
       expect(retrieved).toBe(data);
     });
 
-    it('should handle numbers', () => {
+    it('should handle numbers', async () => {
       const data = 42;
-      SecureStorage.setItem('test', data);
+      await SecureStorage.setItem('test', data);
 
-      const retrieved = SecureStorage.getItem('test');
+      const retrieved = await SecureStorage.getItem('test');
       expect(retrieved).toBe(data);
     });
   });
 
   describe('getItem()', () => {
-    it('should return null for non-existent key', () => {
-      const result = SecureStorage.getItem('nonexistent');
+    it('should return null for non-existent key', async () => {
+      const result = await SecureStorage.getItem('nonexistent');
       expect(result).toBeNull();
     });
 
-    it('should return default value for non-existent key', () => {
-      const result = SecureStorage.getItem('nonexistent', 'default');
+    it('should return default value for non-existent key', async () => {
+      const result = await SecureStorage.getItem('nonexistent', 'default');
       expect(result).toBe('default');
     });
 
-    it('should decrypt stored data', () => {
+    it('should decrypt stored data', async () => {
       const data = { name: 'Bob', score: 200 };
-      SecureStorage.setItem('test', data);
+      await SecureStorage.setItem('test', data);
 
-      const retrieved = SecureStorage.getItem('test');
+      const retrieved = await SecureStorage.getItem('test');
       expect(retrieved).toEqual(data);
     });
 
-    it('should return default value for corrupted data', () => {
+    it('should return default value for corrupted data', async () => {
       localStorage.setItem('test', 'corrupted-base64!!!');
-      const result = SecureStorage.getItem('test', 'fallback');
+      const result = await SecureStorage.getItem('test', 'fallback');
       expect(result).toBe('fallback');
     });
   });
 
   describe('removeItem()', () => {
-    it('should remove stored item', () => {
-      SecureStorage.setItem('test', { data: 'value' });
+    it('should remove stored item', async () => {
+      await SecureStorage.setItem('test', { data: 'value' });
       expect(SecureStorage.has('test')).toBe(true);
 
       SecureStorage.removeItem('test');
@@ -113,9 +113,9 @@ describe('SecureStorage', () => {
   });
 
   describe('clear()', () => {
-    it('should clear all storage', () => {
-      SecureStorage.setItem('test1', 'value1');
-      SecureStorage.setItem('test2', 'value2');
+    it('should clear all storage', async () => {
+      await SecureStorage.setItem('test1', 'value1');
+      await SecureStorage.setItem('test2', 'value2');
 
       SecureStorage.clear();
 
@@ -125,8 +125,8 @@ describe('SecureStorage', () => {
   });
 
   describe('has()', () => {
-    it('should return true for existing key', () => {
-      SecureStorage.setItem('test', 'value');
+    it('should return true for existing key', async () => {
+      await SecureStorage.setItem('test', 'value');
       expect(SecureStorage.has('test')).toBe(true);
     });
 
@@ -136,11 +136,11 @@ describe('SecureStorage', () => {
   });
 
   describe('migrateUnencrypted()', () => {
-    it('should migrate unencrypted JSON data', () => {
+    it('should migrate unencrypted JSON data', async () => {
       const plainData = { name: 'Charlie', score: 300 };
       localStorage.setItem('test', JSON.stringify(plainData));
 
-      const result = SecureStorage.migrateUnencrypted('test');
+      const result = await SecureStorage.migrateUnencrypted('test');
       expect(result).toBe(true);
 
       // Verify data is now encrypted
@@ -148,37 +148,35 @@ describe('SecureStorage', () => {
       expect(stored).not.toContain('Charlie');
 
       // Verify data is still accessible
-      const retrieved = SecureStorage.getItem('test');
+      const retrieved = await SecureStorage.getItem('test');
       expect(retrieved).toEqual(plainData);
     });
 
-    it('should return false for already encrypted data', () => {
-      SecureStorage.setItem('test', { data: 'value' });
-      const result = SecureStorage.migrateUnencrypted('test');
+    it('should return false for already encrypted data', async () => {
+      await SecureStorage.setItem('test', { data: 'value' });
+      const result = await SecureStorage.migrateUnencrypted('test');
       expect(result).toBe(false);
     });
 
-    it('should return false for non-existent key', () => {
-      const result = SecureStorage.migrateUnencrypted('nonexistent');
+    it('should return false for non-existent key', async () => {
+      const result = await SecureStorage.migrateUnencrypted('nonexistent');
       expect(result).toBe(false);
     });
   });
 
   describe('encryption consistency', () => {
-    it('should encrypt same data differently each time (if key rotates)', () => {
-      SecureStorage.setItem('test1', 'same data');
+    it('should encrypt same data differently each time (with different IVs)', async () => {
+      await SecureStorage.setItem('test1', 'same data');
       const encrypted1 = localStorage.getItem('test1');
 
-      sessionStorage.clear(); // Force new key generation
-
-      SecureStorage.setItem('test2', 'same data');
+      await SecureStorage.setItem('test2', 'same data');
       const encrypted2 = localStorage.getItem('test2');
 
-      // Different encryption (different session keys)
+      // Different encryption (different IVs)
       expect(encrypted1).not.toBe(encrypted2);
     });
 
-    it('should maintain data integrity across encrypt/decrypt', () => {
+    it('should maintain data integrity across encrypt/decrypt', async () => {
       const testCases = [
         { name: 'simple', value: 'hello' },
         { name: 'number', value: 42 },
@@ -188,11 +186,11 @@ describe('SecureStorage', () => {
         { name: 'unicode', value: '🎮🔍🎯' }
       ];
 
-      testCases.forEach(({ name, value }) => {
-        SecureStorage.setItem(name, value);
-        const retrieved = SecureStorage.getItem(name);
+      for (const { name, value } of testCases) {
+        await SecureStorage.setItem(name, value);
+        const retrieved = await SecureStorage.getItem(name);
         expect(retrieved).toEqual(value);
-      });
+      }
     });
   });
 });
@@ -203,21 +201,21 @@ describe('migrateAllToEncrypted()', () => {
     sessionStorage.clear();
   });
 
-  it('should migrate all specified keys', () => {
+  it('should migrate all specified keys', async () => {
     // Add unencrypted data
     localStorage.setItem('truthHunters_playerProfile', JSON.stringify({ name: 'Alice' }));
     localStorage.setItem('truthHunters_leaderboard', JSON.stringify([{ score: 100 }]));
 
-    const migrated = migrateAllToEncrypted();
+    const migrated = await migrateAllToEncrypted();
     expect(migrated).toBe(2);
 
     // Verify data is now encrypted but accessible
-    const profile = SecureStorage.getItem('truthHunters_playerProfile');
+    const profile = await SecureStorage.getItem('truthHunters_playerProfile');
     expect(profile).toEqual({ name: 'Alice' });
   });
 
-  it('should return 0 if no data to migrate', () => {
-    const migrated = migrateAllToEncrypted();
+  it('should return 0 if no data to migrate', async () => {
+    const migrated = await migrateAllToEncrypted();
     expect(migrated).toBe(0);
   });
 });

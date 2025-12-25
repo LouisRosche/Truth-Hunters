@@ -1,0 +1,524 @@
+rules_version = '2';
+
+/**
+ * SECURE FIRESTORE RULES FOR TRUTH HUNTERS
+ *
+ * CRITICAL CHANGES FROM CURRENT RULES:
+ * 1. All operations require authentication (request.auth != null)
+ * 2. Teacher operations check custom claims (request.auth.token.role == 'teacher')
+ * 3. Students can only access their own class data
+ * 4. Rate limiting enforced server-side
+ * 5. Audit fields required (createdBy, modifiedBy)
+ *
+ * DEPLOYMENT PREREQUISITES:
+ * - Firebase Authentication must be enabled
+ * - Anonymous auth provider enabled (for students)
+ * - Email/password auth provider enabled (for teachers)
+ * - Custom claims configured (role: student/teacher/admin)
+ * - Cloud Functions deployed (for rate limiting)
+ *
+ * Collections:
+ * - classes: Class information and settings
+ * - games: Completed game scores
+ * - pendingClaims: Student-submitted claims for review
+ * - classAchievements: Shared achievements
+ * - reflections: Student post-game reflections
+ * - activeSessions: Live game sessions
+ * - classSeenClaims: Claims played tracker
+ * - rateLimits: Rate limiting tracker
+ * - teacherRequests: Teacher role requests
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== HELPER FUNCTIONS ====================
+
+    /**
+     * Check if request is authenticated
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /**
+     * Check if authenticated user is a teacher
+     */
+    function isTeacher() {
+      return isAuthenticated() &&
+             request.auth.token.role == 'teacher';
+    }
+
+    /**
+     * Check if authenticated user is an admin
+     */
+    function isAdmin() {
+      return isAuthenticated() &&
+             request.auth.token.role == 'admin';
+    }
+
+    /**
+     * Check if user is a member of a specific class
+     */
+    function isClassMember(classId) {
+      let classDoc = get(/databases/$(database)/documents/classes/$(classId));
+      return classDoc.data.studentIds.hasAny([request.auth.uid]) ||
+             classDoc.data.teacherId == request.auth.uid;
+    }
+
+    /**
+     * Check if user is the teacher of a specific class
+     */
+    function isClassTeacher(classId) {
+      let classDoc = get(/databases/$(database)/documents/classes/$(classId));
+      return classDoc.data.teacherId == request.auth.uid;
+    }
+
+    /**
+     * Check if a string is within length limits
+     */
+    function validStringLength(str, minLen, maxLen) {
+      return str is string &&
+             str.size() >= minLen &&
+             str.size() <= maxLen;
+    }
+
+    /**
+     * Check if a value is a valid difficulty level
+     */
+    function validDifficulty(difficulty) {
+      return difficulty in ['easy', 'medium', 'hard', 'mixed'];
+    }
+
+    /**
+     * Check if a value is a valid answer type
+     */
+    function validAnswer(answer) {
+      return answer in ['TRUE', 'FALSE', 'MIXED'];
+    }
+
+    /**
+     * Check if a value is a positive number within range
+     */
+    function validNumber(num, minVal, maxVal) {
+      return num is number &&
+             num >= minVal &&
+             num <= maxVal;
+    }
+
+    /**
+     * Check if class code is valid format
+     * Must be unique, uppercase, alphanumeric with hyphens
+     */
+    function validClassCode(code) {
+      return code is string &&
+             code.size() >= 6 &&
+             code.size() <= 30 &&
+             code.matches('^[A-Z0-9-]+$');
+    }
+
+    /**
+     * Check if user ID matches authenticated user
+     */
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    /**
+     * Server-side rate limiting check
+     * Checks if user has written to this operation too recently
+     */
+    function isRateLimited(operation) {
+      let rateLimitDoc = get(/databases/$(database)/documents/rateLimits/$(request.auth.uid));
+
+      return exists(/databases/$(database)/documents/rateLimits/$(request.auth.uid)) &&
+             rateLimitDoc.data[operation] != null &&
+             rateLimitDoc.data[operation].windowStart != null &&
+             (request.time.toMillis() - rateLimitDoc.data[operation].windowStart) < getRateLimitWindow(operation) &&
+             rateLimitDoc.data[operation].count >= getRateLimitMax(operation);
+    }
+
+    /**
+     * Get rate limit window in milliseconds
+     */
+    function getRateLimitWindow(operation) {
+      return operation == 'games' ? 30000 :     // 30 seconds
+             operation == 'claims' ? 60000 :    // 1 minute
+             operation == 'achievements' ? 10000 : // 10 seconds
+             60000; // default 1 minute
+    }
+
+    /**
+     * Get max requests per window
+     */
+    function getRateLimitMax(operation) {
+      return operation == 'games' ? 1 :      // 1 game per 30 seconds
+             operation == 'claims' ? 3 :     // 3 claims per minute
+             operation == 'achievements' ? 5 : // 5 achievements per 10 seconds
+             3; // default 3 per window
+    }
+
+    // ==================== CLASSES COLLECTION ====================
+
+    /**
+     * Classes: Core organizational unit
+     *
+     * Read: Only class members (students + teacher)
+     * Create: Teachers only
+     * Update: Class teacher only
+     * Delete: Class teacher only (with safeguards)
+     */
+    match /classes/{classId} {
+      // Class members can read their class data
+      allow read: if isAuthenticated() &&
+                     (isClassMember(classId) || isAdmin());
+
+      // Teachers can create classes
+      allow create: if isTeacher() &&
+                       request.resource.data.teacherId == request.auth.uid &&
+                       request.resource.data.keys().hasAll([
+                         'classCode', 'className', 'teacherId',
+                         'createdAt', 'studentIds', 'settings'
+                       ]) &&
+                       validClassCode(request.resource.data.classCode) &&
+                       validStringLength(request.resource.data.className, 3, 100) &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.studentIds is list &&
+                       request.resource.data.studentIds.size() == 0 && // must start empty
+                       request.resource.data.settings is map;
+
+      // Class teacher can update their class
+      allow update: if isAuthenticated() &&
+                       (isClassTeacher(classId) || isAdmin()) &&
+                       // Cannot change teacher or creation timestamp
+                       request.resource.data.teacherId == resource.data.teacherId &&
+                       request.resource.data.createdAt == resource.data.createdAt &&
+                       // Valid updates only
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['className']) ||
+                        validStringLength(request.resource.data.className, 3, 100));
+
+      // Class teacher can delete (admin approval recommended)
+      allow delete: if isAuthenticated() &&
+                       (isClassTeacher(classId) || isAdmin());
+    }
+
+    // ==================== GAMES COLLECTION ====================
+
+    /**
+     * Games: Completed game records
+     *
+     * Read: Class members only
+     * Create: Authenticated users with validation and rate limiting
+     * Update/Delete: Not allowed (games are immutable)
+     */
+    match /games/{gameId} {
+      // Class members can read games in their class
+      allow read: if isAuthenticated() &&
+                     (isClassMember(resource.data.classId) || isAdmin());
+
+      // Authenticated users can create games (with validation and rate limiting)
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid &&
+                       isClassMember(request.resource.data.classId) &&
+                       request.resource.data.keys().hasAll([
+                         'userId', 'classId', 'teamName', 'score', 'createdAt'
+                       ]) &&
+                       validStringLength(request.resource.data.teamName, 2, 50) &&
+                       validNumber(request.resource.data.score, -50, 100) &&
+                       request.resource.data.createdAt == request.time &&
+                       // Optional fields validation
+                       (!('difficulty' in request.resource.data) ||
+                        validDifficulty(request.resource.data.difficulty)) &&
+                       (!('rounds' in request.resource.data) ||
+                        validNumber(request.resource.data.rounds, 3, 20)) &&
+                       (!('players' in request.resource.data) ||
+                        (request.resource.data.players is list &&
+                         request.resource.data.players.size() <= 6)) &&
+                       // Rate limiting (enforced by Cloud Functions primarily)
+                       !isRateLimited('games');
+
+      // Games are immutable - no updates or deletes
+      allow update, delete: if false;
+    }
+
+    // ==================== PENDING CLAIMS COLLECTION ====================
+
+    /**
+     * Pending Claims: Student-submitted claims for teacher review
+     *
+     * Read: Class members and teachers
+     * Create: Authenticated students with validation and rate limiting
+     * Update: Teachers only (for review/approval)
+     * Delete: Teachers only
+     */
+    match /pendingClaims/{claimId} {
+      // Class members can read claims in their class
+      allow read: if isAuthenticated() &&
+                     (isClassMember(resource.data.classId) ||
+                      isTeacher() ||
+                      isAdmin());
+
+      // Authenticated users can submit claims
+      allow create: if isAuthenticated() &&
+                       request.resource.data.submitterId == request.auth.uid &&
+                       isClassMember(request.resource.data.classId) &&
+                       request.resource.data.keys().hasAll([
+                         'claimText', 'answer', 'explanation', 'subject',
+                         'difficulty', 'classId', 'submitterId', 'submitterName',
+                         'status', 'submittedAt'
+                       ]) &&
+                       validStringLength(request.resource.data.claimText, 20, 500) &&
+                       validAnswer(request.resource.data.answer) &&
+                       validStringLength(request.resource.data.explanation, 10, 1000) &&
+                       validStringLength(request.resource.data.subject, 2, 30) &&
+                       validDifficulty(request.resource.data.difficulty) &&
+                       validStringLength(request.resource.data.submitterName, 2, 50) &&
+                       request.resource.data.status == 'pending' &&
+                       request.resource.data.submittedAt == request.time &&
+                       (!('citation' in request.resource.data) ||
+                        validStringLength(request.resource.data.citation, 0, 200)) &&
+                       // Rate limiting
+                       !isRateLimited('claims');
+
+      // Teachers can update claims (for review)
+      allow update: if isTeacher() &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'reviewedAt', 'reviewedBy', 'reviewerNote']) &&
+                       request.resource.data.status in ['approved', 'rejected', 'pending'] &&
+                       request.resource.data.reviewedBy == request.auth.uid &&
+                       request.resource.data.reviewedAt == request.time &&
+                       (!('reviewerNote' in request.resource.data) ||
+                        validStringLength(request.resource.data.reviewerNote, 0, 500));
+
+      // Teachers can delete claims
+      allow delete: if isTeacher() || isAdmin();
+    }
+
+    // ==================== CLASS ACHIEVEMENTS COLLECTION ====================
+
+    /**
+     * Class Achievements: Shared achievement notifications
+     *
+     * Read: Class members
+     * Create: Authenticated class members with validation
+     * Update/Delete: Not allowed (achievements are permanent)
+     */
+    match /classAchievements/{achievementId} {
+      // Class members can read achievements in their class
+      allow read: if isAuthenticated() &&
+                     (isClassMember(resource.data.classId) || isAdmin());
+
+      // Class members can share achievements
+      allow create: if isAuthenticated() &&
+                       isClassMember(request.resource.data.classId) &&
+                       request.resource.data.keys().hasAll([
+                         'classId', 'achievementId', 'achievementName',
+                         'playerName', 'earnedAt', 'userId'
+                       ]) &&
+                       request.resource.data.userId == request.auth.uid &&
+                       validStringLength(request.resource.data.achievementId, 2, 50) &&
+                       validStringLength(request.resource.data.achievementName, 2, 100) &&
+                       validStringLength(request.resource.data.playerName, 2, 50) &&
+                       request.resource.data.earnedAt == request.time &&
+                       // Rate limiting
+                       !isRateLimited('achievements');
+
+      // Achievements are permanent
+      allow update, delete: if false;
+    }
+
+    // ==================== REFLECTIONS COLLECTION ====================
+
+    /**
+     * Reflections: Student post-game reflections
+     *
+     * Read: Teachers and class members
+     * Create: Authenticated students with validation
+     * Update/Delete: Not allowed
+     */
+    match /reflections/{reflectionId} {
+      // Teachers and class members can read reflections
+      allow read: if isAuthenticated() &&
+                     (isClassMember(resource.data.classId) ||
+                      isTeacher() ||
+                      isAdmin());
+
+      // Class members can create reflections
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid &&
+                       isClassMember(request.resource.data.classId) &&
+                       request.resource.data.keys().hasAll([
+                         'userId', 'classId', 'teamName', 'gameScore', 'createdAt'
+                       ]) &&
+                       validStringLength(request.resource.data.teamName, 2, 50) &&
+                       validNumber(request.resource.data.gameScore, -50, 100) &&
+                       request.resource.data.createdAt == request.time &&
+                       (!('reflectionResponse' in request.resource.data) ||
+                        validStringLength(request.resource.data.reflectionResponse, 0, 2000));
+
+      // Reflections are immutable
+      allow update, delete: if false;
+    }
+
+    // ==================== ACTIVE SESSIONS COLLECTION ====================
+
+    /**
+     * Active Sessions: Live game sessions for real-time leaderboard
+     *
+     * Read: Class members
+     * Create/Update: Session owner only
+     * Delete: Session owner or teacher
+     */
+    match /activeSessions/{sessionId} {
+      // Class members can read active sessions in their class
+      allow read: if isAuthenticated() &&
+                     (isClassMember(resource.data.classId) || isAdmin());
+
+      // Users can create their own sessions
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid &&
+                       isClassMember(request.resource.data.classId) &&
+                       request.resource.data.keys().hasAll([
+                         'sessionId', 'userId', 'classId', 'teamName',
+                         'currentScore', 'currentRound', 'totalRounds',
+                         'isActive', 'updatedAt'
+                       ]) &&
+                       validStringLength(request.resource.data.sessionId, 10, 100) &&
+                       validStringLength(request.resource.data.teamName, 2, 50) &&
+                       validNumber(request.resource.data.currentScore, -50, 100) &&
+                       validNumber(request.resource.data.currentRound, 0, 20) &&
+                       validNumber(request.resource.data.totalRounds, 3, 20) &&
+                       request.resource.data.isActive is bool &&
+                       request.resource.data.updatedAt == request.time;
+
+      // Users can update their own sessions
+      allow update: if isAuthenticated() &&
+                       (resource.data.userId == request.auth.uid ||
+                        isClassTeacher(resource.data.classId)) &&
+                       request.resource.data.userId == resource.data.userId &&
+                       request.resource.data.classId == resource.data.classId &&
+                       request.resource.data.updatedAt == request.time;
+
+      // Users or teachers can delete sessions
+      allow delete: if isAuthenticated() &&
+                       (resource.data.userId == request.auth.uid ||
+                        isClassTeacher(resource.data.classId) ||
+                        isAdmin());
+    }
+
+    // ==================== CLASS SEEN CLAIMS COLLECTION ====================
+
+    /**
+     * Class Seen Claims: Tracks claims played to avoid duplicates
+     *
+     * Read: Class members
+     * Create/Update: Teachers only (to prevent manipulation)
+     * Delete: Teachers only
+     */
+    match /classSeenClaims/{docId} {
+      // Class members can read seen claims for their class
+      allow read: if isAuthenticated() &&
+                     (isClassMember(resource.data.classId) || isAdmin());
+
+      // Teachers can create/update seen claims
+      allow create, update: if isTeacher() &&
+                              request.resource.data.keys().hasAll([
+                                'classCode', 'classId', 'date', 'claimIds', 'updatedAt'
+                              ]) &&
+                              validClassCode(request.resource.data.classCode) &&
+                              request.resource.data.date is string &&
+                              request.resource.data.date.size() == 10 &&
+                              request.resource.data.claimIds is list &&
+                              request.resource.data.claimIds.size() <= 500 &&
+                              request.resource.data.updatedAt == request.time;
+
+      // Teachers can delete (for reset)
+      allow delete: if isTeacher() || isAdmin();
+    }
+
+    // ==================== RATE LIMITS COLLECTION ====================
+
+    /**
+     * Rate Limits: Track user write frequency
+     *
+     * Read: Own document only
+     * Write: Own document only (auto-managed)
+     */
+    match /rateLimits/{userId} {
+      // Users can read their own rate limit doc
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+
+      // Users can write their own rate limit doc
+      // (This is auto-managed by security rules when writes occur)
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ==================== TEACHER REQUESTS COLLECTION ====================
+
+    /**
+     * Teacher Requests: Teacher role approval requests
+     *
+     * Read: Own request or admin
+     * Create: Authenticated users
+     * Update: Admins only (for approval/rejection)
+     * Delete: Admins only
+     */
+    match /teacherRequests/{requestId} {
+      // Users can read their own request, admins can read all
+      allow read: if isAuthenticated() &&
+                     (resource.data.uid == request.auth.uid || isAdmin());
+
+      // Authenticated users can create teacher requests
+      allow create: if isAuthenticated() &&
+                       request.resource.data.uid == request.auth.uid &&
+                       request.resource.data.keys().hasAll([
+                         'uid', 'email', 'schoolName', 'gradeLevel',
+                         'status', 'requestedAt'
+                       ]) &&
+                       request.resource.data.status == 'pending' &&
+                       request.resource.data.requestedAt == request.time &&
+                       validStringLength(request.resource.data.schoolName, 3, 100) &&
+                       request.resource.data.gradeLevel in ['elementary', 'middle', 'high', 'college'];
+
+      // Admins can update (approve/reject)
+      allow update: if isAdmin() &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt', 'rejectionReason']) &&
+                       request.resource.data.status in ['pending', 'approved', 'rejected'];
+
+      // Admins can delete
+      allow delete: if isAdmin();
+    }
+
+    // ==================== ADMIN AUDIT LOG COLLECTION ====================
+
+    /**
+     * Audit Log: Track important administrative actions
+     *
+     * Read: Admins only
+     * Create: Automated (via Cloud Functions)
+     * Update/Delete: Not allowed (audit logs are immutable)
+     */
+    match /auditLog/{logId} {
+      // Admins can read audit logs
+      allow read: if isAdmin();
+
+      // Only Cloud Functions can create audit logs
+      // (In practice, this is enforced by Firebase Admin SDK)
+      allow create: if false; // Use Cloud Functions with admin privileges
+
+      // Audit logs are immutable
+      allow update, delete: if false;
+    }
+
+    // ==================== DEFAULT DENY ====================
+
+    /**
+     * Deny all other operations by default
+     * This ensures security by default - any new collections need explicit rules
+     */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

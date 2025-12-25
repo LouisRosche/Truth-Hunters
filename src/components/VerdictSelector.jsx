@@ -3,9 +3,10 @@
  * Allows users to select TRUE, MIXED, or FALSE
  */
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
+import PropTypes from 'prop-types';
 
-export function VerdictSelector({ value, onChange, disabled }) {
+export const VerdictSelector = memo(function VerdictSelector({ value, onChange, disabled }) {
   const [showMixedHelp, setShowMixedHelp] = useState(false);
 
   const verdicts = [
@@ -163,4 +164,15 @@ export function VerdictSelector({ value, onChange, disabled }) {
       )}
     </div>
   );
-}
+});
+
+VerdictSelector.propTypes = {
+  value: PropTypes.oneOf(['TRUE', 'MIXED', 'FALSE', null]),
+  onChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool
+};
+
+VerdictSelector.defaultProps = {
+  value: null,
+  disabled: false
+};

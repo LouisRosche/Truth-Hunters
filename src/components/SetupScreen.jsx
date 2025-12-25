@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { LeaderboardView } from './LeaderboardView';
 import { ScrollingLeaderboard } from './ScrollingLeaderboard';
@@ -11,11 +12,12 @@ import { SoloStatsView } from './SoloStatsView';
 import { ClaimSubmissionForm } from './ClaimSubmissionForm';
 import { StudentClaimNotifications } from './StudentClaimNotifications';
 import { TEAM_AVATARS, DIFFICULTY_CONFIG, EDUCATIONAL_TIPS } from '../data/constants';
-import { getSubjects } from '../data/claims';
+import { getSubjects } from '../data/subjects';
 import { SoundManager } from '../services/sound';
 import { PlayerProfile } from '../services/playerProfile';
 import { validateName, isContentAppropriate, sanitizeInput } from '../utils/moderation';
 import { getRandomItem, getUnseenClaimStats } from '../utils/helpers';
+import { preloadClaims } from '../data/claimsLoader';
 
 // Get all available subjects
 const ALL_SUBJECTS = getSubjects();
@@ -26,11 +28,21 @@ export function SetupScreen({ onStart, isLoading = false }) {
   const isReturningPlayer = existingProfile.stats.totalGames > 0;
   const quickStartSettings = useMemo(() => PlayerProfile.getQuickStartSettings(), []);
 
-  // Calculate unseen claims for returning players
-  const unseenStats = useMemo(() => {
-    if (!isReturningPlayer) return null;
-    return getUnseenClaimStats(existingProfile.claimsSeen || []);
-  }, [isReturningPlayer, existingProfile.claimsSeen]);
+  // Calculate unseen claims for returning players (async - use state instead of useMemo)
+  const [unseenStats, setUnseenStats] = useState(null);
+
+  useEffect(() => {
+    if (!isReturningPlayer) {
+      setUnseenStats(null);
+      return;
+    }
+
+    // Load unseen stats asynchronously
+    getUnseenClaimStats(existingProfile.claimsSeen || [])
+      .then(stats => setUnseenStats(stats))
+      .catch(() => setUnseenStats(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReturningPlayer, existingProfile.claimsSeen.length]); // Use length to avoid array reference changes
 
   const [teamName, setTeamName] = useState(isReturningPlayer ? quickStartSettings.playerName : '');
   const [rounds, setRounds] = useState(isReturningPlayer ? quickStartSettings.rounds : 5);
@@ -53,11 +65,21 @@ export function SetupScreen({ onStart, isLoading = false }) {
     isReturningPlayer ? (quickStartSettings.subjects || []) : []
   );
 
-  // Calculate available claims for selected subjects (warn if too few)
-  const subjectClaimStats = useMemo(() => {
-    if (selectedSubjects.length === 0) return null;
-    return getUnseenClaimStats([], selectedSubjects);
-  }, [selectedSubjects]);
+  // Calculate available claims for selected subjects (warn if too few) - async
+  const [subjectClaimStats, setSubjectClaimStats] = useState(null);
+
+  useEffect(() => {
+    if (selectedSubjects.length === 0) {
+      setSubjectClaimStats(null);
+      return;
+    }
+
+    // Load subject stats asynchronously
+    getUnseenClaimStats([], selectedSubjects)
+      .then(stats => setSubjectClaimStats(stats))
+      .catch(() => setSubjectClaimStats(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSubjects.length]); // Use length to avoid array reference changes
 
   // Player inputs (up to 6 players per group) - start with just 1 visible
   const [players, setPlayers] = useState([
@@ -65,9 +87,13 @@ export function SetupScreen({ onStart, isLoading = false }) {
   ]);
   const MAX_PLAYERS = 6;
 
-  // Initialize sound manager
+  // Initialize sound manager and preload claims database
   useEffect(() => {
     SoundManager.init();
+
+    // Preload claims database in background for better performance
+    // This happens during setup phase when user is configuring their team
+    preloadClaims();
   }, []);
 
   // Quick Solo Start - uses saved preferences
@@ -917,3 +943,12 @@ export function SetupScreen({ onStart, isLoading = false }) {
     </div>
   );
 }
+
+SetupScreen.propTypes = {
+  onStart: PropTypes.func.isRequired,
+  isLoading: PropTypes.bool
+};
+
+SetupScreen.defaultProps = {
+  isLoading: false
+};

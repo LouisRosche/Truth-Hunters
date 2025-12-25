@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useTeamLeaderboard, usePlayerLeaderboard } from '../hooks/useLeaderboard';
 import { formatPlayerName } from '../utils/helpers';
 
@@ -244,3 +245,8 @@ export function LeaderboardView({ onBack }) {
     </div>
   );
 }
+
+
+LeaderboardView.propTypes = {
+  onBack: PropTypes.func.isRequired
+};

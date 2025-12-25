@@ -3,7 +3,10 @@
  * Allows users to select confidence level (1-3)
  */
 
-export function ConfidenceSelector({ value, onChange, disabled }) {
+import { memo } from 'react';
+import PropTypes from 'prop-types';
+
+export const ConfidenceSelector = memo(function ConfidenceSelector({ value, onChange, disabled }) {
   const levels = [
     { value: 1, label: 'Not sure', risk: 'Right +1 · Wrong -1', color: 'var(--confidence-1)', levelText: 'Safe' },
     { value: 2, label: 'Pretty sure', risk: 'Right +3 · Wrong -3', color: 'var(--confidence-2)', levelText: 'Medium' },
@@ -107,4 +110,14 @@ export function ConfidenceSelector({ value, onChange, disabled }) {
       ))}
     </div>
   );
-}
+});
+
+ConfidenceSelector.propTypes = {
+  value: PropTypes.oneOf([1, 2, 3]).isRequired,
+  onChange: PropTypes.func.isRequired,
+  disabled: PropTypes.bool
+};
+
+ConfidenceSelector.defaultProps = {
+  disabled: false
+};

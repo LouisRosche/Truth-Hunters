@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { FirebaseBackend } from '../services/firebase';
 import { LeaderboardManager } from '../services/leaderboard';
@@ -1530,3 +1531,7 @@ export function TeacherDashboard({ onBack }) {
     </div>
   );
 }
+
+TeacherDashboard.propTypes = {
+  onBack: PropTypes.func.isRequired
+};
