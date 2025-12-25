@@ -4,7 +4,7 @@
  * Shows lifetime progress, achievements, and areas to improve
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { PlayerProfile } from '../services/playerProfile';
@@ -15,7 +15,7 @@ import {
 } from '../data/achievements';
 import { AI_ERROR_PATTERNS } from '../data/claims';
 
-export function SoloStatsView({ onBack, onQuickStart }) {
+function SoloStatsViewComponent({ onBack, onQuickStart }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   const stats = useMemo(() => PlayerProfile.getDisplayStats(), []);
@@ -631,7 +631,11 @@ export function SoloStatsView({ onBack, onQuickStart }) {
 }
 
 
-SoloStatsView.propTypes = {
+SoloStatsViewComponent.propTypes = {
   onBack: PropTypes.func.isRequired,
   onQuickStart: PropTypes.func.isRequired
 };
+
+// Memoize to prevent re-renders - important for stats-heavy dashboard
+export const SoloStatsView = memo(SoloStatsViewComponent);
+export default SoloStatsView;

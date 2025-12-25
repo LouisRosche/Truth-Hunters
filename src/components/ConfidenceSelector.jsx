@@ -46,27 +46,30 @@ export const ConfidenceSelector = memo(function ConfidenceSelector({ value, onCh
           disabled={disabled}
           className="confidence-option"
           style={{
-            flex: '1 1 auto',
-            minWidth: '140px',
-            minHeight: '5rem',
-            padding: '1.25rem 1rem',
-            background: value === level.value ? `${level.color}20` : 'var(--bg-elevated)',
-            border: `2px solid ${value === level.value ? level.color : 'var(--border)'}`,
-            borderRadius: '10px',
+            flex: '1 1 0',
+            minWidth: '150px',
+            minHeight: '6rem',
+            padding: '1rem',
+            background: value === level.value ? `${level.color}25` : 'var(--bg-elevated)',
+            border: `3px solid ${value === level.value ? level.color : 'var(--border)'}`,
+            borderRadius: '12px',
             cursor: disabled ? 'not-allowed' : 'pointer',
             opacity: disabled ? 0.5 : 1,
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
+            transform: value === level.value ? 'scale(1.02)' : 'scale(1)',
+            boxShadow: value === level.value ? `0 4px 12px ${level.color}30` : 'none'
           }}
         >
           {/* Confidence level indicator with text label for accessibility */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <div
               className="mono"
               aria-hidden="true"
               style={{
-                fontSize: '1.75rem',
+                fontSize: '2rem',
                 fontWeight: 700,
-                color: level.color
+                color: level.color,
+                lineHeight: 1
               }}
             >
               {'●'.repeat(level.value)}
@@ -75,8 +78,8 @@ export const ConfidenceSelector = memo(function ConfidenceSelector({ value, onCh
             <span
               className="mono"
               style={{
-                fontSize: '0.625rem',
-                padding: '0.125rem 0.375rem',
+                fontSize: '0.6875rem',
+                padding: '0.25rem 0.5rem',
                 background: value === level.value ? level.color : 'var(--bg-card)',
                 color: value === level.value ? 'var(--bg-deep)' : 'var(--text-muted)',
                 borderRadius: '4px',
@@ -89,10 +92,10 @@ export const ConfidenceSelector = memo(function ConfidenceSelector({ value, onCh
           </div>
           <div
             style={{
-              fontSize: '1rem',
+              fontSize: '1.0625rem',
               fontWeight: 600,
               color: 'var(--text-primary)',
-              marginBottom: '0.25rem'
+              marginBottom: '0.375rem'
             }}
           >
             {level.label}
@@ -100,8 +103,9 @@ export const ConfidenceSelector = memo(function ConfidenceSelector({ value, onCh
           <div
             className="mono"
             style={{
-              fontSize: '0.875rem',
-              color: 'var(--text-muted)'
+              fontSize: '0.9375rem',
+              color: 'var(--text-secondary)',
+              fontWeight: 500
             }}
           >
             {level.risk}

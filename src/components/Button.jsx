@@ -39,24 +39,27 @@ export const Button = memo(function Button({
     primary: {
       background: 'var(--accent-cyan)',
       color: 'var(--bg-deep)',
-      border: 'none'
+      border: 'none',
+      boxShadow: '0 2px 8px rgba(34, 211, 238, 0.3)'
     },
     secondary: {
       background: 'transparent',
       color: 'var(--accent-cyan)',
-      border: '2px solid var(--accent-cyan)'
+      border: '2px solid var(--accent-cyan)',
+      boxShadow: 'none'
     },
     danger: {
       background: 'var(--accent-rose)',
       color: 'white',
-      border: 'none'
+      border: 'none',
+      boxShadow: '0 2px 8px rgba(251, 113, 133, 0.3)'
     }
   };
 
   const sizes = {
-    sm: { padding: '0.625rem 1rem', fontSize: '0.875rem', minHeight: '44px' },
-    md: { padding: '0.875rem 1.5rem', fontSize: '1rem', minHeight: '44px' },
-    lg: { padding: '1rem 2rem', fontSize: '1.125rem', minHeight: '48px' }
+    sm: { padding: '0.625rem 1rem', fontSize: '0.9375rem', minHeight: '44px' },
+    md: { padding: '0.875rem 1.5rem', fontSize: '1.0625rem', minHeight: '48px' },
+    lg: { padding: '1rem 2rem', fontSize: '1.1875rem', minHeight: '52px' }
   };
 
   return (
@@ -65,17 +68,45 @@ export const Button = memo(function Button({
       disabled={disabled}
       aria-label={ariaLabel}
       aria-disabled={disabled}
-      className="mono"
+      className="mono btn-interactive"
       style={{
         ...variants[variant],
         ...sizes[size],
         width: fullWidth ? '100%' : 'auto',
-        borderRadius: '8px',
-        fontWeight: 600,
+        borderRadius: '10px',
+        fontWeight: 700,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
         transition: 'all 0.2s ease',
-        letterSpacing: '0.025em'
+        letterSpacing: '0.025em',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = variant === 'primary'
+            ? '0 4px 12px rgba(34, 211, 238, 0.4)'
+            : variant === 'danger'
+            ? '0 4px 12px rgba(251, 113, 133, 0.4)'
+            : '0 2px 8px rgba(34, 211, 238, 0.2)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = variants[variant].boxShadow || 'none';
+        }
+      }}
+      onMouseDown={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.transform = 'translateY(0) scale(0.98)';
+        }
+      }}
+      onMouseUp={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.transform = 'translateY(-2px) scale(1)';
+        }
       }}
     >
       {children}

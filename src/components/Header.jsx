@@ -91,7 +91,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <span style={{ fontSize: '1.5rem' }}>🔍</span>
+          <span aria-hidden="true" style={{ fontSize: '1.5rem' }}>🔍</span>
           <h1
             className="mono"
             style={{
@@ -108,6 +108,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
           <span
             role="status"
             aria-live="polite"
+            aria-label="Offline mode"
             className="mono"
             style={{
               fontSize: '0.625rem',
@@ -118,7 +119,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
               color: 'var(--accent-amber)'
             }}
           >
-            📡 OFFLINE
+            <span aria-hidden="true">📡</span> OFFLINE
           </span>
         )}
       </div>
@@ -128,6 +129,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
         {onShowHelp && (
           <button
             onClick={onShowHelp}
+            aria-label="Game rules and help"
             title="Game rules & help"
             className="mono"
             style={{
@@ -145,7 +147,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
               minHeight: '36px'
             }}
           >
-            <span style={{ fontSize: '1rem' }}>❓</span>
+            <span aria-hidden="true" style={{ fontSize: '1rem' }}>❓</span>
           </button>
         )}
 
@@ -154,6 +156,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
           <button
             onClick={onToggleAnalytics}
             aria-pressed={analyticsEnabled}
+            aria-label={analyticsEnabled ? 'Disable analytics' : 'Enable analytics'}
             title={analyticsEnabled ? 'Disable analytics (local tracking for insights)' : 'Enable analytics (local tracking for insights)'}
             className="mono"
             style={{
@@ -171,7 +174,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
               minHeight: '36px'
             }}
           >
-            <span style={{ fontSize: '1rem' }}>{analyticsEnabled ? '📊' : '🚫'}</span>
+            <span aria-hidden="true" style={{ fontSize: '1rem' }}>{analyticsEnabled ? '📊' : '🚫'}</span>
           </button>
         )}
 
@@ -180,6 +183,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
           <button
             onClick={onToggleSound}
             aria-pressed={soundEnabled}
+            aria-label={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
             title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
             className="mono"
             style={{
@@ -197,7 +201,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
               minHeight: '36px'
             }}
           >
-            <span style={{ fontSize: '1rem' }}>{soundEnabled ? '🔊' : '🔇'}</span>
+            <span aria-hidden="true" style={{ fontSize: '1rem' }}>{soundEnabled ? '🔊' : '🔇'}</span>
           </button>
         )}
 
@@ -206,6 +210,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
           <button
             onClick={onTogglePause}
             aria-pressed={isPaused}
+            aria-label={isPaused ? 'Resume game' : 'Pause game'}
             title={isPaused ? 'Resume game' : 'Pause game'}
             className="mono"
             style={{
@@ -223,7 +228,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
               minHeight: '36px'
             }}
           >
-            <span style={{ fontSize: '1rem' }}>{isPaused ? '▶️' : '⏸️'}</span>
+            <span aria-hidden="true" style={{ fontSize: '1rem' }}>{isPaused ? '▶️' : '⏸️'}</span>
           </button>
         )}
 
@@ -231,6 +236,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
         {phase === 'playing' && onExitGame && (
           <button
             onClick={() => setShowExitModal(true)}
+            aria-label="Exit game"
             title="Exit game"
             className="mono"
             style={{
@@ -248,7 +254,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
               minHeight: '36px'
             }}
           >
-            <span style={{ fontSize: '1rem' }}>✕</span>
+            <span aria-hidden="true" style={{ fontSize: '1rem' }}>✕</span>
             <span>Exit</span>
           </button>
         )}
@@ -257,6 +263,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
         <button
           onClick={onTogglePresentationMode}
           aria-pressed={presentationMode}
+          aria-label={presentationMode ? 'Switch to normal view' : 'Switch to presentation mode'}
           title={presentationMode ? 'Switch to normal view' : 'Switch to large text for group viewing (4 scholars, 1 screen)'}
           className="mono"
           style={{
@@ -274,7 +281,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
             minHeight: '36px'
           }}
         >
-          <span style={{ fontSize: '1rem' }}>{presentationMode ? '📺' : '👓'}</span>
+          <span aria-hidden="true" style={{ fontSize: '1rem' }}>{presentationMode ? '📺' : '👓'}</span>
           <span>{presentationMode ? 'Large' : 'Group'}</span>
         </button>
 

@@ -64,3 +64,46 @@ export function preventDoubleClick(fn, delay = 500) {
     }
   };
 }
+
+/**
+ * Format a timestamp as a relative time string (e.g., "2h ago", "Yesterday")
+ * @param {number} timestamp - Unix timestamp in milliseconds
+ * @returns {string} Formatted time string
+ */
+export function formatTimeAgo(timestamp) {
+  if (!timestamp) return 'Never';
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
+
+/**
+ * Get rank display for leaderboard (emoji for top 3, number otherwise)
+ * @param {number} index - Zero-based index
+ * @returns {string} Rank display (e.g., "🥇", "🥈", "#4")
+ */
+export function getRankDisplay(index) {
+  if (index === 0) return '🥇';
+  if (index === 1) return '🥈';
+  if (index === 2) return '🥉';
+  return `#${index + 1}`;
+}
+
+/**
+ * Get rank color for leaderboard display
+ * @param {number} index - Zero-based index
+ * @returns {string} CSS color value
+ */
+export function getRankColor(index) {
+  if (index === 0) return '#ffd700'; // Gold
+  if (index === 1) return '#c0c0c0'; // Silver
+  if (index === 2) return '#cd7f32'; // Bronze
+  return 'var(--text-muted)';
+}

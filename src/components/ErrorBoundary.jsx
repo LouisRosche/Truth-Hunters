@@ -23,9 +23,12 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error details for debugging
-    console.error('Truth Hunters Error:', error);
-    console.error('Component stack:', errorInfo?.componentStack);
+    // Log error details for debugging (development only)
+    // eslint-disable-next-line no-undef
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Truth Hunters Error:', error);
+      console.error('Component stack:', errorInfo?.componentStack);
+    }
 
     this.setState((prevState) => ({
       errorInfo,
@@ -51,7 +54,10 @@ export class ErrorBoundary extends React.Component {
       try {
         this.props.onError(error, errorInfo);
       } catch (callbackError) {
-        console.error('Error in onError callback:', callbackError);
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error in onError callback:', callbackError);
+        }
       }
     }
   }

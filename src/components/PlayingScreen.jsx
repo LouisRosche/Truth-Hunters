@@ -364,7 +364,7 @@ export function PlayingScreen({
     integrity.reset(); // Reset anti-cheat tracking
   }, [claim, resultData, reasoning, onSubmit, integrity]);
 
-  const handleHintRequest = (hintType) => {
+  const handleHintRequest = useCallback((hintType) => {
     const hint = HINT_TYPES.find((h) => h.id === hintType);
     if (!hint || usedHints.includes(hintType)) return;
 
@@ -374,7 +374,7 @@ export function PlayingScreen({
     setHintCostTotal(prev => prev + hint.cost);
     onUseHint(hint.cost, hintType);
     SoundManager.play('tick');
-  };
+  }, [claim, usedHints, onUseHint]);
 
   // Check if this is the last round (rounds are 1-indexed: 1, 2, 3)
   const isLastRound = round >= totalRounds;

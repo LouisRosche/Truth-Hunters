@@ -10,6 +10,7 @@ import { FirebaseBackend } from '../services/firebase';
 import { OfflineQueue } from '../services/offlineQueue';
 import { PlayerProfile } from '../services/playerProfile';
 import { SUBJECT_HINTS } from '../data/constants';
+import { sanitizeUserContent } from '../utils/sanitize';
 
 const SUBJECTS = Object.keys(SUBJECT_HINTS);
 
@@ -228,7 +229,7 @@ export function ClaimSubmissionForm({ onClose, onSubmitSuccess }) {
         {playerInfo && (
           <div className="submitter-info">
             <span className="avatar">{playerInfo.avatar}</span>
-            <span className="name">{playerInfo.name}</span>
+            <span className="name">{sanitizeUserContent(playerInfo.name, 50)}</span>
           </div>
         )}
       </div>

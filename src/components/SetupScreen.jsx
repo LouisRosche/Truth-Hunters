@@ -16,6 +16,7 @@ import { getSubjects } from '../data/subjects';
 import { SoundManager } from '../services/sound';
 import { PlayerProfile } from '../services/playerProfile';
 import { validateName, isContentAppropriate, sanitizeInput } from '../utils/moderation';
+import { sanitizeUserContent } from '../utils/sanitize';
 import { getRandomItem, getUnseenClaimStats } from '../utils/helpers';
 import { preloadClaims } from '../data/claimsLoader';
 
@@ -323,7 +324,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
           }}
         >
           <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            Welcome back, <strong style={{ color: 'var(--accent-cyan)' }}>{quickStartSettings.playerName || 'Hunter'}</strong>!
+            Welcome back, <strong style={{ color: 'var(--accent-cyan)' }}>{sanitizeUserContent(quickStartSettings.playerName || 'Hunter', 50)}</strong>!
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Button onClick={handleQuickSoloStart} size="sm" disabled={isLoading}>

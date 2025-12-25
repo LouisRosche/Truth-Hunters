@@ -3,10 +3,12 @@
  * Compact, information-dense vertical list with auto-refresh
  */
 
+import { memo } from 'react';
 import PropTypes from 'prop-types';
 import { useTeamLeaderboard } from '../hooks/useLeaderboard';
+import { sanitizeUserContent } from '../utils/sanitize';
 
-export function ScrollingLeaderboard({ onViewFull }) {
+function ScrollingLeaderboardComponent({ onViewFull }) {
   // Use unified hook with auto-refresh enabled
   const { teams, isLoading, error } = useTeamLeaderboard({
     limit: 15,
@@ -155,7 +157,7 @@ export function ScrollingLeaderboard({ onViewFull }) {
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                {entry.teamName}
+                {sanitizeUserContent(entry.teamName || '', 50)}
               </div>
               <div className="mono" style={{
                 fontSize: '0.5625rem',
@@ -247,9 +249,13 @@ export function ScrollingLeaderboard({ onViewFull }) {
   );
 }
 
-ScrollingLeaderboard.propTypes = {
+ScrollingLeaderboardComponent.propTypes = {
   onViewFull: PropTypes.func
 };
+
+// Memoize to prevent re-renders with auto-refresh enabled
+export const ScrollingLeaderboard = memo(ScrollingLeaderboardComponent);
+export default ScrollingLeaderboard;
 
 ScrollingLeaderboard.defaultProps = {
   onViewFull: null

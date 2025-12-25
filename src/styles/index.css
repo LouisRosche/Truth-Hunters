@@ -378,14 +378,29 @@ body {
    ACCESSIBILITY
    ============================================================ */
 
-/* Focus styles for accessibility */
+/* Focus styles for accessibility - Enhanced for WCAG AA */
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
+select:focus-visible,
 [role="button"]:focus-visible,
-[tabindex]:focus-visible {
+[role="radio"]:focus-visible,
+[role="checkbox"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible,
+a:focus-visible {
   outline: 3px solid var(--accent-cyan);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+  transition: outline-offset 0.1s ease;
+}
+
+/* Enhanced focus for interactive game elements */
+.verdict-option:focus-visible,
+.confidence-option:focus-visible {
+  outline: 4px solid var(--accent-cyan);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(34, 211, 238, 0.3);
 }
 
 /* High contrast mode support */

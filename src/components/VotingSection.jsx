@@ -3,6 +3,7 @@
  * Main voting interface with verdict, confidence, reasoning, and hints
  */
 
+import { memo } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { VerdictSelector } from './VerdictSelector';
@@ -13,7 +14,7 @@ import { HINT_TYPES } from '../data/constants';
  * Voting section component for claim evaluation
  * @param {Object} props - Component props
  */
-export function VotingSection({
+function VotingSectionComponent({
   verdict,
   onVerdictChange,
   confidence,
@@ -30,58 +31,58 @@ export function VotingSection({
 }) {
   return (
     <div className="animate-in" style={{ marginTop: '0.75rem' }}>
-      {/* Verdict & Confidence side-by-side to save vertical space */}
-      <div className="voting-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-        {/* Verdict Selection */}
-        <div
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            padding: '0.75rem'
-          }}
-        >
-          <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
-            VERDICT
-          </h3>
-          <VerdictSelector value={verdict} onChange={onVerdictChange} />
-        </div>
+      {/* Verdict Selection */}
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '0.75rem'
+        }}
+      >
+        <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)', marginBottom: '0.75rem' }}>
+          1. WHAT&apos;S YOUR VERDICT?
+        </h3>
+        <VerdictSelector value={verdict} onChange={onVerdictChange} />
+      </div>
 
-        {/* Confidence Selection with Risk Preview */}
+      {/* Confidence Selection with Risk Preview */}
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '0.75rem'
+        }}
+      >
+        <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)', marginBottom: '0.75rem' }}>
+          2. HOW CONFIDENT ARE YOU?
+        </h3>
+        <ConfidenceSelector value={confidence} onChange={onConfidenceChange} aria-describedby="confidence-preview" />
+        {/* Risk Preview */}
         <div
+          id="confidence-preview"
+          className="mono"
+          role="status"
+          aria-live="polite"
           style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            padding: '0.75rem'
+            marginTop: '0.75rem',
+            padding: '0.625rem 0.75rem',
+            background: 'rgba(167, 139, 250, 0.15)',
+            border: '1px solid rgba(167, 139, 250, 0.3)',
+            borderRadius: '6px',
+            fontSize: '0.875rem',
+            textAlign: 'center',
+            color: 'var(--text-secondary)'
           }}
         >
-          <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
-            CONFIDENCE
-          </h3>
-          <ConfidenceSelector value={confidence} onChange={onConfidenceChange} aria-describedby="confidence-preview" />
-          {/* Risk Preview */}
-          <div
-            id="confidence-preview"
-            className="mono"
-            role="status"
-            aria-live="polite"
-            style={{
-              marginTop: '0.5rem',
-              padding: '0.375rem 0.5rem',
-              background: 'rgba(167, 139, 250, 0.1)',
-              borderRadius: '4px',
-              fontSize: '0.625rem',
-              textAlign: 'center',
-              color: 'var(--text-muted)'
-            }}
-          >
-            If right: <span style={{ color: 'var(--correct)', fontWeight: 600 }}>+{confidencePreview.ifCorrect}</span>
-            {' | '}
-            If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 600 }}>{confidencePreview.ifWrong}</span>
-            <br />
-            <span style={{ fontSize: '0.5625rem', color: 'var(--text-muted)' }}>+ speed bonus (up to 2.0x)</span>
-          </div>
+          If right: <span style={{ color: 'var(--correct)', fontWeight: 700, fontSize: '1rem' }}>+{confidencePreview.ifCorrect}</span>
+          {' | '}
+          If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 700, fontSize: '1rem' }}>{confidencePreview.ifWrong}</span>
+          <br />
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'inline-block' }}>+ speed bonus (up to 2.0x)</span>
         </div>
       </div>
 
@@ -91,33 +92,34 @@ export function VotingSection({
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '0.5rem'
+          padding: '1rem',
+          marginBottom: '0.75rem'
         }}
       >
         <label
           className="mono"
-          style={{ display: 'block', fontSize: '0.625rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}
+          style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}
         >
-          WHY? (optional)
+          3. WHY? (optional - helps you learn!)
         </label>
         <textarea
           value={reasoning}
           onChange={(e) => onReasoningChange(e.target.value)}
-          placeholder="What made you choose this?"
+          placeholder="What clues did you notice? What made you choose this answer?"
           rows={2}
           maxLength={500}
           aria-label="Explain your reasoning"
           style={{
             width: '100%',
-            padding: '0.5rem',
+            padding: '0.75rem',
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
             borderRadius: '6px',
             color: 'var(--text-primary)',
-            fontSize: '0.8125rem',
+            fontSize: '0.9375rem',
             fontFamily: 'var(--font-serif)',
-            resize: 'none'
+            resize: 'none',
+            lineHeight: 1.5
           }}
         />
       </div>
@@ -128,33 +130,34 @@ export function VotingSection({
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '8px',
-          padding: '0.75rem',
+          padding: '1rem',
           marginBottom: '0.75rem'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <h3
             className="mono"
-            style={{ fontSize: '0.75rem', color: 'var(--accent-violet)', margin: 0 }}
+            style={{ fontSize: '0.875rem', color: 'var(--accent-violet)', margin: 0 }}
           >
-            💡 HINTS
+            💡 NEED HELP?
           </h3>
           {hintCostTotal > 0 && (
             <span
               className="mono"
               style={{
-                fontSize: '0.625rem',
+                fontSize: '0.75rem',
                 color: 'var(--incorrect)',
-                padding: '0.125rem 0.375rem',
-                background: 'rgba(239, 68, 68, 0.1)',
-                borderRadius: '3px'
+                padding: '0.25rem 0.5rem',
+                background: 'rgba(239, 68, 68, 0.15)',
+                borderRadius: '4px',
+                fontWeight: 600
               }}
             >
               -{hintCostTotal} pts
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {HINT_TYPES.map((hint) => {
             const isUsed = usedHints.includes(hint.id);
             return (
@@ -164,15 +167,18 @@ export function VotingSection({
                 disabled={isUsed}
                 className="mono"
                 style={{
-                  padding: '0.375rem 0.5rem',
+                  padding: '0.5rem 0.75rem',
+                  minHeight: '44px',
                   background: isUsed ? 'var(--accent-violet)' : 'var(--bg-elevated)',
                   color: isUsed ? 'white' : 'var(--text-secondary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px',
-                  fontSize: '0.6875rem',
+                  border: '2px solid ' + (isUsed ? 'var(--accent-violet)' : 'var(--border)'),
+                  borderRadius: '6px',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
                   cursor: isUsed ? 'default' : 'pointer',
                   opacity: isUsed ? 0.7 : 1,
-                  textDecoration: isUsed ? 'line-through' : 'none'
+                  textDecoration: isUsed ? 'line-through' : 'none',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 {hint.icon} {hint.name} (-{hint.cost})
@@ -189,7 +195,7 @@ export function VotingSection({
   );
 }
 
-VotingSection.propTypes = {
+VotingSectionComponent.propTypes = {
   verdict: PropTypes.oneOf(['TRUE', 'FALSE', 'MIXED']),
   onVerdictChange: PropTypes.func.isRequired,
   confidence: PropTypes.oneOf([1, 2, 3]).isRequired,
@@ -211,9 +217,13 @@ VotingSection.propTypes = {
   disabled: PropTypes.bool
 };
 
-VotingSection.defaultProps = {
+VotingSectionComponent.defaultProps = {
   verdict: null,
   reasoning: '',
   teamAvatar: null,
   disabled: false
 };
+
+// Memoize to prevent re-renders during gameplay - critical for Chromebook performance
+export const VotingSection = memo(VotingSectionComponent);
+export default VotingSection;

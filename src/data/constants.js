@@ -295,6 +295,43 @@ export const REFLECTION_PROMPTS = [
 ];
 
 /**
+ * UI Z-Index Layers
+ * Ensures proper stacking of UI elements
+ */
+export const Z_INDEX = {
+  HEADER: 100,
+  MODAL: 1000,
+  TOAST: 9999,
+  TUTORIAL: 10000
+};
+
+/**
+ * Component Limits
+ * Maximum values for various game components
+ */
+export const LIMITS = {
+  MAX_PLAYERS: 6,
+  TEAM_NAME_MAX_LENGTH: 25,
+  PLAYER_NAME_MAX_LENGTH: 15,
+  REASONING_MAX_LENGTH: 500,
+  LEADERBOARD_SCROLLING_LIMIT: 15,
+  LEADERBOARD_VIEW_LIMIT: 20,
+  ERROR_LOG_RETENTION: 10
+};
+
+/**
+ * Threshold Values
+ * Key thresholds used across the app
+ */
+export const THRESHOLDS = {
+  CALIBRATION_BONUS_RANGE: 2,      // Points within predicted score to earn bonus
+  CALIBRATION_BONUS_POINTS: 3,     // Bonus points for good calibration
+  STREAK_DISPLAY_MINIMUM: 2,       // Min streak to show streak indicator
+  STREAK_LEGENDARY: 5,              // Streak count for legendary status
+  ERROR_RETRY_MAX: 2                // Max component error retries before giving up
+};
+
+/**
  * Subject-specific hints
  */
 export const SUBJECT_HINTS = {

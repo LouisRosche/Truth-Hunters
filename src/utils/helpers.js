@@ -8,7 +8,7 @@
  */
 
 // Generic utilities
-export { shuffleArray, getRandomItem, debounce, preventDoubleClick } from './generic';
+export { shuffleArray, getRandomItem, debounce, preventDoubleClick, formatTimeAgo, getRankDisplay, getRankColor } from './generic';
 
 // Game-specific utilities
 export { selectClaimsByDifficulty, formatPlayerName, getHintContent, getUnseenClaimStats } from './game';

@@ -9,42 +9,31 @@ import PropTypes from 'prop-types';
 function ClaimCardComponent({ claim, showAnswer = false }) {
   return (
     <>
-      {/* Chromebook compact CSS */}
+      {/* Student-friendly responsive CSS */}
       <style>{`
         @media (max-width: 1366px) and (max-height: 768px) {
-          .claim-card-compact {
-            padding: 0.5rem !important;
-            margin-bottom: 0.375rem !important;
-            max-height: 180px;
-            overflow-y: auto;
-          }
-
           .claim-card-compact .claim-text {
-            font-size: 0.875rem !important;
-            line-height: 1.4 !important;
+            font-size: 1rem !important;
+            line-height: 1.5 !important;
           }
 
           .claim-card-compact .mono {
-            font-size: 0.5625rem !important;
-            padding: 0.125rem 0.25rem !important;
-          }
-
-          .claim-card-compact [style*="explanation"] {
-            font-size: 0.75rem !important;
-            padding: 0.375rem !important;
+            font-size: 0.6875rem !important;
+            padding: 0.25rem 0.375rem !important;
           }
         }
       `}</style>
 
-      <div
+      <article
         className="animate-in claim-card-compact"
+        aria-label="Claim to evaluate"
         style={{
           background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '1rem',
+          border: '2px solid var(--border)',
+          borderRadius: '12px',
+          padding: '1.25rem',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'visible'
         }}
       >
       {/* Top accent bar */}
@@ -108,10 +97,10 @@ function ClaimCardComponent({ claim, showAnswer = false }) {
             }}
           >
             {claim.source === 'student-contributed'
-              ? `✨ By ${claim.contributor || 'Classmate'}`
+              ? <><span aria-hidden="true">✨</span> By {claim.contributor || 'Classmate'}</>
               : claim.source === 'ai-generated'
-              ? '🤖 AI-Generated'
-              : '📚 Expert-Sourced'}
+              ? <><span aria-hidden="true">🤖</span> AI-Generated</>
+              : <><span aria-hidden="true">📚</span> Expert-Sourced</>}
           </span>
         )}
       </div>
@@ -120,13 +109,14 @@ function ClaimCardComponent({ claim, showAnswer = false }) {
       <blockquote
         className="claim-text"
         style={{
-          fontSize: '1.0625rem',
-          lineHeight: 1.6,
+          fontSize: '1.125rem',
+          lineHeight: 1.7,
           color: 'var(--text-primary)',
           fontStyle: 'italic',
-          borderLeft: '3px solid var(--accent-cyan)',
-          paddingLeft: '0.875rem',
-          margin: '0.75rem 0'
+          borderLeft: '4px solid var(--accent-cyan)',
+          paddingLeft: '1rem',
+          margin: '1rem 0',
+          fontWeight: 500
         }}
       >
         &ldquo;{claim.text}&rdquo;
@@ -134,28 +124,33 @@ function ClaimCardComponent({ claim, showAnswer = false }) {
 
       {/* Answer reveal section */}
       {showAnswer && (
-        <div className="animate-in" style={{ marginTop: '0.75rem' }}>
+        <div className="animate-in" style={{ marginTop: '1rem' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.5rem'
+              gap: '0.625rem',
+              marginBottom: '0.75rem'
             }}
           >
             <span
               className="mono"
               style={{
-                fontSize: '0.8125rem',
+                fontSize: '1rem',
                 fontWeight: 700,
-                padding: '0.3125rem 0.625rem',
-                borderRadius: '4px',
+                padding: '0.5rem 0.875rem',
+                borderRadius: '6px',
                 background:
                   claim.answer === 'TRUE'
-                    ? 'rgba(16, 185, 129, 0.2)'
+                    ? 'rgba(16, 185, 129, 0.25)'
                     : claim.answer === 'FALSE'
-                    ? 'rgba(239, 68, 68, 0.2)'
-                    : 'rgba(251, 191, 36, 0.2)',
+                    ? 'rgba(239, 68, 68, 0.25)'
+                    : 'rgba(251, 191, 36, 0.25)',
+                border: `2px solid ${claim.answer === 'TRUE'
+                  ? 'var(--correct)'
+                  : claim.answer === 'FALSE'
+                  ? 'var(--incorrect)'
+                  : 'var(--accent-amber)'}`,
                 color:
                   claim.answer === 'TRUE'
                     ? 'var(--correct)'
@@ -170,26 +165,35 @@ function ClaimCardComponent({ claim, showAnswer = false }) {
               <span
                 className="mono"
                 style={{
-                  fontSize: '0.6875rem',
-                  color: 'var(--accent-rose)'
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-rose)',
+                  fontWeight: 600
                 }}
               >
-                Error: {claim.errorPattern}
+                <span aria-hidden="true">🤖</span> Error: {claim.errorPattern}
               </span>
             )}
           </div>
           <p
             style={{
-              color: 'var(--text-secondary)',
-              fontSize: '0.875rem',
-              lineHeight: 1.5
+              color: 'var(--text-primary)',
+              fontSize: '1rem',
+              lineHeight: 1.6,
+              padding: '0.75rem',
+              background: 'var(--bg-elevated)',
+              borderRadius: '8px',
+              borderLeft: `3px solid ${claim.answer === 'TRUE'
+                ? 'var(--correct)'
+                : claim.answer === 'FALSE'
+                ? 'var(--incorrect)'
+                : 'var(--accent-amber)'}`
             }}
           >
             {claim.explanation}
           </p>
         </div>
       )}
-    </div>
+    </article>
     </>
   );
 }

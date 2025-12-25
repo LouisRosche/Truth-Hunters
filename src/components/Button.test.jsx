@@ -133,8 +133,8 @@ describe('Button', () => {
       const button = screen.getByRole('button');
       expect(button).toHaveStyle({
         padding: '0.875rem 1.5rem',
-        fontSize: '1rem',
-        minHeight: '44px'
+        fontSize: '1.0625rem',
+        minHeight: '48px'
       });
     });
 
@@ -143,7 +143,7 @@ describe('Button', () => {
       const button = screen.getByRole('button');
       expect(button).toHaveStyle({
         padding: '0.625rem 1rem',
-        fontSize: '0.875rem',
+        fontSize: '0.9375rem',
         minHeight: '44px'
       });
     });
@@ -153,8 +153,8 @@ describe('Button', () => {
       const button = screen.getByRole('button');
       expect(button).toHaveStyle({
         padding: '1rem 2rem',
-        fontSize: '1.125rem',
-        minHeight: '48px'
+        fontSize: '1.1875rem',
+        minHeight: '52px'
       });
     });
   });
@@ -230,16 +230,16 @@ describe('Button', () => {
       expect(button).toHaveStyle({ minHeight: '44px' });
     });
 
-    it('meets minimum 44px touch target for medium size', () => {
+    it('exceeds minimum 48px touch target for medium size', () => {
       render(<Button size="md">Medium</Button>);
       const button = screen.getByRole('button');
-      expect(button).toHaveStyle({ minHeight: '44px' });
+      expect(button).toHaveStyle({ minHeight: '48px' });
     });
 
-    it('exceeds minimum touch target for large size', () => {
+    it('exceeds minimum with 52px touch target for large size', () => {
       render(<Button size="lg">Large</Button>);
       const button = screen.getByRole('button');
-      expect(button).toHaveStyle({ minHeight: '48px' });
+      expect(button).toHaveStyle({ minHeight: '52px' });
     });
   });
 });

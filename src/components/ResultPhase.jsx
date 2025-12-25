@@ -3,6 +3,7 @@
  * Displays result after verdict submission with feedback and stats
  */
 
+import { memo } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { ENCOURAGEMENTS } from '../data/constants';
@@ -11,7 +12,7 @@ import { ENCOURAGEMENTS } from '../data/constants';
  * Result phase component showing outcome and feedback
  * @param {Object} props - Component props
  */
-export function ResultPhase({
+function ResultPhaseComponent({
   resultData,
   currentStreak,
   encouragement,
@@ -172,7 +173,7 @@ export function ResultPhase({
   );
 }
 
-ResultPhase.propTypes = {
+ResultPhaseComponent.propTypes = {
   resultData: PropTypes.shape({
     correct: PropTypes.bool.isRequired,
     points: PropTypes.number.isRequired,
@@ -196,10 +197,14 @@ ResultPhase.propTypes = {
   onNext: PropTypes.func.isRequired
 };
 
-ResultPhase.defaultProps = {
+ResultPhaseComponent.defaultProps = {
   resultData: null,
   currentStreak: 0,
   encouragement: '',
   calibrationTip: null,
   integrityPenalty: 0
 };
+
+// Memoize to prevent re-renders - improves Chromebook performance during gameplay
+export const ResultPhase = memo(ResultPhaseComponent);
+export default ResultPhase;

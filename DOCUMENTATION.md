@@ -9,7 +9,6 @@
 ### Getting Started
 - **[README.md](README.md)** - Main project overview, installation, and quick start
 - **[docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)** - Setting up Firebase for class-wide leaderboards (IT admin guide)
-- **[docs/VIDEO_WALKTHROUGH_SCRIPT.md](docs/VIDEO_WALKTHROUGH_SCRIPT.md)** - Step-by-step walkthrough script
 
 ### Using the Game
 - **[README.md#gameplay](README.md#gameplay)** - How to play
@@ -33,19 +32,16 @@
 
 ---
 
-## 🔍 For Auditors & Evaluators
+## 🔒 Security & Configuration
 
-### Repository Audit Framework
-A universal, context-aware framework for evaluating any GitHub repository:
+### Security Documentation
+- **[docs/security/README.md](docs/security/README.md)** - Comprehensive security documentation and architecture
+- **[docs/security/SECURITY_SUMMARY.md](docs/security/SECURITY_SUMMARY.md)** - Security status and features
+- **[docs/security/ENVIRONMENT_VARIABLES.md](docs/security/ENVIRONMENT_VARIABLES.md)** - Security and configuration setup
+- **[SECURITY.md](SECURITY.md)** - Security vulnerability disclosure policy
 
-- **[docs/audit/AUDIT_FRAMEWORK.md](docs/audit/AUDIT_FRAMEWORK.md)** - Core framework (evaluation criteria, domain-specific standards)
-- **[docs/audit/AUDIT_TEMPLATE.md](docs/audit/AUDIT_TEMPLATE.md)** - Template for conducting an audit
-- **[docs/AUDIT_FRAMEWORK_GUIDE.md](docs/AUDIT_FRAMEWORK_GUIDE.md)** - Comprehensive usage guide
-- **[docs/audit/audit-tools/README.md](docs/audit/audit-tools/README.md)** - Automation scripts for audits
-
-### This Repository's Audit
-- **[docs/audit/AUDIT_REPORT.md](docs/audit/AUDIT_REPORT.md)** - Complete audit of Truth Hunters repository
-- **[docs/audit/AUDIT_IMPLEMENTATION_STATUS.md](docs/audit/AUDIT_IMPLEMENTATION_STATUS.md)** - Implementation status of audit recommendations
+### Configuration Reference
+- **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** - All configuration files explained (Firebase, build, deployment)
 
 ---
 
@@ -70,11 +66,10 @@ A universal, context-aware framework for evaluating any GitHub repository:
 |------|----------|
 | Install and run the game | [README.md](README.md) |
 | Contribute code or claims | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Set up Firebase | [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) |
+| Set up Firebase for your school | [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) |
 | Add translations | [docs/I18N_GUIDE.md](docs/I18N_GUIDE.md) |
-| Audit a repository | [docs/audit/AUDIT_FRAMEWORK.md](docs/audit/AUDIT_FRAMEWORK.md) |
-| Use audit tools | [docs/audit/audit-tools/README.md](docs/audit/audit-tools/README.md) |
-| See our audit results | [docs/audit/AUDIT_REPORT.md](docs/audit/AUDIT_REPORT.md) |
+| Understand security features | [docs/security/README.md](docs/security/README.md) |
+| Configure environment variables | [docs/security/ENVIRONMENT_VARIABLES.md](docs/security/ENVIRONMENT_VARIABLES.md) |
 
 ---
 
@@ -91,6 +86,16 @@ All documentation in this repository follows these principles:
 ---
 
 ## 📝 Documentation Changelog
+
+**December 25, 2024**
+- **CLEANUP**: Removed unnecessary meta-documentation and planning artifacts:
+  - Deleted `docs/SECURITY_IMPLEMENTATION_PLAN.md` (planning artifact)
+  - Deleted `docs/VIDEO_WALKTHROUGH_SCRIPT.md` (marketing material)
+  - Deleted `docs/AUDIT_FRAMEWORK_GUIDE.md` (meta-documentation)
+  - Deleted entire `docs/audit/` directory (audit framework not core to project)
+  - Deleted `docs/security/IMPLEMENTATION_CHECKLIST.md` (status document)
+- **REFOCUSED**: Documentation now organized by primary users (teachers, students, contributors)
+- **KEPT**: Core user-facing documentation: Firebase setup, i18n guide, configuration, security guides
 
 **December 20, 2024**
 - Added missing LICENSE file (MIT)

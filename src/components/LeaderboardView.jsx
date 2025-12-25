@@ -3,12 +3,13 @@
  * Compact, information-dense leaderboard with responsive layout
  */
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import PropTypes from 'prop-types';
 import { useTeamLeaderboard, usePlayerLeaderboard } from '../hooks/useLeaderboard';
 import { formatPlayerName } from '../utils/helpers';
+import { sanitizeUserContent } from '../utils/sanitize';
 
-export function LeaderboardView({ onBack }) {
+function LeaderboardViewComponent({ onBack }) {
   const [leaderboardTab, setLeaderboardTab] = useState('teams');
 
   // Use unified hooks for consistent data fetching
@@ -195,7 +196,7 @@ export function LeaderboardView({ onBack }) {
                       <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.teamAvatar || '🔍'}</span>
                     )}
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {leaderboardTab === 'teams' ? item.teamName : item.displayName}
+                      {leaderboardTab === 'teams' ? sanitizeUserContent(item.teamName || '', 50) : sanitizeUserContent(item.displayName || '', 50)}
                     </span>
                   </div>
 
@@ -246,7 +247,10 @@ export function LeaderboardView({ onBack }) {
   );
 }
 
-
-LeaderboardView.propTypes = {
+LeaderboardViewComponent.propTypes = {
   onBack: PropTypes.func.isRequired
 };
+
+// Memoize to prevent unnecessary re-renders - important for Chromebook performance
+export const LeaderboardView = memo(LeaderboardViewComponent);
+export default LeaderboardView;

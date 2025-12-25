@@ -4,17 +4,40 @@
  * Compact, information-dense layout
  */
 
+import { memo, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useLiveLeaderboard } from '../hooks/useLeaderboard';
 import { FirebaseBackend } from '../services/firebase';
+import { sanitizeUserContent } from '../utils/sanitize';
 
-export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, onToggle }) {
+function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, onToggle }) {
   // Use unified hook for live sessions
   const { sessions, isLoading, hasFirebase } = useLiveLeaderboard();
+  const [searchFilter, setSearchFilter] = useState('');
+  const [showOnlyMyTeam, setShowOnlyMyTeam] = useState(false);
 
   // Check if we have necessary context
   const classCode = FirebaseBackend.getClassCode();
   const canShowLeaderboard = hasFirebase && classCode;
+
+  // Filter sessions based on search and filter settings
+  const filteredSessions = useMemo(() => {
+    let filtered = sessions;
+
+    // Filter by search term
+    if (searchFilter.trim()) {
+      filtered = filtered.filter(s =>
+        s.teamName?.toLowerCase().includes(searchFilter.toLowerCase())
+      );
+    }
+
+    // Filter to show only my team
+    if (showOnlyMyTeam && currentSessionId) {
+      filtered = filtered.filter(s => s.sessionId === currentSessionId);
+    }
+
+    return filtered;
+  }, [sessions, searchFilter, showOnlyMyTeam, currentSessionId]);
 
   // Minimized view - just a small indicator
   if (isMinimized) {
@@ -105,6 +128,49 @@ export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, on
         )}
       </div>
 
+      {/* Search and Filter Controls (only show if multiple teams) */}
+      {!isLoading && sessions.length > 3 && (
+        <div style={{ marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          {/* Search Input */}
+          <input
+            type="text"
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            placeholder="Search teams..."
+            style={{
+              width: '100%',
+              padding: '0.375rem',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontSize: '0.6875rem',
+              fontFamily: 'inherit'
+            }}
+          />
+
+          {/* Filter Toggle */}
+          {currentSessionId && (
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              cursor: 'pointer',
+              fontSize: '0.6875rem',
+              color: 'var(--text-secondary)'
+            }}>
+              <input
+                type="checkbox"
+                checked={showOnlyMyTeam}
+                onChange={(e) => setShowOnlyMyTeam(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>Show only my team</span>
+            </label>
+          )}
+        </div>
+      )}
+
       {/* Loading state */}
       {isLoading && (
         <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.6875rem' }}>
@@ -119,10 +185,17 @@ export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, on
         </div>
       )}
 
+      {/* No results state */}
+      {!isLoading && sessions.length > 0 && filteredSessions.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.6875rem' }}>
+          No teams match your search
+        </div>
+      )}
+
       {/* Leaderboard entries - Compact grid */}
-      {!isLoading && sessions.length > 0 && (
+      {!isLoading && filteredSessions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', maxHeight: '200px', overflowY: 'auto' }}>
-          {sessions.map((session, index) => {
+          {filteredSessions.map((session, index) => {
             const isCurrentTeam = session.sessionId === currentSessionId;
             return (
               <div
@@ -166,7 +239,7 @@ export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, on
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
                   }}>
-                    {session.teamName}
+                    {sanitizeUserContent(session.teamName || '', 50)}
                     {isCurrentTeam && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> (you)</span>}
                   </div>
                   <div className="mono" style={{ fontSize: '0.5625rem', color: 'var(--text-muted)' }}>
@@ -218,20 +291,26 @@ export function LiveClassLeaderboard({ currentSessionId, isMinimized = false, on
         color: 'var(--text-muted)',
         textAlign: 'center'
       }}>
-        Class: {classCode} • {sessions.length} team{sessions.length !== 1 ? 's' : ''} playing
+        Class: {classCode} • {filteredSessions.length !== sessions.length
+          ? `${filteredSessions.length} of ${sessions.length}`
+          : sessions.length} team{sessions.length !== 1 ? 's' : ''} playing
       </div>
     </div>
   );
 }
 
-LiveClassLeaderboard.propTypes = {
+LiveClassLeaderboardComponent.propTypes = {
   currentSessionId: PropTypes.string,
   isMinimized: PropTypes.bool,
   onToggle: PropTypes.func
 };
 
-LiveClassLeaderboard.defaultProps = {
+LiveClassLeaderboardComponent.defaultProps = {
   currentSessionId: null,
   isMinimized: false,
   onToggle: null
 };
+
+// Memoize to prevent re-renders - critical for real-time leaderboard updates
+export const LiveClassLeaderboard = memo(LiveClassLeaderboardComponent);
+export default LiveClassLeaderboard;

@@ -80,6 +80,19 @@ export function TeacherDashboard({ onBack }) {
   const isOnline = useOnlineStatus();
   const { showToast } = useToast();
 
+  // UX enhancements
+  const [showQuickStart, setShowQuickStart] = useState(() => {
+    // Show quick start if first time visiting dashboard
+    try {
+      return !localStorage.getItem('truthHunters_dashboardVisited');
+    } catch {
+      return false;
+    }
+  });
+  const [gamesSortBy, setGamesSortBy] = useState('date'); // date, score, accuracy, team
+  const [gamesFilterDifficulty, setGamesFilterDifficulty] = useState('all');
+  const [showClassCodeModal, setShowClassCodeModal] = useState(false);
+
   // Class settings state
   const [classSettings, setClassSettings] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -140,7 +153,9 @@ export function TeacherDashboard({ onBack }) {
         }
       }
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to load dashboard data:', err);
+      }
       if (isMountedRef.current) {
         setError('Failed to load data. Please try again.');
         // Fallback to local
@@ -184,6 +199,17 @@ export function TeacherDashboard({ onBack }) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Mark dashboard as visited
+  useEffect(() => {
+    if (showQuickStart) {
+      try {
+        localStorage.setItem('truthHunters_dashboardVisited', 'true');
+      } catch {
+        // Ignore
+      }
+    }
+  }, [showQuickStart]);
 
   // Save class settings
   const handleSaveSettings = async () => {
@@ -321,7 +347,9 @@ export function TeacherDashboard({ onBack }) {
         setError(result.error || 'Failed to review claim. Please try again.');
       }
     } catch (e) {
-      console.warn('Review claim error:', e);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Review claim error:', e);
+      }
       if (isMountedRef.current) {
         setError('An error occurred. Please try again.');
       }
@@ -339,6 +367,45 @@ export function TeacherDashboard({ onBack }) {
     if (claimFilter === 'rejected') return reviewedClaims.filter(c => c.status === 'rejected');
     return [...pendingClaims, ...reviewedClaims];
   }, [claimFilter, pendingClaims, reviewedClaims]);
+
+  // Filter and sort games
+  const filteredAndSortedGames = useMemo(() => {
+    let filtered = games;
+
+    // Filter by difficulty
+    if (gamesFilterDifficulty !== 'all') {
+      filtered = filtered.filter(g => g.difficulty === gamesFilterDifficulty);
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (gamesSortBy) {
+        case 'score':
+          return (b.score || 0) - (a.score || 0);
+        case 'accuracy':
+          return (b.accuracy || 0) - (a.accuracy || 0);
+        case 'team':
+          return (a.teamName || '').localeCompare(b.teamName || '');
+        case 'date':
+        default:
+          return (b.timestamp || 0) - (a.timestamp || 0);
+      }
+    });
+
+    return sorted;
+  }, [games, gamesFilterDifficulty, gamesSortBy]);
+
+  // Copy class code to clipboard
+  const handleCopyClassCode = () => {
+    const code = FirebaseBackend.getClassCode();
+    if (code) {
+      navigator.clipboard.writeText(code).then(() => {
+        showToast('Class code copied to clipboard!', 'success');
+      }).catch(() => {
+        showToast('Failed to copy. Please copy manually: ' + code, 'error');
+      });
+    }
+  };
 
   return (
     <div className="viewport-container" style={{ maxWidth: '900px', margin: '0 auto', padding: '1.5rem' }}>
@@ -450,7 +517,60 @@ export function TeacherDashboard({ onBack }) {
         </div>
       )}
 
-      {/* Class Code Configuration */}
+      {/* Quick Start Guide */}
+      {showQuickStart && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1))',
+            border: '1px solid var(--accent-violet)',
+            borderRadius: '12px',
+            padding: '1.25rem',
+            marginBottom: '1rem',
+            position: 'relative'
+          }}
+        >
+          <button
+            onClick={() => setShowQuickStart(false)}
+            style={{
+              position: 'absolute',
+              top: '0.75rem',
+              right: '0.75rem',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              fontSize: '1.25rem',
+              cursor: 'pointer',
+              padding: '0.25rem'
+            }}
+          >
+            ×
+          </button>
+          <div style={{ display: 'flex', alignItems: 'start', gap: '1rem' }}>
+            <div style={{ fontSize: '2rem' }}>👋</div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--accent-violet)', marginBottom: '0.75rem' }}>
+                Welcome to Your Teacher Dashboard!
+              </h3>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                <p style={{ margin: '0 0 0.75rem 0' }}>
+                  <strong>Quick Start:</strong> Students need your class code to join. Share it below!
+                </p>
+                <ul style={{ paddingLeft: '1.25rem', margin: '0 0 0.75rem 0' }}>
+                  <li><strong>Overview</strong> - See class stats and calibration data</li>
+                  <li><strong>Games</strong> - View all team scores and filter/sort results</li>
+                  <li><strong>Claims</strong> - Review student-submitted claims (if enabled)</li>
+                  <li><strong>Export</strong> - Download data for grading or analysis</li>
+                </ul>
+                <p style={{ margin: 0, fontSize: '0.8125rem', fontStyle: 'italic' }}>
+                  Tip: Use Settings to customize difficulty, subjects, and features for your class.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Class Code Configuration with Sharing */}
       <div
         style={{
           background: 'var(--bg-card)',
@@ -460,8 +580,8 @@ export function TeacherDashboard({ onBack }) {
           marginBottom: '1rem'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
             <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>CLASS CODE</span>
             {isEditing ? (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -486,11 +606,51 @@ export function TeacherDashboard({ onBack }) {
                 <Button onClick={() => setIsEditing(false)} variant="secondary" size="sm">Cancel</Button>
               </div>
             ) : (
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
-                {FirebaseBackend.getClassCode() || 'PUBLIC (all classes)'}
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-cyan)', marginTop: '0.25rem', fontFamily: 'var(--font-mono)' }}>
+                {FirebaseBackend.getClassCode() || 'NO CODE SET'}
               </div>
             )}
           </div>
+          {!isEditing && FirebaseBackend.getClassCode() && (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={handleCopyClassCode}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  background: 'var(--accent-emerald)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.375rem'
+                }}
+              >
+                📋 Copy Code
+              </button>
+              <button
+                onClick={() => setShowClassCodeModal(true)}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  background: 'var(--accent-violet)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.375rem'
+                }}
+              >
+                📢 Share
+              </button>
+            </div>
+          )}
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
@@ -504,11 +664,136 @@ export function TeacherDashboard({ onBack }) {
                 cursor: 'pointer'
               }}
             >
-              Change
+              {FirebaseBackend.getClassCode() ? 'Change' : 'Set Code'}
             </button>
           )}
         </div>
+        {!FirebaseBackend.getClassCode() && !isEditing && (
+          <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '6px', fontSize: '0.8125rem', color: 'var(--accent-amber)' }}>
+            ⚠️ No class code set. Students can still play, but you won't see their data here.
+          </div>
+        )}
       </div>
+
+      {/* Class Code Sharing Modal */}
+      {showClassCodeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem'
+          }}
+          onClick={() => setShowClassCodeModal(false)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              borderRadius: '12px',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid var(--border)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 className="mono" style={{ fontSize: '1.25rem', color: 'var(--accent-cyan)', margin: 0 }}>
+                Share Class Code
+              </h3>
+              <button
+                onClick={() => setShowClassCodeModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div
+                style={{
+                  fontSize: '3rem',
+                  fontWeight: 700,
+                  color: 'var(--accent-cyan)',
+                  fontFamily: 'var(--font-mono)',
+                  background: 'var(--bg-elevated)',
+                  padding: '1.5rem',
+                  borderRadius: '12px',
+                  border: '2px dashed var(--accent-cyan)',
+                  marginBottom: '1rem',
+                  letterSpacing: '0.1em'
+                }}
+              >
+                {FirebaseBackend.getClassCode()}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                Students should enter this code when starting the game to join your class leaderboard.
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
+                How to share with students:
+              </h4>
+              <ul style={{ paddingLeft: '1.5rem', margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                <li>Write it on the board before class</li>
+                <li>Include it in your LMS announcement</li>
+                <li>Project this screen at the start of the activity</li>
+                <li>Send via email or class chat</li>
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={handleCopyClassCode}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--accent-emerald)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                📋 Copy to Clipboard
+              </button>
+              <button
+                onClick={() => setShowClassCodeModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
@@ -663,22 +948,69 @@ export function TeacherDashboard({ onBack }) {
       {/* Games Tab */}
       {!loading && activeTab === 'games' && (
         <div className="animate-in">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-              {games.length} game{games.length !== 1 ? 's' : ''} recorded
-            </span>
-            <Button onClick={handleExportGames} variant="secondary" size="sm" disabled={games.length === 0}>
-              📥 Export CSV
-            </Button>
+          {/* Filters and Controls */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>
+                  Showing {filteredAndSortedGames.length} of {games.length} game{games.length !== 1 ? 's' : ''}
+                </span>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {/* Difficulty Filter */}
+                  <select
+                    value={gamesFilterDifficulty}
+                    onChange={(e) => setGamesFilterDifficulty(e.target.value)}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Difficulties</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+
+                  {/* Sort By */}
+                  <select
+                    value={gamesSortBy}
+                    onChange={(e) => setGamesSortBy(e.target.value)}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="date">Sort by: Most Recent</option>
+                    <option value="score">Sort by: Highest Score</option>
+                    <option value="accuracy">Sort by: Accuracy</option>
+                    <option value="team">Sort by: Team Name</option>
+                  </select>
+                </div>
+              </div>
+
+              <Button onClick={handleExportGames} variant="secondary" size="sm" disabled={games.length === 0}>
+                📥 Export CSV
+              </Button>
+            </div>
           </div>
 
-          {games.length === 0 ? (
+          {filteredAndSortedGames.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-              No games recorded yet.
+              {games.length === 0 ? 'No games recorded yet.' : 'No games match your filters.'}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {games.slice(0, 20).map((game, i) => (
+              {filteredAndSortedGames.slice(0, 20).map((game, i) => (
                 <div
                   key={game.id || i}
                   style={{
@@ -737,9 +1069,9 @@ export function TeacherDashboard({ onBack }) {
                   </div>
                 </div>
               ))}
-              {games.length > 20 && (
+              {filteredAndSortedGames.length > 20 && (
                 <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                  Showing 20 of {games.length} games. Export to see all.
+                  Showing 20 of {filteredAndSortedGames.length} filtered games. Export to see all.
                 </div>
               )}
             </div>

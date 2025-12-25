@@ -4,6 +4,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 
 const ToastContext = createContext();
 
@@ -96,10 +97,19 @@ function ToastItem({ toast, onDismiss }) {
 
   const color = colors[toast.type] || colors.info;
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' || e.key === 'Enter') {
+      e.preventDefault();
+      onDismiss(toast.id);
+    }
+  };
+
   return (
     <div
       className="animate-in"
       role="alert"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       style={{
         background: color.bg,
         border: `1px solid ${color.border}`,
@@ -120,7 +130,7 @@ function ToastItem({ toast, onDismiss }) {
       }}
       onClick={() => onDismiss(toast.id)}
     >
-      <span style={{ fontSize: '1.125rem', flexShrink: 0 }}>
+      <span aria-hidden="true" style={{ fontSize: '1.125rem', flexShrink: 0 }}>
         {color.icon}
       </span>
       <div style={{ flex: 1 }}>
@@ -131,7 +141,7 @@ function ToastItem({ toast, onDismiss }) {
           e.stopPropagation();
           onDismiss(toast.id);
         }}
-        aria-label="Dismiss"
+        aria-label="Dismiss notification"
         style={{
           background: 'none',
           border: 'none',
@@ -149,3 +159,29 @@ function ToastItem({ toast, onDismiss }) {
     </div>
   );
 }
+
+ToastProvider.propTypes = {
+  children: PropTypes.node.isRequired
+};
+
+ToastContainer.propTypes = {
+  toasts: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      message: PropTypes.string.isRequired,
+      type: PropTypes.oneOf(['success', 'error', 'warning', 'info']),
+      duration: PropTypes.number
+    })
+  ).isRequired,
+  onDismiss: PropTypes.func.isRequired
+};
+
+ToastItem.propTypes = {
+  toast: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    message: PropTypes.string.isRequired,
+    type: PropTypes.oneOf(['success', 'error', 'warning', 'info']),
+    duration: PropTypes.number
+  }).isRequired,
+  onDismiss: PropTypes.func.isRequired
+};

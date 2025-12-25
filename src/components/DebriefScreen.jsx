@@ -177,37 +177,41 @@ Play Truth Hunters and test your fact-checking skills!`;
     <div className="viewport-container" style={{ maxWidth: '800px', margin: '0 auto', padding: '1.5rem' }}>
       {/* Removed overly aggressive CSS - preserving educational content */}
 
-      {/* Final Score */}
+      {/* Final Score - CELEBRATORY */}
       <div
-        className="animate-in"
+        className="animate-celebrate"
         style={{
-          background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)',
-          border: '1px solid var(--border)',
-          borderRadius: '16px',
-          padding: '2rem',
+          background: finalScore >= 0
+            ? 'linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(167, 139, 250, 0.15) 100%)'
+            : 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)',
+          border: `3px solid ${finalScore >= 0 ? 'var(--accent-cyan)' : 'var(--border)'}`,
+          borderRadius: '20px',
+          padding: '2.5rem 2rem',
           textAlign: 'center',
-          marginBottom: '1.5rem'
+          marginBottom: '1.5rem',
+          boxShadow: finalScore >= 0 ? '0 8px 24px rgba(34, 211, 238, 0.2)' : 'none'
         }}
       >
         <div
           className="mono"
-          style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.5rem', letterSpacing: '0.1em' }}
+          style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.75rem', letterSpacing: '0.1em', fontWeight: 600 }}
         >
           FINAL SCORE
         </div>
         <div
           className="mono"
           style={{
-            fontSize: '4rem',
+            fontSize: '5rem',
             fontWeight: 700,
             color: finalScore >= 0 ? 'var(--accent-cyan)' : 'var(--accent-rose)',
             lineHeight: 1,
-            marginBottom: '0.5rem'
+            marginBottom: '0.75rem',
+            textShadow: finalScore >= 0 ? '0 2px 8px rgba(34, 211, 238, 0.3)' : 'none'
           }}
         >
           {finalScore}
         </div>
-        <div style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>{team.name}</div>
+        <div style={{ color: 'var(--text-primary)', fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>{team.name}</div>
 
         {calibrationBonus > 0 ? (
           <div
@@ -270,16 +274,17 @@ Play Truth Hunters and test your fact-checking skills!`;
         ))}
       </div>
 
-      {/* Achievements Section */}
+      {/* Achievements Section - CELEBRATORY! */}
       {earnedAchievements.length > 0 && (
         <div
-          className="animate-in"
+          className="animate-celebrate"
           style={{
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%)',
-            border: '1px solid var(--accent-amber)',
-            borderRadius: '12px',
-            padding: '1.25rem',
-            marginBottom: '1.25rem'
+            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(167, 139, 250, 0.2) 100%)',
+            border: '3px solid var(--accent-amber)',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            marginBottom: '1.5rem',
+            boxShadow: '0 8px 24px rgba(251, 191, 36, 0.3)'
           }}
         >
           <button
@@ -292,49 +297,71 @@ Play Truth Hunters and test your fact-checking skills!`;
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: 0
+              padding: 0,
+              marginBottom: showAchievements ? '1.25rem' : 0
             }}
           >
-            <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)' }}>
+            <h3 className="mono" style={{ fontSize: '1.125rem', color: 'var(--accent-amber)', fontWeight: 700 }}>
               🏆 ACHIEVEMENTS UNLOCKED ({earnedAchievements.length})
             </h3>
-            <span style={{ color: 'var(--text-muted)' }}>{showAchievements ? '▲' : '▼'}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '1.25rem' }}>{showAchievements ? '▲' : '▼'}</span>
           </button>
 
           {showAchievements && (
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                gap: '0.75rem',
-                marginTop: '1rem'
+                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                gap: '1rem'
               }}
             >
-              {earnedAchievements.map((achievement) => (
+              {earnedAchievements.map((achievement, idx) => (
                 <div
                   key={achievement.id}
-                  className="animate-in"
+                  className="animate-celebrate"
                   style={{
-                    padding: '0.875rem',
-                    background: 'var(--bg-card)',
-                    borderRadius: '8px',
+                    padding: '1.25rem',
+                    background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)',
+                    borderRadius: '12px',
                     textAlign: 'center',
-                    border: '1px solid var(--border)'
+                    border: '2px solid var(--accent-amber)',
+                    boxShadow: '0 4px 12px rgba(251, 191, 36, 0.2)',
+                    transform: 'scale(1)',
+                    transition: 'all 0.3s ease',
+                    animationDelay: `${idx * 0.1}s`
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(251, 191, 36, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.2)';
                   }}
                 >
-                  <div style={{ fontSize: '1.75rem', marginBottom: '0.375rem' }}>{achievement.icon}</div>
+                  <div
+                    style={{
+                      fontSize: '3rem',
+                      marginBottom: '0.5rem',
+                      lineHeight: 1
+                    }}
+                  >
+                    {achievement.icon}
+                  </div>
                   <div
                     className="mono"
                     style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      fontWeight: 700,
                       color: 'var(--accent-amber)',
-                      marginBottom: '0.25rem'
+                      marginBottom: '0.375rem'
                     }}
                   >
                     {achievement.name}
                   </div>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{achievement.description}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    {achievement.description}
+                  </div>
                 </div>
               ))}
             </div>

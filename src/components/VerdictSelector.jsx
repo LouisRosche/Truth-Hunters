@@ -11,7 +11,7 @@ export const VerdictSelector = memo(function VerdictSelector({ value, onChange, 
 
   const verdicts = [
     { value: 'TRUE', emoji: '✓', color: 'var(--correct)', description: 'The claim is completely true', shortHelp: 'Everything in this claim is accurate' },
-    { value: 'MIXED', emoji: '◐', color: 'var(--accent-amber)', description: 'The claim contains both true and false elements', shortHelp: 'Some parts are true, but other parts are false or misleading', hasExplainer: true },
+    { value: 'MIXED', emoji: '?', color: 'var(--accent-amber)', description: 'The claim contains both true and false elements', shortHelp: 'Some parts are true, but other parts are false or misleading', hasExplainer: true },
     { value: 'FALSE', emoji: '✗', color: 'var(--incorrect)', description: 'The claim is false or misleading', shortHelp: 'This claim is incorrect or misleading' }
   ];
 
@@ -50,23 +50,26 @@ export const VerdictSelector = memo(function VerdictSelector({ value, onChange, 
             className="verdict-option"
             style={{
               flex: 1,
-              padding: '1.5rem 1.25rem',
-              minHeight: '5.5rem',
-              background: value === v.value ? `${v.color}20` : 'var(--bg-elevated)',
-              border: `2px solid ${value === v.value ? v.color : 'var(--border)'}`,
-              borderRadius: '10px',
+              padding: '1.25rem 1rem',
+              minHeight: '7rem',
+              background: value === v.value ? `${v.color}25` : 'var(--bg-elevated)',
+              border: `3px solid ${value === v.value ? v.color : 'var(--border)'}`,
+              borderRadius: '12px',
               cursor: disabled ? 'not-allowed' : 'pointer',
               opacity: disabled ? 0.5 : 1,
               transition: 'all 0.2s ease',
-              position: 'relative'
+              position: 'relative',
+              transform: value === v.value ? 'scale(1.02)' : 'scale(1)',
+              boxShadow: value === v.value ? `0 4px 12px ${v.color}30` : 'none'
             }}
           >
             <div
               aria-hidden="true"
               style={{
-                fontSize: '2rem',
-                marginBottom: '0.375rem',
-                color: v.color
+                fontSize: '2.5rem',
+                marginBottom: '0.5rem',
+                color: v.color,
+                fontWeight: 700
               }}
             >
               {v.emoji}
@@ -74,8 +77,8 @@ export const VerdictSelector = memo(function VerdictSelector({ value, onChange, 
             <div
               className="mono"
               style={{
-                fontSize: '1rem',
-                fontWeight: 600,
+                fontSize: '1.125rem',
+                fontWeight: 700,
                 color: value === v.value ? v.color : 'var(--text-secondary)'
               }}
             >
@@ -98,15 +101,17 @@ export const VerdictSelector = memo(function VerdictSelector({ value, onChange, 
                 aria-label="What does MIXED mean?"
                 style={{
                   position: 'absolute',
-                  bottom: '0.375rem',
+                  bottom: '0.5rem',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  padding: '0.125rem 0.5rem',
-                  borderRadius: '4px',
-                  background: 'rgba(251, 191, 36, 0.15)',
-                  border: '1px solid var(--accent-amber)',
+                  padding: '0.25rem 0.625rem',
+                  minHeight: '28px',
+                  borderRadius: '6px',
+                  background: 'rgba(251, 191, 36, 0.2)',
+                  border: '2px solid var(--accent-amber)',
                   color: 'var(--accent-amber)',
-                  fontSize: '0.5625rem',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap'
                 }}

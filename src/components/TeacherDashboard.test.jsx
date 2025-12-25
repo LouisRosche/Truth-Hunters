@@ -309,7 +309,8 @@ describe('TeacherDashboard', () => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      expect(screen.getByText(/teacher dashboard/i)).toBeInTheDocument();
+      // Check for the main heading (there may be multiple "Teacher Dashboard" texts due to welcome banner)
+      expect(screen.getAllByText(/teacher dashboard/i).length).toBeGreaterThan(0);
     });
 
     it('displays class code when available', async () => {
