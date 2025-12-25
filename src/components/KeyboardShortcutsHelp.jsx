@@ -85,8 +85,10 @@ export function KeyboardShortcutsHelp({ onClose }) {
           padding: '2rem',
           maxWidth: '600px',
           width: '100%',
-          maxHeight: '80vh',
-          overflowY: 'auto'
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
       >
         {/* Header */}

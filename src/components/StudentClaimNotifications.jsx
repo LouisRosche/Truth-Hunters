@@ -270,8 +270,8 @@ const notificationStyles = `
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    max-height: 60vh;
-    overflow-y: auto;
+    flex: 1;
+    overflow: hidden;
     padding-right: 0.5rem;
   }
 
