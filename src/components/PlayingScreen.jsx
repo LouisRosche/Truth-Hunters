@@ -210,8 +210,12 @@ export function PlayingScreen({
 
   // Handle pending keyboard actions and timer auto-submit (to avoid circular dependencies)
   useEffect(() => {
-    if (pendingSubmit && claim) {
+    if (pendingSubmit && claim && !isSubmitting) {
       setPendingSubmit(false);
+
+      // CRITICAL: Check if already submitting to prevent race condition
+      // This prevents double submission if user clicks submit at same time as timer expires
+      setIsSubmitting(true);
 
       // If no verdict selected (time ran out), forfeit the round
       if (!verdict) {
@@ -260,8 +264,9 @@ export function PlayingScreen({
       setCalibrationTip(getRandomItem(CALIBRATION_TIPS[calibrationType]) || null);
       setResultData({ correct, points, confidence, verdict, speedBonus, timeElapsed });
       setShowResult(true);
+      setIsSubmitting(false); // Reset for next round
     }
-  }, [pendingSubmit, verdict, claim, confidence, difficulty, totalTimeAllowed, integrity.penalty]);
+  }, [pendingSubmit, verdict, claim, confidence, difficulty, totalTimeAllowed, integrity.penalty, isSubmitting]);
 
   useEffect(() => {
     if (pendingNext && resultData) {
@@ -293,6 +298,13 @@ export function PlayingScreen({
     if (!verdict || !claim || isSubmitting) return;
 
     setIsSubmitting(true);
+
+    // CRITICAL: Clear timer immediately to prevent race condition with auto-submit
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
     const correct = verdict === claim.answer;
 
     // Calculate time elapsed for speed bonus

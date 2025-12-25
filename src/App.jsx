@@ -149,7 +149,18 @@ export function App() {
         clearTimeout(sessionUpdateTimeoutRef.current);
       }
     };
-  }, [sessionId, gameState.phase, gameState.currentRound, gameState.team.score, gameState.team.name, gameState.team.avatar?.emoji, gameState.team.players, gameState.team.results, gameState.totalRounds]);
+    // FIXED: Use stable primitive values instead of object/array references to prevent infinite loops
+    // Only update when meaningful state changes occur (round, score, phase)
+  }, [
+    sessionId,
+    gameState.phase,
+    gameState.currentRound,
+    gameState.team.score,
+    gameState.team.name,
+    gameState.team.avatar?.emoji, // Use primitive emoji string instead of object reference
+    gameState.totalRounds,
+    gameState.team.results.length // Use length instead of array reference
+  ]);
 
   // Clean up session on unmount or window close
   useEffect(() => {

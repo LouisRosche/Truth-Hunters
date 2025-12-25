@@ -3,7 +3,7 @@
  * Game-specific helper functions for claims, roles, and player display
  */
 
-import { CLAIMS_DATABASE, getFilteredClaims } from '../data/claims';
+import { loadClaimsDatabase, loadFilteredClaims } from '../data/claimsLoader';
 import { SUBJECT_HINTS } from '../data/constants';
 import { shuffleArray } from './generic';
 import { logger } from './logger';
@@ -13,23 +13,26 @@ import { logger } from './logger';
  * GUARANTEES no duplicate claims within a session
  * For solo players: prioritizes unseen claims until all have been seen
  *
+ * NOW ASYNC: Claims database is lazy-loaded for code-splitting (375KB saved from main bundle)
+ *
  * @param {string} difficulty - 'easy' | 'medium' | 'hard' | 'mixed'
  * @param {number} count - Number of claims to select
  * @param {Array<string>} subjects - Optional array of subjects to include (empty = all)
  * @param {Array<string>} previouslySeenIds - Claim IDs the player has already seen (for solo mode)
  * @param {Array<Object>} additionalClaims - Extra claims to add to the pool (e.g., student-contributed)
  * @param {Object} classSettings - Optional class settings { gradeLevel, classSeenIds }
- * @returns {Array} Selected claims (unique, no repeats, prioritizing unseen)
+ * @returns {Promise<Array>} Selected claims (unique, no repeats, prioritizing unseen)
  */
-export function selectClaimsByDifficulty(difficulty, count, subjects = [], previouslySeenIds = [], additionalClaims = [], classSettings = null) {
-  // Use getFilteredClaims if gradeLevel is specified, otherwise use full database
+export async function selectClaimsByDifficulty(difficulty, count, subjects = [], previouslySeenIds = [], additionalClaims = [], classSettings = null) {
+  // Use loadFilteredClaims if gradeLevel is specified, otherwise load full database
   let basePool;
   if (classSettings?.gradeLevel) {
-    basePool = getFilteredClaims({
+    basePool = await loadFilteredClaims({
       gradeLevel: classSettings.gradeLevel,
       subject: subjects?.length === 1 ? subjects[0] : null
     });
   } else {
+    const CLAIMS_DATABASE = await loadClaimsDatabase();
     basePool = [...CLAIMS_DATABASE];
   }
 
@@ -116,7 +119,8 @@ export function selectClaimsByDifficulty(difficulty, count, subjects = [], previ
   // This prevents the game from breaking mid-way when there aren't enough claims
   if (selectedClaims.length < count && subjects && subjects.length > 0) {
     logger.warn(`Only ${selectedClaims.length} claims found for subjects [${subjects.join(', ')}], falling back to full database`);
-    const fullPool = [...CLAIMS_DATABASE, ...additionalClaims].filter(c => !usedIds.has(c.id));
+    const CLAIMS_DATABASE_FALLBACK = await loadClaimsDatabase();
+    const fullPool = [...CLAIMS_DATABASE_FALLBACK, ...additionalClaims].filter(c => !usedIds.has(c.id));
     const additional = selectUnique(fullPool, count - selectedClaims.length, false);
     selectedClaims.push(...additional);
   }
@@ -136,13 +140,15 @@ export function selectClaimsByDifficulty(difficulty, count, subjects = [], previ
 
 /**
  * Get count of unseen claims available for a player
+ * NOW ASYNC: Claims database is lazy-loaded
  * @param {Array<string>} previouslySeenIds - Claim IDs the player has already seen
  * @param {Array<string>} subjects - Optional array of subjects to filter by
  * @param {Array<Object>} additionalClaims - Extra claims to include (e.g., student-contributed)
- * @returns {Object} { total, unseen, percentSeen }
+ * @returns {Promise<Object>} { total, unseen, percentSeen }
  */
-export function getUnseenClaimStats(previouslySeenIds = [], subjects = [], additionalClaims = []) {
+export async function getUnseenClaimStats(previouslySeenIds = [], subjects = [], additionalClaims = []) {
   // Combine base database with any additional claims
+  const CLAIMS_DATABASE = await loadClaimsDatabase();
   const combinedPool = [...CLAIMS_DATABASE, ...additionalClaims];
 
   let pool = combinedPool;

@@ -1,6 +1,6 @@
 /**
  * SCROLLING LEADERBOARD COMPONENT
- * Simple, clean vertical list with auto-refresh
+ * Compact, information-dense vertical list with auto-refresh
  */
 
 import PropTypes from 'prop-types';
@@ -8,8 +8,8 @@ import { useTeamLeaderboard } from '../hooks/useLeaderboard';
 
 export function ScrollingLeaderboard({ onViewFull }) {
   // Use unified hook with auto-refresh enabled
-  const { teams, isLoading } = useTeamLeaderboard({
-    limit: 10,
+  const { teams, isLoading, error } = useTeamLeaderboard({
+    limit: 15,
     autoRefresh: true
   });
 
@@ -19,21 +19,21 @@ export function ScrollingLeaderboard({ onViewFull }) {
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderRadius: '12px',
-        padding: '1rem',
+        padding: '0.75rem',
         height: '100%'
       }}>
         <h3 className="mono" style={{
-          fontSize: '0.75rem',
+          fontSize: '0.6875rem',
           color: 'var(--accent-amber)',
-          marginBottom: '1rem'
+          marginBottom: '0.75rem'
         }}>
-          🏆 LEADERBOARD
+          🏆 TOP TEAMS
         </h3>
         <p style={{
           color: 'var(--text-muted)',
-          fontSize: '0.8125rem',
+          fontSize: '0.75rem',
           textAlign: 'center',
-          marginTop: '2rem'
+          marginTop: '1.5rem'
         }}>
           Loading...
         </p>
@@ -47,24 +47,23 @@ export function ScrollingLeaderboard({ onViewFull }) {
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderRadius: '12px',
-        padding: '1rem',
+        padding: '0.75rem',
         height: '100%'
       }}>
         <h3 className="mono" style={{
-          fontSize: '0.75rem',
+          fontSize: '0.6875rem',
           color: 'var(--accent-amber)',
-          marginBottom: '1rem'
+          marginBottom: '0.75rem'
         }}>
-          🏆 LEADERBOARD
+          🏆 TOP TEAMS
         </h3>
         <p style={{
           color: 'var(--text-muted)',
-          fontSize: '0.8125rem',
+          fontSize: '0.75rem',
           textAlign: 'center',
-          marginTop: '2rem'
+          marginTop: '1.5rem'
         }}>
-          No games played yet!<br />
-          Be the first team on the board.
+          No games yet!
         </p>
       </div>
     );
@@ -75,29 +74,33 @@ export function ScrollingLeaderboard({ onViewFull }) {
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
       borderRadius: '12px',
-      padding: '1rem',
+      padding: '0.75rem',
       height: '100%',
       display: 'flex',
       flexDirection: 'column'
     }}>
       {/* Header */}
-      <h3 className="mono" style={{
-        fontSize: '0.75rem',
-        color: 'var(--accent-amber)',
-        marginBottom: '0.75rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem'
-      }}>
-        🏆 TOP TEAMS
-      </h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <h3 className="mono" style={{
+          fontSize: '0.6875rem',
+          color: 'var(--accent-amber)',
+          margin: 0
+        }}>
+          🏆 TOP TEAMS
+        </h3>
+        {error && (
+          <span style={{ fontSize: '0.625rem', color: 'var(--incorrect)' }} title={error}>
+            ⚠️
+          </span>
+        )}
+      </div>
 
-      {/* Simple vertical list */}
+      {/* Compact list */}
       <div style={{
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
+        gap: '0.375rem',
         overflow: 'auto'
       }}>
         {teams.map((entry, index) => (
@@ -105,25 +108,26 @@ export function ScrollingLeaderboard({ onViewFull }) {
             key={entry.id || index}
             className="animate-in"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 0.625rem',
+              display: 'grid',
+              gridTemplateColumns: '1.5rem 1.25rem 1fr 3rem 2.5rem',
+              gap: '0.375rem',
+              padding: '0.375rem 0.5rem',
               background: index < 3
                 ? 'rgba(251, 191, 36, 0.1)'
                 : 'var(--bg-elevated)',
-              borderRadius: '8px',
+              borderRadius: '6px',
               border: index < 3
                 ? '1px solid rgba(251, 191, 36, 0.3)'
                 : '1px solid var(--border)',
-              transition: 'all 0.2s ease'
+              alignItems: 'center',
+              transition: 'all 0.2s ease',
+              fontSize: '0.75rem'
             }}
           >
             {/* Rank */}
             <div className="mono" style={{
-              width: '1.5rem',
               textAlign: 'center',
-              fontSize: '0.875rem',
+              fontSize: index < 3 ? '0.875rem' : '0.6875rem',
               fontWeight: 700,
               color: index === 0
                 ? '#ffd700'
@@ -137,12 +141,12 @@ export function ScrollingLeaderboard({ onViewFull }) {
             </div>
 
             {/* Avatar */}
-            <div style={{ fontSize: '1rem' }}>
+            <div style={{ fontSize: '0.875rem' }}>
               {entry.teamAvatar || '🔍'}
             </div>
 
             {/* Team info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ minWidth: 0 }}>
               <div style={{
                 fontSize: '0.75rem',
                 fontWeight: 600,
@@ -153,17 +157,47 @@ export function ScrollingLeaderboard({ onViewFull }) {
               }}>
                 {entry.teamName}
               </div>
-              <div style={{
+              <div className="mono" style={{
                 fontSize: '0.5625rem',
                 color: 'var(--text-muted)',
+                display: 'flex',
+                gap: '0.375rem',
                 marginTop: '0.125rem'
               }}>
-                {entry.accuracy || 0}% • {entry.rounds || 0}R
-                {entry.difficulty && ` • ${
-                  entry.difficulty === 'hard' ? '🔥' :
-                  entry.difficulty === 'medium' ? '⚡' : '✨'
-                }`}
+                <span>{entry.accuracy || 0}%</span>
+                <span>•</span>
+                <span>{entry.rounds || 0}R</span>
+                {entry.difficulty && (
+                  <>
+                    <span>•</span>
+                    <span>{
+                      entry.difficulty === 'hard' ? '🔥' :
+                      entry.difficulty === 'medium' ? '⚡' : '✨'
+                    }</span>
+                  </>
+                )}
               </div>
+            </div>
+
+            {/* Difficulty badge */}
+            <div className="mono" style={{
+              fontSize: '0.625rem',
+              padding: '0.125rem 0.25rem',
+              borderRadius: '4px',
+              background: entry.difficulty === 'hard' ? 'rgba(239, 68, 68, 0.2)'
+                : entry.difficulty === 'medium' ? 'rgba(251, 191, 36, 0.2)'
+                : 'rgba(16, 185, 129, 0.2)',
+              color: entry.difficulty === 'hard' ? 'var(--incorrect)'
+                : entry.difficulty === 'medium' ? 'var(--accent-amber)'
+                : 'var(--correct)',
+              textAlign: 'center',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}>
+              {entry.difficulty === 'hard' ? 'HARD'
+                : entry.difficulty === 'medium' ? 'MED'
+                : entry.difficulty === 'easy' ? 'EASY'
+                : '—'}
             </div>
 
             {/* Score */}
@@ -172,7 +206,8 @@ export function ScrollingLeaderboard({ onViewFull }) {
               fontWeight: 700,
               color: entry.score >= 0
                 ? 'var(--accent-cyan)'
-                : 'var(--accent-rose)'
+                : 'var(--accent-rose)',
+              textAlign: 'right'
             }}>
               {entry.score > 0 ? '+' : ''}{entry.score}
             </div>
@@ -186,8 +221,8 @@ export function ScrollingLeaderboard({ onViewFull }) {
           onClick={onViewFull}
           className="mono"
           style={{
-            marginTop: '0.75rem',
-            padding: '0.5rem',
+            marginTop: '0.5rem',
+            padding: '0.375rem 0.5rem',
             background: 'transparent',
             border: '1px solid var(--border)',
             borderRadius: '6px',

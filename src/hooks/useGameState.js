@@ -70,13 +70,22 @@ export function useGameState() {
     // Select claims based on difficulty
     const selectedClaims = selectClaimsByDifficulty(difficulty, rounds);
 
+    // CRITICAL: Validate we have enough claims to start the game
+    if (!selectedClaims || selectedClaims.length === 0) {
+      throw new Error('No claims available to start the game. Please try a different difficulty or subject.');
+    }
+
+    if (selectedClaims.length < rounds) {
+      throw new Error(`Not enough claims available. Only ${selectedClaims.length} claims found for ${rounds} rounds. Please reduce the number of rounds or change your selection.`);
+    }
+
     // Initialize game state
     const newState = {
       phase: 'playing',
       currentRound: 0,
       totalRounds: rounds,
       claims: selectedClaims,
-      currentClaim: selectedClaims[0],
+      currentClaim: selectedClaims[0], // Safe: validated above
       difficulty,
       team: {
         name: teamName,
@@ -161,6 +170,27 @@ export function useGameState() {
       // Continue to next round
       const nextRound = currentRound + 1;
       const nextClaim = claims[nextRound];
+
+      // CRITICAL: Validate next claim exists (safety check)
+      if (!nextClaim) {
+        console.error(`Claim index out of bounds: round ${nextRound} but only ${claims.length} claims available`);
+        // Force game to end if we've run out of claims
+        const finalState = {
+          ...gameState,
+          phase: 'debrief',
+          currentRound: nextRound,
+          team: {
+            ...team,
+            score: newScore,
+            results: newResults
+          }
+        };
+        setGameState(finalState);
+        GameStateManager.clear();
+        saveGameRecord(finalState);
+        SoundManager.play('complete');
+        return { isCorrect, points: netPoints, streak: newStreak };
+      }
 
       const newState = {
         ...gameState,
