@@ -24,6 +24,15 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
   const filteredSessions = useMemo(() => {
     let filtered = sessions;
 
+    // CRITICAL FIX: Deduplicate sessions by sessionId to prevent overlapping entries
+    const seenIds = new Set();
+    filtered = filtered.filter(s => {
+      const id = s.sessionId || s.id;
+      if (!id || seenIds.has(id)) return false;
+      seenIds.add(id);
+      return true;
+    });
+
     // Filter by search term
     if (searchFilter.trim()) {
       filtered = filtered.filter(s =>
@@ -197,9 +206,11 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
           {filteredSessions.map((session, index) => {
             const isCurrentTeam = session.sessionId === currentSessionId;
+            // Use unique key combining sessionId/id and index to prevent duplicate rendering
+            const uniqueKey = `${session.sessionId || session.id || 'session'}-${index}`;
             return (
               <div
-                key={session.sessionId}
+                key={uniqueKey}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1.25rem 1rem 1fr 3rem 2.5rem',
