@@ -408,7 +408,7 @@ export function TeacherDashboard({ onBack }) {
   };
 
   return (
-    <div className="viewport-container" style={{ maxWidth: '900px', height: '100%', margin: '0 auto', padding: '1.5rem' }}>
+    <div className="viewport-container" style={{ maxWidth: '900px', height: '100%', margin: '0 auto', padding: '0.5rem', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Chromebook compact CSS */}
       <style>{`
         @media (max-width: 1366px) and (max-height: 768px) {
@@ -827,43 +827,45 @@ export function TeacherDashboard({ onBack }) {
         ))}
       </div>
 
-      {/* Loading/Error States */}
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-          Loading...
-        </div>
-      )}
+      {/* Tab Content Container - Scrollable */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        {/* Loading/Error States */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+            Loading...
+          </div>
+        )}
 
-      {error && (
-        <div
-          role="alert"
-          style={{
-            padding: '1rem',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid var(--incorrect)',
-            borderRadius: '8px',
-            marginBottom: '1rem',
-            color: 'var(--incorrect)'
-          }}
-        >
-          {error}
-          <button
-            onClick={loadData}
+        {error && (
+          <div
+            role="alert"
             style={{
-              marginLeft: '1rem',
-              padding: '0.25rem 0.5rem',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              cursor: 'pointer'
+              padding: '1rem',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid var(--incorrect)',
+              borderRadius: '8px',
+              marginBottom: '1rem',
+              color: 'var(--incorrect)'
             }}
           >
-            Retry
-          </button>
-        </div>
-      )}
+            {error}
+            <button
+              onClick={loadData}
+              style={{
+                marginLeft: '1rem',
+                padding: '0.25rem 0.5rem',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
-      {/* Overview Tab */}
+        {/* Overview Tab */}
       {!loading && activeTab === 'overview' && (
         <div className="animate-in">
           {/* Stats Grid */}
@@ -1860,6 +1862,8 @@ export function TeacherDashboard({ onBack }) {
           </div>
         </div>
       )}
+      </div>
+      {/* End Tab Content Container */}
     </div>
   );
 }

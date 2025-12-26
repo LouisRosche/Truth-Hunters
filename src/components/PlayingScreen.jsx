@@ -422,8 +422,8 @@ export function PlayingScreen({
   }
 
   return (
-    <div className="viewport-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
-      {/* Chromebook optimizations - removed overly aggressive CSS */}
+    <div className="viewport-container" style={{ maxWidth: '800px', margin: '0 auto', height: '100%', overflowY: 'auto', padding: '0.5rem' }}>
+      {/* Single-viewport CSS - content must fit or scroll internally */}
       <style>{`
         @media (max-width: 700px) {
           .voting-grid {

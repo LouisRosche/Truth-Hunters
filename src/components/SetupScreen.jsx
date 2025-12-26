@@ -276,8 +276,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
 
   // Main Setup View - with scrolling leaderboard on left for larger screens
   return (
-    <div className="viewport-container" style={{ display: 'flex', justifyContent: 'center', gap: '2rem', padding: '1.5rem' }}>
-      {/* Removed overly aggressive CSS - using global viewport styles instead */}
+    <div className="viewport-container" style={{ display: 'flex', justifyContent: 'center', gap: '2rem', padding: '0.5rem', height: '100%', overflow: 'hidden' }}>
+      {/* Single-viewport CSS - all content must fit without scrolling */}
 
       {/* Scrolling Leaderboard - hidden on mobile, shown on larger screens */}
       <div className="leaderboard-sidebar" style={{
@@ -288,8 +288,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
         <ScrollingLeaderboard onViewFull={() => setShowLeaderboard(true)} />
       </div>
 
-      {/* Main Setup Form - wider for better content fit */}
-      <div className="setup-form-container" style={{ maxWidth: '720px', width: '100%' }}>
+      {/* Main Setup Form - wider for better content fit, scrollable internally */}
+      <div className="setup-form-container" style={{ maxWidth: '720px', width: '100%', overflowY: 'auto', height: '100%' }}>
       {/* Header */}
       <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</div>

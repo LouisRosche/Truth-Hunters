@@ -174,8 +174,8 @@ Play Truth Hunters and test your fact-checking skills!`;
   const aiCatchRate = aiClaims.length > 0 ? Math.round((aiCorrectCount / aiClaims.length) * 100) : 0;
 
   return (
-    <div className="viewport-container" style={{ maxWidth: '800px', margin: '0 auto', padding: '1.5rem' }}>
-      {/* Removed overly aggressive CSS - preserving educational content */}
+    <div className="viewport-container" style={{ maxWidth: '800px', margin: '0 auto', padding: '0.5rem', height: '100%', overflowY: 'auto' }}>
+      {/* Single-viewport CSS - content scrolls internally to fit */}
 
       {/* Final Score - CELEBRATORY */}
       <div
