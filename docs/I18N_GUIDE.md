@@ -1,15 +1,51 @@
 # Internationalization (i18n) Guide
 
-Truth Hunters supports multiple languages to make epistemic education accessible to non-English speaking students.
+---
 
-## Supported Languages
+## ⚠️ **IMPORTANT: i18n Infrastructure Status**
 
-Currently supported languages:
-- **English (en)** - Complete ✓
-- **Spanish (es)** - Complete ✓
-- **French (fr)** - Coming soon
-- **Chinese (zh)** - Coming soon
-- **Arabic (ar)** - Coming soon
+**Current Implementation:** Infrastructure configured, component integration **NOT YET COMPLETE**
+
+### What Exists ✅
+- react-i18next configured in `/src/i18n/config.js`
+- Translation files: `en.json`, `es.json` (complete)
+- `LanguageSelector` component implemented
+- i18n dependencies installed
+
+### What's Missing ❌
+- **i18n NOT initialized in application** - `/src/main.jsx` does not import/initialize i18next
+- **Components NOT using translations** - Only 2 of 36 components use `useTranslation()`
+- **Application runs in English only** - Translation files exist but are not loaded
+- **Language selector NOT rendered** - Component exists but not imported in main app
+
+### Integration Required Before Use
+
+**Estimated work:** 120-180 hours to externalize 1,418+ hardcoded strings across 31 files
+
+**To complete i18n integration:**
+1. Initialize i18next in `/src/main.jsx`
+2. Import and render `LanguageSelector` component
+3. Replace hardcoded strings in all components with `t()` function calls
+4. Test all screens in both English and Spanish
+5. Verify pluralization and variable interpolation
+
+**Current Status:** Translation infrastructure ready, implementation in progress
+
+See [COMPREHENSIVE_AUDIT_SUMMARY.md](../COMPREHENSIVE_AUDIT_SUMMARY.md) lines 48-55 for details.
+
+---
+
+Truth Hunters is building multilingual support to make epistemic education accessible to non-English speaking students.
+
+## Language Implementation Status
+
+| Language | Translation Files | Component Integration | Status |
+|----------|-------------------|----------------------|--------|
+| **English (en)** | ✅ Complete | ❌ Hardcoded in components | Infrastructure only |
+| **Spanish (es)** | ✅ Complete | ❌ Not integrated | Infrastructure only |
+| **French (fr)** | ❌ Not started | ❌ Not integrated | Planned |
+| **Chinese (zh)** | ❌ Not started | ❌ Not integrated | Planned |
+| **Arabic (ar)** | ❌ Not started | ❌ Not integrated | Planned |
 
 ## Adding a New Language
 

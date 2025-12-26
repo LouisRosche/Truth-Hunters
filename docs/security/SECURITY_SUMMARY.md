@@ -101,12 +101,11 @@ A complete implementation plan has been created with detailed documentation:
 
 | Document | Purpose | Time to Read |
 |----------|---------|--------------|
-| [📋 Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md) | Step-by-step tasks with priorities | 15 min |
-| [📖 Security Implementation Plan](./SECURITY_IMPLEMENTATION_PLAN.md) | Comprehensive technical strategy | 45 min |
+| [📚 Security README](./README.md) | Complete architecture and implementation roadmap | 30-45 min |
+| [⚙️ Environment Variables](./ENVIRONMENT_VARIABLES.md) | Configuration guide | 10 min |
+| [📋 This Document](./SECURITY_SUMMARY.md) | Security features and status overview | 20 min |
 | [🔐 Secure Firestore Rules](./firestore.rules.secure) | Production-ready security rules | - |
 | [🔑 Authentication Hook](./useAuth.skeleton.jsx) | Starter code for auth system | - |
-| [⚙️ Environment Variables](./ENVIRONMENT_VARIABLES.md) | Configuration guide | 10 min |
-| [📚 Security README](./README.md) | Overview and quick start | 20 min |
 
 ### Implementation Overview
 
@@ -298,8 +297,8 @@ A complete implementation plan has been created with detailed documentation:
 docs/security/README.md
 
 # Then read:
-docs/security/IMPLEMENTATION_CHECKLIST.md
-docs/security/SECURITY_IMPLEMENTATION_PLAN.md
+docs/security/README.md (implementation roadmap)
+docs/security/SECURITY_SUMMARY.md (this document)
 ```
 
 **2. Set Up Firebase Auth** (30 minutes)
@@ -322,7 +321,7 @@ cp docs/security/firestore.rules.secure firestore.rules
 **4. Follow Implementation Checklist**
 ```bash
 # Open and follow step-by-step:
-open docs/security/IMPLEMENTATION_CHECKLIST.md
+open docs/security/README.md
 ```
 
 ### For Project Managers
@@ -390,8 +389,8 @@ open docs/security/IMPLEMENTATION_CHECKLIST.md
 ## 📞 Support & Resources
 
 ### Documentation
-- [Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md) - Step-by-step guide
-- [Security Plan](./SECURITY_IMPLEMENTATION_PLAN.md) - Complete technical details
+- [Security Documentation](./README.md) - Complete architecture and implementation roadmap
+- [Environment Variables](./ENVIRONMENT_VARIABLES.md) - Configuration guide
 - [Environment Variables](./ENVIRONMENT_VARIABLES.md) - Configuration guide
 
 ### External Resources
@@ -513,7 +512,7 @@ Week 4: Testing & Deployment
 
 **Questions?** See [docs/security/README.md](./README.md) for full documentation.
 
-**Ready to implement?** Start with [Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md).
+**Ready to implement?** See the [Implementation Roadmap](./README.md#implementation-roadmap) in the security documentation.
 
 **Security concern?** Create a [Security Advisory](https://github.com/LouisRosche/Truth-Hunters/security/advisories/new).
 

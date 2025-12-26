@@ -31,7 +31,7 @@ Firebase is Google's cloud platform that provides a real-time database for stori
 **What works WITHOUT Firebase:**
 - ✅ **Solo and team gameplay**
 - ✅ **Local leaderboards** (stored on device)
-- ✅ **All 94 built-in claims**
+- ✅ **All 726 built-in claims**
 - ✅ **Achievements and scoring**
 - ✅ **Analytics and stats**
 
@@ -72,6 +72,23 @@ Before starting, you'll need:
 3. **School network permissions** (if applicable)
    - Ability to access `firebase.google.com` and `firestore.googleapis.com`
    - Chromebook/device firewall may need whitelist entries
+
+---
+
+---
+
+## ⚠️ Security Notice
+
+**Current Implementation:** Teacher dashboard accessible via URL parameter (`?teacher=true`) without authentication. This is suitable for **testing and development only**.
+
+**Before production deployment:**
+- Implement Firebase Authentication (see [docs/security/README.md](security/README.md))
+- Secure Firestore rules with authentication requirements
+- Remove URL parameter teacher access
+
+**Current Firestore rules:** Allow public reads and validated writes. Suitable for classroom testing with teacher supervision. Not suitable for unsupervised production use.
+
+See [SECURITY_AUDIT_SUMMARY.md](../SECURITY_AUDIT_SUMMARY.md) for complete security documentation.
 
 ---
 
@@ -267,12 +284,17 @@ For added security, restrict your Firebase API key to your domain:
 
 ### Accessing the Dashboard
 
+**⚠️ Temporary Access Method (Development Only)**
+
 **Method 1: URL Parameter**
 - Add `?teacher=true` to any Truth Hunters URL
 - Example: `https://yoursite.com/?teacher=true`
+- **Note:** No authentication required (security limitation)
 
 **Method 2: Direct Link**
 - Click "Teacher Dashboard" at bottom of home screen
+
+**Production Requirement:** Firebase Authentication must be implemented before unsupervised deployment. See [docs/security/README.md](security/README.md).
 
 ### Dashboard Features
 

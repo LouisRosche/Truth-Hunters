@@ -4,6 +4,29 @@
 
 A research-backed educational game for middle schoolers to develop epistemic skills, AI error detection, and confidence calibration.
 
+---
+
+## ⚠️ Project Status: BETA (Not Production Ready)
+
+**Current Status:** Active development with known issues requiring remediation
+
+### Critical Notices
+
+**Legal Compliance:** Missing required legal documentation (Privacy Policy, Terms of Service). COPPA/GDPR compliance gaps exist. See [legal-compliance-audit-report.json](legal-compliance-audit-report.json) for details.
+
+**Security:** Authentication system requires implementation before production deployment. Teacher dashboard currently accessible via URL parameter. See [docs/security/README.md](docs/security/README.md).
+
+**Accessibility:** Partial WCAG 2.2 compliance. 47 accessibility issues documented in [accessibility-audit-report.json](accessibility-audit-report.json). Keyboard navigation implemented; screen reader support in progress.
+
+**Internationalization:** Infrastructure configured (react-i18next) but component integration pending. Currently English-only in practice.
+
+**Remediation Estimate:** 352-484 hours across legal, accessibility, security, and i18n domains. See [COMPREHENSIVE_AUDIT_SUMMARY.md](COMPREHENSIVE_AUDIT_SUMMARY.md) and [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md).
+
+**Safe for:** Development, testing, classroom pilots with informed consent and supervision
+**Not ready for:** Unsupervised production deployment, public release without legal review
+
+---
+
 ## Overview
 
 Truth Hunters helps students learn to:
@@ -15,16 +38,21 @@ Truth Hunters helps students learn to:
 
 ## Features
 
-- **734 curated claims** across 22 subjects (Biology, History, Physics, Media Literacy, and more)
+### Core Gameplay ✅
+- **726 curated claims** across 22 subjects (Biology, History, Physics, Media Literacy, and more)
 - **Progressive difficulty** system (easy, medium, hard, or mixed)
 - **Calibration-based tips** that help students learn from their confidence patterns
 - **Confidence staking** with risk/reward scoring
 - **Hints system** that costs points but helps learning
 - **Achievements** for various accomplishments
-- **Local leaderboards** with optional Firebase class-wide support
-- **Chromebook-optimized** for school environments
-- **Content moderation** for appropriate team names
-- **Accessible design** with screen reader support and keyboard navigation
+- **Local leaderboards** with Firebase class-wide integration available
+- **Web-based design** compatible with Chromebooks (standard Web Audio API)
+- **Content moderation** for profanity in team names
+
+### In Development 🚧
+- **Accessibility:** Keyboard navigation functional; working toward full WCAG 2.2 AA compliance (47 issues in remediation)
+- **Internationalization:** react-i18next infrastructure ready; component integration in progress (currently English-only)
+- **Authentication:** Firebase authentication system (required for production)
 
 ## 📚 Documentation
 
@@ -33,8 +61,8 @@ Truth Hunters helps students learn to:
 Quick links:
 - [Contributing Guidelines](CONTRIBUTING.md) - Code contributions, claim submissions, bug reports
 - [Firebase Setup](docs/FIREBASE_SETUP.md) - Class-wide leaderboards setup for IT admins
-- [Internationalization](docs/I18N_GUIDE.md) - Adding translations and language support
-- [Audit Framework](docs/audit/AUDIT_FRAMEWORK.md) - Universal repository evaluation methodology
+- [Internationalization](docs/I18N_GUIDE.md) - i18n infrastructure and translation framework
+- [Security Documentation](docs/security/README.md) - Security architecture and implementation status
 
 ## Research Foundation
 
@@ -91,7 +119,7 @@ Truth-Hunters/
 │   │   ├── DebriefScreen.jsx
 │   │   └── ...
 │   ├── data/           # Game data
-│   │   ├── claims.js   # Claims database (734 claims)
+│   │   ├── claims.js   # Claims database (726 claims)
 │   │   ├── achievements.js
 │   │   └── constants.js
 │   ├── hooks/          # Custom React hooks
@@ -160,15 +188,24 @@ Add claims to `src/data/claims.js`:
 - **Timeline Compression** - Events merged or incorrectly dated
 - **Geographic Fabrication** - Made-up but plausible location details
 
-## Firebase Setup (Optional)
+## Firebase Integration
 
-For class-wide leaderboards:
+Firebase provides **optional enhanced features** for classroom use:
+- Class-wide leaderboards
+- Teacher dashboard
+- Student claim submissions
+- Cross-device synchronization
 
+**Note:** Firebase is a production dependency. The app functions without Firebase configuration (local-only mode), but teacher features require Firebase setup.
+
+**Quick Setup:**
 1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
 2. Enable Firestore Database
 3. Get your config object from Project Settings
 4. In the game, go to "Teacher Setup" and paste the config
 5. Optionally set a class code to filter leaderboards
+
+**⚠️ Security Notice:** Current implementation uses URL parameter authentication (`?teacher=true`) for teacher mode. Production deployment requires Firebase Authentication implementation. See [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) and [docs/security/README.md](docs/security/README.md).
 
 ## Gameplay
 
@@ -205,13 +242,23 @@ For class-wide leaderboards:
 ### Technologies
 
 - **React 18** - UI framework
-- **Vite** - Build tool
+- **Vite 7** - Build tool and dev server
 - **Vitest** - Testing framework
-- **Firebase** - Optional backend for class leaderboards
+- **Firebase 12** - Backend integration for class features
 
 ## Deployment
 
-### GitHub Pages (Automatic)
+### ⚠️ Pre-Deployment Requirements
+
+**Before production deployment, address:**
+- [ ] Legal compliance (Privacy Policy, Terms of Service, COPPA/GDPR) - See [legal-compliance-audit-report.json](legal-compliance-audit-report.json)
+- [ ] Firebase Authentication implementation - See [docs/security/README.md](docs/security/README.md)
+- [ ] Critical accessibility fixes - See [accessibility-audit-report.json](accessibility-audit-report.json)
+- [ ] Security hardening (authentication, secure Firestore rules)
+
+**Current deployment suitable for:** Development, testing, supervised classroom pilots only
+
+### GitHub Pages (Automatic - Development/Testing)
 
 The repository includes CI/CD that automatically deploys to GitHub Pages on every push to `main`:
 
@@ -288,6 +335,6 @@ MIT License - see LICENSE file for details.
 ## Acknowledgments
 
 - Research-based design informed by epistemic education literature
-- Sound effects using Web Audio API for Chromebook compatibility
-- Accessible design with keyboard navigation and screen reader support
-- Universal GitHub Repository Audit Framework developed using DORA metrics, CHAOSS standards, and domain-specific best practices
+- Sound effects using Web Audio API for cross-platform compatibility
+- Accessibility features implementing WCAG 2.2 guidelines (in progress)
+- Comprehensive security and quality audits informing ongoing development

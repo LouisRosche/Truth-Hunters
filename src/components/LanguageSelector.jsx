@@ -101,7 +101,7 @@ export function LanguageSelector({ compact = false }) {
       }}>
         More languages coming soon! Want to contribute a translation?{' '}
         <a
-          href="https://github.com/LouisRosche/TruthDetector/blob/main/CONTRIBUTING.md"
+          href="https://github.com/LouisRosche/Truth-Hunters/blob/main/CONTRIBUTING.md"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'var(--accent-cyan)' }}

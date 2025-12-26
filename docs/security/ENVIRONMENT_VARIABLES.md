@@ -571,5 +571,5 @@ nano .env.development
 
 For more details, see:
 - [Firebase Setup Guide](../FIREBASE_SETUP.md)
-- [Security Implementation Plan](./SECURITY_IMPLEMENTATION_PLAN.md)
-- [Authentication Guide](./AUTHENTICATION_GUIDE.md)
+- [Security Documentation](./README.md)
+- [Security Summary](./SECURITY_SUMMARY.md)

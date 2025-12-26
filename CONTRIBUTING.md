@@ -245,7 +245,7 @@ Truth-Hunters/
 │   │   ├── DebriefScreen.jsx   # Post-game review
 │   │   └── ...                 # Shared components
 │   ├── data/                # Game data
-│   │   ├── claims.js           # Claims database (734 claims)
+│   │   ├── claims.js           # Claims database (726 claims)
 │   │   ├── achievements.js     # Achievement definitions
 │   │   └── constants.js        # Game constants
 │   ├── hooks/               # Custom React hooks

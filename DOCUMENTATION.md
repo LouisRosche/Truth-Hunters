@@ -87,6 +87,16 @@ All documentation in this repository follows these principles:
 
 ## 📝 Documentation Changelog
 
+**December 26, 2024**
+- **ALIGNMENT FIXES**: Corrected documentation to match actual codebase implementation
+  - Fixed claims count: 726 (actual) across all documentation
+  - Updated README with honest project status (BETA, not production ready)
+  - Added critical notices for legal, security, accessibility, i18n gaps
+  - Updated i18n documentation to reflect infrastructure-only status
+  - Added security warnings to Firebase setup guide
+  - Removed broken links to deleted audit framework files
+  - Updated technology versions (Vite 7, Firebase 12)
+
 **December 25, 2024**
 - **CLEANUP**: Removed unnecessary meta-documentation and planning artifacts:
   - Deleted `docs/SECURITY_IMPLEMENTATION_PLAN.md` (planning artifact)
@@ -102,10 +112,8 @@ All documentation in this repository follows these principles:
 - Added SECURITY.md for vulnerability disclosure
 - Extracted standalone CODE_OF_CONDUCT.md
 - Fixed repository naming inconsistency (TruthDetector → Truth-Hunters)
-- Fixed claims count in README (726 → 734)
+- Initial claims count corrections
 - Removed outdated IMPLEMENTATION_STATUS.md (contained incorrect Vite 8 reference)
-- Fixed Vite version reference in docs/audit/AUDIT_REPORT.md (Vite 7 → Vite 6)
-- Reorganized audit files to docs/audit/ subdirectory
 - Created DOCUMENTATION.md for centralized documentation index
 - Consolidated audit framework documentation organization
 

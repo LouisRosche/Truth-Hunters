@@ -10,12 +10,12 @@ This directory contains comprehensive security implementation plans and document
 
 **New to security implementation?** Start with:
 1. [Security Overview](#current-security-status) (below)
-2. [Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md)
-3. [Security Implementation Plan](./SECURITY_IMPLEMENTATION_PLAN.md)
+2. [Security Summary](./SECURITY_SUMMARY.md) - Features and current status
+3. [Environment Variables](./ENVIRONMENT_VARIABLES.md) - Configuration setup
 
-**Ready to implement?** Go directly to:
-- [Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md) - Step-by-step tasks
-- [Starter Code](./useAuth.skeleton.jsx) - Copy-paste code templates
+**Ready to implement?** See:
+- [Implementation Roadmap](#implementation-roadmap) - Step-by-step remediation plan
+- [Critical Vulnerabilities](#critical-issues) - Must-fix security issues
 
 ---
 
@@ -54,9 +54,9 @@ Truth Hunters currently has **three critical security vulnerabilities**:
 
 | Document | Purpose | Audience | Time to Read |
 |----------|---------|----------|--------------|
-| [Security Implementation Plan](./SECURITY_IMPLEMENTATION_PLAN.md) | Comprehensive strategy and technical details | Developers | 30-45 min |
-| [Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md) | Step-by-step task list with priorities | Implementers | 15-20 min |
+| [Security Summary](./SECURITY_SUMMARY.md) | Security features and implementation status | All | 20-30 min |
 | [Environment Variables](./ENVIRONMENT_VARIABLES.md) | Configuration and secrets management | DevOps/Developers | 10-15 min |
+| [This Document](./README.md) | Complete security architecture and roadmap | Developers | 30-45 min |
 
 ### Implementation Files
 
@@ -173,7 +173,7 @@ open docs/security/IMPLEMENTATION_CHECKLIST.md
 ### For Project Managers
 
 **1. Review Scope** (15 minutes)
-- Read: [Security Implementation Plan - Executive Summary](./SECURITY_IMPLEMENTATION_PLAN.md#executive-summary)
+- Read: [Security Summary](./SECURITY_SUMMARY.md) - Current security features and status
 - Understand: 3 critical issues, 4-week timeline, ~24 hours effort
 
 **2. Allocate Resources** (varies)
@@ -188,7 +188,7 @@ open docs/security/IMPLEMENTATION_CHECKLIST.md
 - Week 4: Testing & deployment
 
 **4. Track Progress**
-- Use: [Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md)
+- Follow: Implementation roadmap in this document
 - Monitor: Weekly check-ins with developer
 - Validate: Run tests at end of each phase
 
@@ -488,7 +488,7 @@ npm run test:e2e                # End-to-end flows
 
 **"Email verification not received"**
 - Fix: Check spam folder, resend verification
-- See: [Authentication Plan](./SECURITY_IMPLEMENTATION_PLAN.md#authentication)
+- See: Authentication section in this document
 
 **"Too many requests" errors**
 - Expected: Rate limiting is working
@@ -631,7 +631,7 @@ Special thanks to contributors and security researchers who helped improve this 
 
 **Ready to secure Truth Hunters?**
 
-👉 Start with: [Implementation Checklist](./IMPLEMENTATION_CHECKLIST.md)
+👉 Start with: [Implementation Roadmap](#implementation-roadmap) in this document
 
 📧 Questions? Open an issue or contact the team!
 

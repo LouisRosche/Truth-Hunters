@@ -114,9 +114,9 @@ npm package configuration and scripts.
 
 **Dependencies:**
 - **React 18:** UI framework
-- **Firebase 11:** Backend services (optional)
+- **Firebase 12:** Backend services
 - **DOMPurify:** XSS protection for user-generated content
-- **Vite 6:** Build tool and dev server
+- **Vite 7:** Build tool and dev server
 
 **Dev Dependencies:**
 - **Vitest:** Testing framework
