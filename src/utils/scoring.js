@@ -64,7 +64,13 @@ export function calculatePoints(correct, confidence, difficulty = 'easy', option
   // If no options provided, return simple calculation (backwards compatible)
   if (!options) {
     const total = basePoints * difficultyMultiplier;
-    return total > 0 ? Math.round(total) : -Math.round(Math.abs(total));
+    const finalPoints = total > 0 ? Math.round(total) : -Math.round(Math.abs(total));
+    // CRITICAL: Validate to prevent NaN/Infinity propagation
+    if (!isFinite(finalPoints)) {
+      console.error('Invalid finalPoints in simple calculation:', { finalPoints, total, basePoints, difficultyMultiplier });
+      return 0;
+    }
+    return finalPoints;
   }
 
   // Enhanced calculation with speed bonus
@@ -82,6 +88,22 @@ export function calculatePoints(correct, confidence, difficulty = 'easy', option
 
   // Round away from zero for fair scoring
   const finalPoints = total > 0 ? Math.round(total) : -Math.round(Math.abs(total));
+
+  // CRITICAL: Validate finalPoints to prevent NaN/Infinity propagation
+  if (!isFinite(finalPoints)) {
+    console.error('Invalid finalPoints calculated:', { finalPoints, total, basePoints, difficultyMultiplier, speedBonus, options });
+    return {
+      points: 0,
+      speedBonus: null,
+      breakdown: {
+        base: 0,
+        difficultyMultiplier: 1,
+        speedMultiplier: 1,
+        integrityPenalty: 0,
+        error: 'Invalid calculation resulted in NaN/Infinity'
+      }
+    };
+  }
 
   // Return detailed object when options provided
   return {
@@ -156,7 +178,9 @@ export function calculateGameStats(results, claims, score, predictedScore) {
       currentStreak = 0;
     }
 
-    runningScore += result.points;
+    // CRITICAL: Validate result.points to prevent NaN/Infinity propagation
+    const validPoints = typeof result.points === 'number' && isFinite(result.points) ? result.points : 0;
+    runningScore += validPoints;
     stats.lowestPoint = Math.min(stats.lowestPoint, runningScore);
   });
 

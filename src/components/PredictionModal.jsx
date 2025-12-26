@@ -3,7 +3,7 @@
  * Start-of-game modal for predicting final score (metacognition priming)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -13,6 +13,19 @@ export function PredictionModal({ onSubmit, totalRounds, difficulty, isStartOfGa
   const defaultPrediction = Math.round(totalRounds * 2); // Assume ~2 points per round average
   const [prediction, setPrediction] = useState(defaultPrediction);
   const focusTrapRef = useFocusTrap(true);
+
+  // CRITICAL: Add Escape key handler (WCAG 2.1.2 No Keyboard Trap)
+  // Escape submits with current prediction value
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        onSubmit(prediction);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onSubmit, prediction]);
 
   // Calculate potential score range for context
   const maxPossibleScore = totalRounds * 5; // All correct with high confidence

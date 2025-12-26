@@ -76,6 +76,7 @@ export function PlayingScreen({
 
   const roundStartTimeRef = useRef(null);
   const timerIntervalRef = useRef(null);
+  const submittingRef = useRef(false); // Atomic lock to prevent double submission race condition
 
   // Check if tutorial should be shown (first time user in this session)
   useEffect(() => {
@@ -170,6 +171,11 @@ export function PlayingScreen({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]); // Now depends on the memoized handler
 
+  // Reset atomic lock when new claim loads
+  useEffect(() => {
+    submittingRef.current = false;
+  }, [claim?.id]);
+
   // Timer effect - starts when claim loads, resets when showResult changes
   useEffect(() => {
     if (!showResult && claim) {
@@ -213,8 +219,12 @@ export function PlayingScreen({
     if (pendingSubmit && claim && !isSubmitting) {
       setPendingSubmit(false);
 
-      // CRITICAL: Check if already submitting to prevent race condition
+      // CRITICAL: Atomic lock to prevent race condition
       // This prevents double submission if user clicks submit at same time as timer expires
+      if (submittingRef.current) {
+        return; // Already submitting, abort
+      }
+      submittingRef.current = true;
       setIsSubmitting(true);
 
       // If no verdict selected (time ran out), forfeit the round
@@ -291,12 +301,18 @@ export function PlayingScreen({
       setCalibrationTip(null);
       setForfeitAcknowledged(true); // Reset forfeit warning for next round
       integrity.reset(); // Reset anti-cheat tracking
+      submittingRef.current = false; // Reset atomic lock for next round
     }
   }, [pendingNext, resultData, claim, reasoning, onSubmit, integrity]);
 
   const handleSubmitVerdict = useCallback(() => {
     if (!verdict || !claim || isSubmitting) return;
 
+    // CRITICAL: Atomic lock to prevent race condition
+    if (submittingRef.current) {
+      return; // Already submitting, abort
+    }
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     // CRITICAL: Clear timer immediately to prevent race condition with auto-submit

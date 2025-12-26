@@ -93,6 +93,9 @@ export function App() {
   // Debounced Firebase session update (reduce frequency of updates)
   const sessionUpdateTimeoutRef = useRef(null);
 
+  // Atomic lock to prevent rapid clicking of Start Game button
+  const preparingGameRef = useRef(false);
+
   // Update live session during gameplay for class-wide leaderboard
   useEffect(() => {
     if (!sessionId || !FirebaseBackend.initialized || !FirebaseBackend.getClassCode()) {
@@ -294,6 +297,24 @@ export function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [gameState.phase]);
 
+  // CRITICAL: Add Escape key handler for modals (WCAG 2.1.2 No Keyboard Trap)
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (showHelp) {
+          setShowHelp(false);
+        } else if (isPaused && gameState.phase === 'playing') {
+          togglePause();
+        } else if (savedGameSummary && gameState.phase === 'setup') {
+          discardSavedGame();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showHelp, isPaused, savedGameSummary, gameState.phase, togglePause, discardSavedGame]);
+
   // Auto-save game state during gameplay
   useEffect(() => {
     if (gameState.phase === 'playing') {
@@ -327,31 +348,41 @@ export function App() {
   const startGame = useCallback(async (settings) => {
     const { teamName, rounds, difficulty, avatar, soundEnabled, players, subjects } = settings;
 
+    // CRITICAL: Atomic lock to prevent rapid clicking
+    if (preparingGameRef.current) {
+      return; // Already preparing, abort
+    }
+
+    preparingGameRef.current = true;
+
     // Validation before starting game
     if (!teamName || teamName.trim().length === 0) {
       logger.error('Cannot start game: Team name is required');
       alert('Please enter a team name before starting the game.');
+      preparingGameRef.current = false;
       return;
     }
 
     if (!rounds || rounds < 1 || rounds > 20) {
       logger.error('Cannot start game: Invalid rounds value', { rounds });
       alert('Please select a valid number of rounds (1-20).');
+      preparingGameRef.current = false;
       return;
     }
 
     if (!difficulty || !['easy', 'medium', 'hard', 'mixed'].includes(difficulty)) {
       logger.error('Cannot start game: Invalid difficulty', { difficulty });
       alert('Please select a valid difficulty level.');
+      preparingGameRef.current = false;
       return;
     }
 
     if (!avatar) {
       logger.error('Cannot start game: Avatar is required');
       alert('Please select a team avatar.');
+      preparingGameRef.current = false;
       return;
     }
-
     setIsPreparingGame(true);
 
     try {
@@ -397,6 +428,7 @@ export function App() {
       if (!selectedClaims || selectedClaims.length === 0) {
         logger.error('Cannot start game: No claims available');
         alert('Unable to load game content. Please check your internet connection and try again.');
+        preparingGameRef.current = false;
         return;
       }
 
@@ -426,6 +458,7 @@ export function App() {
       alert('An error occurred while starting the game. Please try again.');
     } finally {
       setIsPreparingGame(false);
+      preparingGameRef.current = false;
     }
   }, []);
 
@@ -484,13 +517,21 @@ export function App() {
     // Track hint usage in analytics
     Analytics.track(AnalyticsEvents.HINT_USED, { hintType });
 
-    setGameState((prev) => ({
-      ...prev,
-      team: {
-        ...prev.team,
-        score: prev.team.score - cost
+    setGameState((prev) => {
+      // CRITICAL: Validate cost to prevent NaN/Infinity propagation
+      const validCost = typeof cost === 'number' && isFinite(cost) ? cost : 0;
+      if (!isFinite(cost)) {
+        logger.error('Invalid hint cost, using 0', { cost });
       }
-    }));
+
+      return {
+        ...prev,
+        team: {
+          ...prev.team,
+          score: prev.team.score - validCost
+        }
+      };
+    });
   }, []);
 
   const handleRoundSubmit = useCallback(
@@ -525,7 +566,14 @@ export function App() {
 
       setGameState((prev) => {
         const newResults = [...prev.team.results, { ...result, round: prev.currentRound }];
-        const newScore = prev.team.score + result.points;
+
+        // CRITICAL: Validate result.points to prevent NaN/Infinity propagation
+        const validPoints = typeof result.points === 'number' && isFinite(result.points) ? result.points : 0;
+        if (!isFinite(result.points)) {
+          logger.error('Invalid points in result, using 0', { result });
+        }
+
+        const newScore = prev.team.score + validPoints;
         const isLastRound = prev.currentRound >= prev.totalRounds;
 
         // Get next claim with bounds checking
@@ -538,8 +586,12 @@ export function App() {
         // If last round, finalize the game
         if (isLastRound) {
           // Calculate final score with calibration bonus (prediction was made at start)
-          const calibrationBonus = Math.abs(newScore - prev.team.predictedScore) <= 2 ? 3 : 0;
-          const finalScore = newScore + calibrationBonus;
+          // CRITICAL: Validate scores to prevent NaN/Infinity in calibration calculation
+          const validNewScore = isFinite(newScore) ? newScore : 0;
+          const validPredictedScore = isFinite(prev.team.predictedScore) ? prev.team.predictedScore : 0;
+
+          const calibrationBonus = Math.abs(validNewScore - validPredictedScore) <= 2 ? 3 : 0;
+          const finalScore = validNewScore + calibrationBonus;
 
           // Calculate accuracy percentage
           const correctCount = newResults.filter((r) => r.correct).length;
@@ -871,6 +923,9 @@ export function App() {
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowHelp(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setShowHelp(false);
           }}
         >
           <div

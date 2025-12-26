@@ -3,6 +3,7 @@
  * First-time user onboarding overlay explaining game mechanics
  */
 
+import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { safeSetItem } from '../utils/safeStorage';
@@ -22,6 +23,18 @@ export function TutorialOverlay({ onClose, sessionId }) {
     // Store session ID to allow tutorial again in new sessions
     safeSetItem('truthDetector_tutorialSeen', { sessionId, seen: true });
   };
+
+  // CRITICAL: Add Escape key handler (WCAG 2.1.2 No Keyboard Trap)
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [sessionId, onClose]);
 
   return (
     <div
