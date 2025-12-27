@@ -422,8 +422,16 @@ export function PlayingScreen({
   }
 
   return (
-    <div className="viewport-container" style={{ maxWidth: '800px', margin: '0 auto', height: '100%', overflowY: 'auto', padding: '0.5rem' }}>
-      {/* Single-viewport CSS - content must fit or scroll internally */}
+    <div className="viewport-container" style={{
+      maxWidth: '800px',
+      margin: '0 auto',
+      height: '100%',
+      overflow: 'hidden',
+      padding: '0.5rem',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Single-viewport CSS - NO scrolling, everything must fit */}
       <style>{`
         @media (max-width: 700px) {
           .voting-grid {
@@ -721,7 +729,7 @@ export function PlayingScreen({
 
       {/* Difficulty Badge with Multiplier */}
       {claim.difficulty && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
           <span
             className="mono"
             style={{
@@ -739,62 +747,71 @@ export function PlayingScreen({
         </div>
       )}
 
-      {/* Claim Card */}
-      <ClaimCard claim={claim} showAnswer={showResult} />
+      {/* Main content area - uses remaining space */}
+      <div style={{
+        flex: 1,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0
+      }}>
+        {/* Claim Card */}
+        <ClaimCard claim={claim} showAnswer={showResult} />
 
-      {/* Active Hint Display */}
-      {activeHint && !showResult && (
-        <div
-          className="animate-in"
-          style={{
-            marginTop: '0.75rem',
-            padding: '0.75rem',
-            background: 'rgba(167, 139, 250, 0.1)',
-            border: '1px solid var(--accent-violet)',
-            borderRadius: '6px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
-            <span>{activeHint.icon}</span>
-            <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-violet)' }}>
-              {activeHint.name}
-            </span>
+        {/* Active Hint Display */}
+        {activeHint && !showResult && (
+          <div
+            className="animate-in"
+            style={{
+              marginTop: '0.5rem',
+              padding: '0.5rem',
+              background: 'rgba(167, 139, 250, 0.1)',
+              border: '1px solid var(--accent-violet)',
+              borderRadius: '6px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+              <span>{activeHint.icon}</span>
+              <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-violet)' }}>
+                {activeHint.name}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{activeHint.content}</div>
           </div>
-          <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{activeHint.content}</div>
-        </div>
-      )}
+        )}
 
-      {/* Voting Section - shown when not viewing result */}
-      {!showResult && (
-        <VotingSection
-          verdict={verdict}
-          onVerdictChange={setVerdict}
-          confidence={confidence}
-          onConfidenceChange={setConfidence}
-          confidencePreview={confidencePreview}
-          reasoning={reasoning}
-          onReasoningChange={setReasoning}
-          usedHints={usedHints}
-          hintCostTotal={hintCostTotal}
-          onHintRequest={handleHintRequest}
-          onSubmit={handleSubmitVerdict}
-          teamAvatar={teamAvatar}
-          disabled={isSubmitting}
-        />
-      )}
+        {/* Voting Section - shown when not viewing result */}
+        {!showResult && (
+          <VotingSection
+            verdict={verdict}
+            onVerdictChange={setVerdict}
+            confidence={confidence}
+            onConfidenceChange={setConfidence}
+            confidencePreview={confidencePreview}
+            reasoning={reasoning}
+            onReasoningChange={setReasoning}
+            usedHints={usedHints}
+            hintCostTotal={hintCostTotal}
+            onHintRequest={handleHintRequest}
+            onSubmit={handleSubmitVerdict}
+            teamAvatar={teamAvatar}
+            disabled={isSubmitting}
+          />
+        )}
 
-      {/* Result Phase */}
-      {showResult && (
-        <ResultPhase
-          resultData={resultData}
-          currentStreak={currentStreak}
-          encouragement={encouragement}
-          calibrationTip={calibrationTip}
-          integrityPenalty={integrity.penalty}
-          isLastRound={isLastRound}
-          onNext={handleNextRound}
-        />
-      )}
+        {/* Result Phase */}
+        {showResult && (
+          <ResultPhase
+            resultData={resultData}
+            currentStreak={currentStreak}
+            encouragement={encouragement}
+            calibrationTip={calibrationTip}
+            integrityPenalty={integrity.penalty}
+            isLastRound={isLastRound}
+            onNext={handleNextRound}
+          />
+        )}
+      </div>
     </div>
   );
 }

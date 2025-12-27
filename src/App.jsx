@@ -15,7 +15,6 @@ import { logger } from './utils/logger';
 const SetupScreen = lazy(() => import('./components/SetupScreen').then(m => ({ default: m.SetupScreen })));
 const PlayingScreen = lazy(() => import('./components/PlayingScreen').then(m => ({ default: m.PlayingScreen })));
 const DebriefScreen = lazy(() => import('./components/DebriefScreen').then(m => ({ default: m.DebriefScreen })));
-const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 import { TEAM_AVATARS } from './data/constants';
 import { ACHIEVEMENTS, getNewLifetimeAchievements } from './data/achievements';
 import { selectClaimsByDifficulty } from './utils/helpers';
@@ -31,13 +30,6 @@ import { useOfflineToasts } from './hooks/useOfflineToasts';
 export function App() {
   // Connect offline queue to toast notifications
   useOfflineToasts();
-
-  // Check for teacher mode via URL parameter (?teacher=true or #teacher)
-  const [isTeacherMode] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const hashTeacher = window.location.hash === '#teacher';
-    return params.get('teacher') === 'true' || hashTeacher;
-  });
 
   const [gameState, setGameState] = useState({
     phase: 'setup',
@@ -762,36 +754,6 @@ export function App() {
     });
     setCurrentStreak(0);
   }, []);
-
-  // Teacher mode - render dashboard only
-  if (isTeacherMode) {
-    return (
-      <ErrorBoundary
-        onReset={() => {
-          // Navigate back to student app
-          window.location.href = window.location.pathname;
-        }}
-        resetLabel="Back to Game"
-      >
-        <Suspense fallback={
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flex: 1,
-            color: 'var(--text-muted)'
-          }}>
-            Loading Teacher Dashboard...
-          </div>
-        }>
-          <TeacherDashboard onBack={() => {
-            // Navigate back to student app by removing teacher param
-            window.location.href = window.location.pathname;
-          }} />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
 
   return (
     <ErrorBoundary>

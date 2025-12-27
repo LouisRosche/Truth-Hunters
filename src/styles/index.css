@@ -501,7 +501,7 @@ a:focus-visible {
 
   .viewport-content {
     padding: 0.4rem;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   .viewport-footer {

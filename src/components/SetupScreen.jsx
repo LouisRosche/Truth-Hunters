@@ -288,8 +288,15 @@ export function SetupScreen({ onStart, isLoading = false }) {
         <ScrollingLeaderboard onViewFull={() => setShowLeaderboard(true)} />
       </div>
 
-      {/* Main Setup Form - wider for better content fit, scrollable internally */}
-      <div className="setup-form-container" style={{ maxWidth: '720px', width: '100%', overflowY: 'auto', height: '100%' }}>
+      {/* Main Setup Form - wider for better content fit, NO scrolling */}
+      <div className="setup-form-container" style={{
+        maxWidth: '720px',
+        width: '100%',
+        overflow: 'hidden',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
       {/* Header */}
       <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</div>
