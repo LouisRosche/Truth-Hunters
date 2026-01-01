@@ -298,7 +298,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
         flexDirection: 'column'
       }}>
       {/* Header */}
-      <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+      <div className="animate-in" style={{ textAlign: 'center', marginBottom: '1rem' }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</div>
         <h1
           className="mono"
@@ -325,8 +325,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
             background: 'linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%)',
             border: '1px solid var(--accent-cyan)',
             borderRadius: '12px',
-            padding: '1rem',
-            marginBottom: '1rem',
+            padding: '0.75rem',
+            marginBottom: '0.75rem',
             textAlign: 'center'
           }}
         >
@@ -397,8 +397,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '0.75rem'
+          padding: '0.75rem',
+          marginBottom: '0.5rem'
         }}
       >
         <button
@@ -460,8 +460,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '0.75rem'
+          padding: '0.75rem',
+          marginBottom: '0.5rem'
         }}
       >
         <label className="mono" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.375rem' }}>
@@ -521,8 +521,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '0.75rem'
+          padding: '0.75rem',
+          marginBottom: '0.5rem'
         }}
       >
         <label className="mono" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
@@ -650,8 +650,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '0.75rem'
+          padding: '0.75rem',
+          marginBottom: '0.5rem'
         }}
       >
         <label className="mono" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
@@ -696,8 +696,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '0.75rem'
+          padding: '0.75rem',
+          marginBottom: '0.5rem'
         }}
       >
         <label className="mono" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
@@ -752,8 +752,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '0.75rem'
+          padding: '0.75rem',
+          marginBottom: '0.5rem'
         }}
       >
         <label className="mono" style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
@@ -788,7 +788,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
       </div>
 
       {/* Sound Toggle + Start */}
-      <div className="animate-in" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
+      <div className="animate-in" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem' }}>
         {/* iOS-style toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>SOUND</span>
