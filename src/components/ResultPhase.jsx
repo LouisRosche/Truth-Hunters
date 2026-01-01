@@ -27,11 +27,11 @@ function ResultPhaseComponent({
     <div
       className={`animate-in ${resultData.correct ? 'animate-celebrate' : 'animate-shake'}`}
       style={{
-        marginTop: '0.5rem',
+        marginTop: '0.25rem',
         background: resultData.correct ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
         border: `2px solid ${resultData.correct ? 'var(--correct)' : 'var(--incorrect)'}`,
         borderRadius: '8px',
-        padding: '0.75rem',
+        padding: '0.5rem',
         textAlign: 'center'
       }}
     >

@@ -1,135 +1,78 @@
 /**
- * LIVE CLASS LEADERBOARD
- * Real-time leaderboard showing all active game sessions in the class
- * Compact, information-dense layout
+ * LIVE CLASS LEADERBOARD - SIMPLIFIED
+ * Minimal real-time leaderboard showing active game sessions
  */
 
-import { memo, useState, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useLiveLeaderboard } from '../hooks/useLeaderboard';
 import { FirebaseBackend } from '../services/firebase';
 import { sanitizeUserContent } from '../utils/sanitize';
 
 function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, onToggle }) {
-  // Use unified hook for live sessions
   const { sessions, isLoading, hasFirebase } = useLiveLeaderboard();
-  const [searchFilter, setSearchFilter] = useState('');
-  const [showOnlyMyTeam, setShowOnlyMyTeam] = useState(false);
-
-  // Check if we have necessary context
   const classCode = FirebaseBackend.getClassCode();
   const canShowLeaderboard = hasFirebase && classCode;
 
-  // Deduplicate sessions first, then apply filters
-  const { deduplicatedSessions, filteredSessions } = useMemo(() => {
-    // CRITICAL FIX: Deduplicate sessions by sessionId to prevent overlapping entries
+  // Simple deduplication - show top 5 only
+  const topSessions = useMemo(() => {
     const seenIds = new Set();
-    const deduplicated = sessions.filter(s => {
-      const id = s.sessionId || s.id;
-      if (!id || seenIds.has(id)) return false;
-      seenIds.add(id);
-      return true;
-    });
+    return sessions
+      .filter(s => {
+        const id = s.sessionId || s.id;
+        if (!id || seenIds.has(id)) return false;
+        seenIds.add(id);
+        return true;
+      })
+      .slice(0, 5); // Only show top 5
+  }, [sessions]);
 
-    let filtered = deduplicated;
-
-    // Filter by search term
-    if (searchFilter.trim()) {
-      filtered = filtered.filter(s =>
-        s.teamName?.toLowerCase().includes(searchFilter.toLowerCase())
-      );
-    }
-
-    // Filter to show only my team
-    if (showOnlyMyTeam && currentSessionId) {
-      filtered = filtered.filter(s => s.sessionId === currentSessionId);
-    }
-
-    return { deduplicatedSessions: deduplicated, filteredSessions: filtered };
-  }, [sessions, searchFilter, showOnlyMyTeam, currentSessionId]);
-
-  // Minimized view - just a small indicator
+  // Minimized view
   if (isMinimized) {
     if (!canShowLeaderboard) return null;
-
     return (
       <button
         onClick={onToggle}
         className="mono"
-        title="Show live class leaderboard"
         style={{
-          padding: '0.25rem 0.5rem',
+          padding: '0.125rem 0.25rem',
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border)',
-          borderRadius: '6px',
-          fontSize: '0.75rem',
+          borderRadius: '4px',
+          fontSize: '0.625rem',
           color: 'var(--accent-amber)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.375rem'
+          cursor: 'pointer'
         }}
       >
-        <span style={{ fontSize: '0.75rem' }}>🏆</span>
-        <span>{deduplicatedSessions.length} playing</span>
+        🏆 {topSessions.length}
       </button>
     );
   }
 
-  // Don't show if Firebase not available
-  if (!canShowLeaderboard) {
-    return null;
-  }
+  if (!canShowLeaderboard || topSessions.length === 0) return null;
 
   return (
-    <div
-      className="animate-in"
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: '8px',
-        padding: '0.5rem',
-        marginBottom: '0.5rem'
-      }}
-    >
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '0.375rem'
-      }}>
-        <h3 className="mono" style={{
-          fontSize: '0.75rem',
-          color: 'var(--accent-amber)',
-          margin: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.375rem'
-        }}>
-          <span>🏆</span> LIVE CLASS
-          <span style={{
-            fontSize: '0.5rem',
-            padding: '0.125rem 0.25rem',
-            background: 'rgba(16, 185, 129, 0.2)',
-            color: 'var(--correct)',
-            borderRadius: '3px',
-            fontWeight: 400
-          }}>
-            LIVE
-          </span>
-        </h3>
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: '4px',
+      padding: '0.25rem',
+      marginBottom: '0.25rem'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.125rem' }}>
+        <span className="mono" style={{ fontSize: '0.625rem', color: 'var(--accent-amber)' }}>
+          🏆 LIVE
+        </span>
         {onToggle && (
           <button
             onClick={onToggle}
-            className="mono"
             style={{
-              padding: '0.125rem 0.25rem',
               background: 'transparent',
               border: 'none',
               color: 'var(--text-muted)',
               cursor: 'pointer',
-              fontSize: '0.75rem'
+              fontSize: '0.75rem',
+              padding: 0
             }}
           >
             ×
@@ -137,175 +80,50 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
         )}
       </div>
 
-      {/* Search and Filter Controls (only show if multiple teams) */}
-      {!isLoading && deduplicatedSessions.length > 3 && (
-        <div style={{ marginBottom: '0.375rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          {/* Search Input */}
-          <input
-            type="text"
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="Search teams..."
-            style={{
-              width: '100%',
-              padding: '0.375rem',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              color: 'var(--text-primary)',
-              fontSize: '0.75rem',
-              fontFamily: 'inherit'
-            }}
-          />
-
-          {/* Filter Toggle */}
-          {currentSessionId && (
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)'
-            }}>
-              <input
-                type="checkbox"
-                checked={showOnlyMyTeam}
-                onChange={(e) => setShowOnlyMyTeam(e.target.checked)}
-                style={{ cursor: 'pointer' }}
-              />
-              <span>Show only my team</span>
-            </label>
-          )}
-        </div>
-      )}
-
-      {/* Loading state */}
-      {isLoading && (
-        <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+      {isLoading ? (
+        <div style={{ textAlign: 'center', fontSize: '0.625rem', color: 'var(--text-muted)', padding: '0.25rem' }}>
           Loading...
         </div>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && deduplicatedSessions.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-          No other teams playing yet
-        </div>
-      )}
-
-      {/* No results state */}
-      {!isLoading && deduplicatedSessions.length > 0 && filteredSessions.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-          No teams match your search
-        </div>
-      )}
-
-      {/* Leaderboard entries - Compact grid */}
-      {!isLoading && filteredSessions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          {filteredSessions.map((session, index) => {
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          {topSessions.map((session, index) => {
             const isCurrentTeam = session.sessionId === currentSessionId;
-            // Use stable sessionId/id as key (duplicates already filtered out)
-            const uniqueKey = session.sessionId || session.id || `session-${index}`;
             return (
               <div
-                key={uniqueKey}
+                key={session.sessionId || session.id || index}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1.25rem 1rem 1fr 3rem 2.5rem',
+                  gridTemplateColumns: '0.75rem 1fr 2rem 1.5rem',
                   gap: '0.25rem',
-                  padding: '0.25rem 0.375rem',
-                  background: isCurrentTeam ? 'rgba(167, 139, 250, 0.15)' : 'var(--bg-elevated)',
-                  border: isCurrentTeam ? '1px solid var(--accent-violet)' : '1px solid var(--border)',
-                  borderRadius: '6px',
+                  padding: '0.125rem 0.25rem',
+                  background: isCurrentTeam ? 'rgba(167, 139, 250, 0.1)' : 'var(--bg-elevated)',
+                  borderRadius: '3px',
+                  fontSize: '0.625rem',
                   alignItems: 'center'
                 }}
               >
-                {/* Rank */}
-                <div
-                  className="mono"
-                  style={{
-                    textAlign: 'center',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--text-muted)'
-                  }}
-                >
-                  {index < 3 ? ['🥇', '🥈', '🥉'][index] : `#${index + 1}`}
-                </div>
-
-                {/* Avatar */}
-                <div style={{ fontSize: '0.875rem' }}>
-                  {session.teamAvatar || '🔍'}
-                </div>
-
-                {/* Team info */}
-                <div style={{ minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    fontWeight: isCurrentTeam ? 600 : 500,
-                    color: isCurrentTeam ? 'var(--accent-violet)' : 'var(--text-primary)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {sanitizeUserContent(session.teamName || '', 50)}
-                    {isCurrentTeam && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> (you)</span>}
-                  </div>
-                  <div className="mono" style={{ fontSize: '0.5625rem', color: 'var(--text-muted)' }}>
-                    {session.currentRound}/{session.totalRounds}R
-                  </div>
-                </div>
-
-                {/* Accuracy badge */}
-                <div className="mono" style={{
-                  fontSize: '0.75rem',
-                  padding: '0.125rem 0.25rem',
-                  borderRadius: '4px',
-                  background: session.accuracy >= 80 ? 'rgba(16, 185, 129, 0.2)'
-                    : session.accuracy >= 50 ? 'rgba(251, 191, 36, 0.2)'
-                    : 'rgba(239, 68, 68, 0.2)',
-                  color: session.accuracy >= 80 ? 'var(--correct)'
-                    : session.accuracy >= 50 ? 'var(--accent-amber)'
-                    : 'var(--incorrect)',
-                  textAlign: 'center',
-                  fontWeight: 600
+                <span className="mono" style={{ color: index === 0 ? '#ffd700' : 'var(--text-muted)' }}>
+                  {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}`}
+                </span>
+                <span style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  fontWeight: isCurrentTeam ? 600 : 400
                 }}>
+                  {sanitizeUserContent(session.teamName || 'Team', 20)}
+                </span>
+                <span className="mono" style={{ textAlign: 'center', fontSize: '0.5625rem' }}>
                   {session.accuracy || 0}%
-                </div>
-
-                {/* Score */}
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
-                    color: session.currentScore >= 0 ? 'var(--correct)' : 'var(--incorrect)',
-                    textAlign: 'right'
-                  }}
-                >
+                </span>
+                <span className="mono" style={{ textAlign: 'right', fontWeight: 700, color: session.currentScore >= 0 ? 'var(--correct)' : 'var(--incorrect)' }}>
                   {session.currentScore >= 0 ? '+' : ''}{session.currentScore}
-                </div>
+                </span>
               </div>
             );
           })}
         </div>
       )}
-
-      {/* Footer with class info */}
-      <div className="mono" style={{
-        marginTop: '0.375rem',
-        paddingTop: '0.25rem',
-        borderTop: '1px solid var(--border)',
-        fontSize: '0.5625rem',
-        color: 'var(--text-muted)',
-        textAlign: 'center'
-      }}>
-        Class: {classCode} • {filteredSessions.length !== deduplicatedSessions.length
-          ? `${filteredSessions.length} of ${deduplicatedSessions.length}`
-          : deduplicatedSessions.length} team{deduplicatedSessions.length !== 1 ? 's' : ''} playing
-      </div>
     </div>
   );
 }
@@ -322,6 +140,5 @@ LiveClassLeaderboardComponent.defaultProps = {
   onToggle: null
 };
 
-// Memoize to prevent re-renders - critical for real-time leaderboard updates
 export const LiveClassLeaderboard = memo(LiveClassLeaderboardComponent);
 export default LiveClassLeaderboard;
