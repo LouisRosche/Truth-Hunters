@@ -30,18 +30,18 @@ function VotingSectionComponent({
   disabled
 }) {
   return (
-    <div className="animate-in" style={{ marginTop: '0.5rem' }}>
+    <div className="animate-in" style={{ marginTop: '0.25rem' }}>
       {/* Verdict Selection */}
       <div
         style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '0.5rem'
+          padding: '0.5rem',
+          marginBottom: '0.25rem'
         }}
       >
-        <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
+        <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.25rem' }}>
           1. WHAT&apos;S YOUR VERDICT?
         </h3>
         <VerdictSelector value={verdict} onChange={onVerdictChange} />
@@ -53,11 +53,11 @@ function VotingSectionComponent({
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '0.5rem'
+          padding: '0.5rem',
+          marginBottom: '0.25rem'
         }}
       >
-        <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
+        <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.25rem' }}>
           2. HOW CONFIDENT ARE YOU?
         </h3>
         <ConfidenceSelector value={confidence} onChange={onConfidenceChange} aria-describedby="confidence-preview" />
@@ -68,7 +68,7 @@ function VotingSectionComponent({
           role="status"
           aria-live="polite"
           style={{
-            marginTop: '0.5rem',
+            marginTop: '0.25rem',
             padding: '0.625rem 0.75rem',
             background: 'rgba(167, 139, 250, 0.15)',
             border: '1px solid rgba(167, 139, 250, 0.3)',
@@ -92,8 +92,8 @@ function VotingSectionComponent({
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '0.5rem'
+          padding: '0.5rem',
+          marginBottom: '0.25rem'
         }}
       >
         <label
@@ -130,11 +130,11 @@ function VotingSectionComponent({
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '0.5rem'
+          padding: '0.5rem',
+          marginBottom: '0.25rem'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
           <h3
             className="mono"
             style={{ fontSize: '0.875rem', color: 'var(--accent-violet)', margin: 0 }}

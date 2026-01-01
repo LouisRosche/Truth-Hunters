@@ -427,7 +427,7 @@ export function PlayingScreen({
       margin: '0 auto',
       height: '100%',
       overflow: 'hidden',
-      padding: '0.25rem',
+      padding: '0.125rem',
       display: 'flex',
       flexDirection: 'column'
     }}>
@@ -455,7 +455,7 @@ export function PlayingScreen({
           height: '3px',
           background: 'var(--bg-elevated)',
           borderRadius: '2px',
-          marginBottom: '0.25rem',
+          marginBottom: '0.125rem',
           overflow: 'hidden'
         }}
       >
@@ -475,7 +475,7 @@ export function PlayingScreen({
         style={{
           display: 'flex',
           justifyContent: 'center',
-          marginBottom: '0.25rem'
+          marginBottom: '0.125rem'
         }}
       >
         <div
@@ -555,7 +555,7 @@ export function PlayingScreen({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '0.5rem'
+          marginBottom: '0.25rem'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -671,8 +671,8 @@ export function PlayingScreen({
         <div
           className="animate-in mono"
           style={{
-            marginBottom: '0.5rem',
-            padding: '0.375rem 0.75rem',
+            marginBottom: '0.25rem',
+            padding: '0.25rem 0.5rem',
             background: 'rgba(167, 139, 250, 0.08)',
             border: '1px solid rgba(167, 139, 250, 0.3)',
             borderRadius: '6px',
@@ -697,8 +697,8 @@ export function PlayingScreen({
         <div
           className="animate-in"
           style={{
-            marginBottom: '0.5rem',
-            padding: '0.375rem',
+            marginBottom: '0.25rem',
+            padding: '0.25rem',
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
             borderRadius: '6px'
@@ -729,7 +729,7 @@ export function PlayingScreen({
 
       {/* Difficulty Badge with Multiplier */}
       {claim.difficulty && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.125rem' }}>
           <span
             className="mono"
             style={{
