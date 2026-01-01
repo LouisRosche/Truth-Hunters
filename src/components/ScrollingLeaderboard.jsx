@@ -21,13 +21,13 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderRadius: '12px',
-        padding: '0.75rem',
+        padding: '0.5rem',
         height: '100%'
       }}>
         <h3 className="mono" style={{
           fontSize: '0.75rem',
           color: 'var(--accent-amber)',
-          marginBottom: '0.75rem'
+          marginBottom: '0.5rem'
         }}>
           🏆 TOP TEAMS
         </h3>
@@ -35,7 +35,7 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
           color: 'var(--text-muted)',
           fontSize: '0.75rem',
           textAlign: 'center',
-          marginTop: '1.5rem'
+          marginTop: '1rem'
         }}>
           Loading...
         </p>
@@ -49,13 +49,13 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderRadius: '12px',
-        padding: '0.75rem',
+        padding: '0.5rem',
         height: '100%'
       }}>
         <h3 className="mono" style={{
           fontSize: '0.75rem',
           color: 'var(--accent-amber)',
-          marginBottom: '0.75rem'
+          marginBottom: '0.5rem'
         }}>
           🏆 TOP TEAMS
         </h3>
@@ -63,7 +63,7 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
           color: 'var(--text-muted)',
           fontSize: '0.75rem',
           textAlign: 'center',
-          marginTop: '1.5rem'
+          marginTop: '1rem'
         }}>
           No games yet!
         </p>
@@ -76,13 +76,13 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
       borderRadius: '12px',
-      padding: '0.75rem',
+      padding: '0.5rem',
       height: '100%',
       display: 'flex',
       flexDirection: 'column'
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
         <h3 className="mono" style={{
           fontSize: '0.75rem',
           color: 'var(--accent-amber)',
@@ -102,18 +102,18 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.375rem',
+        gap: '0.25rem',
         overflow: 'hidden'
       }}>
         {teams.map((entry, index) => (
           <div
-            key={entry.id || index}
+            key={entry.id || `team-${index}`}
             className="animate-in"
             style={{
               display: 'grid',
               gridTemplateColumns: '1.5rem 1.25rem 1fr 3rem 2.5rem',
-              gap: '0.375rem',
-              padding: '0.375rem 0.5rem',
+              gap: '0.25rem',
+              padding: '0.25rem 0.375rem',
               background: index < 3
                 ? 'rgba(251, 191, 36, 0.1)'
                 : 'var(--bg-elevated)',
@@ -223,8 +223,8 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
           onClick={onViewFull}
           className="mono"
           style={{
-            marginTop: '0.5rem',
-            padding: '0.375rem 0.5rem',
+            marginTop: '0.375rem',
+            padding: '0.25rem 0.375rem',
             background: 'transparent',
             border: '1px solid var(--border)',
             borderRadius: '6px',

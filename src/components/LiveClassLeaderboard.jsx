@@ -20,18 +20,18 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
   const classCode = FirebaseBackend.getClassCode();
   const canShowLeaderboard = hasFirebase && classCode;
 
-  // Filter sessions based on search and filter settings
-  const filteredSessions = useMemo(() => {
-    let filtered = sessions;
-
+  // Deduplicate sessions first, then apply filters
+  const { deduplicatedSessions, filteredSessions } = useMemo(() => {
     // CRITICAL FIX: Deduplicate sessions by sessionId to prevent overlapping entries
     const seenIds = new Set();
-    filtered = filtered.filter(s => {
+    const deduplicated = sessions.filter(s => {
       const id = s.sessionId || s.id;
       if (!id || seenIds.has(id)) return false;
       seenIds.add(id);
       return true;
     });
+
+    let filtered = deduplicated;
 
     // Filter by search term
     if (searchFilter.trim()) {
@@ -45,7 +45,7 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
       filtered = filtered.filter(s => s.sessionId === currentSessionId);
     }
 
-    return filtered;
+    return { deduplicatedSessions: deduplicated, filteredSessions: filtered };
   }, [sessions, searchFilter, showOnlyMyTeam, currentSessionId]);
 
   // Minimized view - just a small indicator
@@ -71,7 +71,7 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
         }}
       >
         <span style={{ fontSize: '0.75rem' }}>🏆</span>
-        <span>{sessions.length} playing</span>
+        <span>{deduplicatedSessions.length} playing</span>
       </button>
     );
   }
@@ -88,8 +88,8 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderRadius: '8px',
-        padding: '0.625rem',
-        marginBottom: '0.625rem'
+        padding: '0.5rem',
+        marginBottom: '0.5rem'
       }}
     >
       {/* Header */}
@@ -97,7 +97,7 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '0.5rem'
+        marginBottom: '0.375rem'
       }}>
         <h3 className="mono" style={{
           fontSize: '0.75rem',
@@ -138,8 +138,8 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
       </div>
 
       {/* Search and Filter Controls (only show if multiple teams) */}
-      {!isLoading && sessions.length > 3 && (
-        <div style={{ marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+      {!isLoading && deduplicatedSessions.length > 3 && (
+        <div style={{ marginBottom: '0.375rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           {/* Search Input */}
           <input
             type="text"
@@ -188,14 +188,14 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
       )}
 
       {/* Empty state */}
-      {!isLoading && sessions.length === 0 && (
+      {!isLoading && deduplicatedSessions.length === 0 && (
         <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
           No other teams playing yet
         </div>
       )}
 
       {/* No results state */}
-      {!isLoading && sessions.length > 0 && filteredSessions.length === 0 && (
+      {!isLoading && deduplicatedSessions.length > 0 && filteredSessions.length === 0 && (
         <div style={{ textAlign: 'center', padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
           No teams match your search
         </div>
@@ -203,19 +203,19 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
 
       {/* Leaderboard entries - Compact grid */}
       {!isLoading && filteredSessions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           {filteredSessions.map((session, index) => {
             const isCurrentTeam = session.sessionId === currentSessionId;
-            // Use unique key combining sessionId/id and index to prevent duplicate rendering
-            const uniqueKey = `${session.sessionId || session.id || 'session'}-${index}`;
+            // Use stable sessionId/id as key (duplicates already filtered out)
+            const uniqueKey = session.sessionId || session.id || `session-${index}`;
             return (
               <div
                 key={uniqueKey}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1.25rem 1rem 1fr 3rem 2.5rem',
-                  gap: '0.375rem',
-                  padding: '0.3125rem 0.4375rem',
+                  gap: '0.25rem',
+                  padding: '0.25rem 0.375rem',
                   background: isCurrentTeam ? 'rgba(167, 139, 250, 0.15)' : 'var(--bg-elevated)',
                   border: isCurrentTeam ? '1px solid var(--accent-violet)' : '1px solid var(--border)',
                   borderRadius: '6px',
@@ -295,16 +295,16 @@ function LiveClassLeaderboardComponent({ currentSessionId, isMinimized = false, 
 
       {/* Footer with class info */}
       <div className="mono" style={{
-        marginTop: '0.5rem',
-        paddingTop: '0.375rem',
+        marginTop: '0.375rem',
+        paddingTop: '0.25rem',
         borderTop: '1px solid var(--border)',
         fontSize: '0.5625rem',
         color: 'var(--text-muted)',
         textAlign: 'center'
       }}>
-        Class: {classCode} • {filteredSessions.length !== sessions.length
-          ? `${filteredSessions.length} of ${sessions.length}`
-          : sessions.length} team{sessions.length !== 1 ? 's' : ''} playing
+        Class: {classCode} • {filteredSessions.length !== deduplicatedSessions.length
+          ? `${filteredSessions.length} of ${deduplicatedSessions.length}`
+          : deduplicatedSessions.length} team{deduplicatedSessions.length !== 1 ? 's' : ''} playing
       </div>
     </div>
   );

@@ -21,9 +21,9 @@ function LeaderboardViewComponent({ onBack }) {
   const error = leaderboardTab === 'teams' ? errorTeams : errorPlayers;
 
   return (
-    <div style={{ maxWidth: '100%', height: '100%', margin: '0 auto', padding: '1rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ maxWidth: '100%', height: '100%', margin: '0 auto', padding: '0.5rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button
             onClick={onBack}
@@ -85,13 +85,13 @@ function LeaderboardViewComponent({ onBack }) {
       {/* Error Display */}
       {error && (
         <div style={{
-          padding: '0.5rem 0.75rem',
+          padding: '0.375rem 0.5rem',
           background: 'rgba(239, 68, 68, 0.1)',
           border: '1px solid var(--incorrect)',
           borderRadius: '6px',
           color: 'var(--incorrect)',
           fontSize: '0.75rem',
-          marginBottom: '0.75rem'
+          marginBottom: '0.5rem'
         }}>
           ⚠️ {error}
         </div>
@@ -125,10 +125,10 @@ function LeaderboardViewComponent({ onBack }) {
               style={{
                 display: 'grid',
                 gridTemplateColumns: leaderboardTab === 'teams'
-                  ? '3rem 1fr 1fr 6rem 5rem 5rem'
-                  : '3rem 1fr 6rem 5rem 5rem',
-                gap: '0.75rem',
-                padding: '0.625rem 0.875rem',
+                  ? '2rem 1fr 1fr 4rem 3.5rem 4rem'
+                  : '2rem 1fr 4rem 3.5rem 4rem',
+                gap: '0.5rem',
+                padding: '0.5rem 0.625rem',
                 background: 'var(--bg-elevated)',
                 borderBottom: '1px solid var(--border)',
                 fontSize: '0.75rem',
@@ -151,15 +151,15 @@ function LeaderboardViewComponent({ onBack }) {
             <div style={{ flex: 1, overflow: 'auto' }}>
               {displayData.map((item, index) => (
                 <div
-                  key={item.id || index}
+                  key={item.id || `item-${index}`}
                   className="animate-in"
                   style={{
                     display: 'grid',
                     gridTemplateColumns: leaderboardTab === 'teams'
-                      ? '3rem 1fr 1fr 6rem 5rem 5rem'
-                      : '3rem 1fr 6rem 5rem 5rem',
-                    gap: '0.75rem',
-                    padding: '0.625rem 0.875rem',
+                      ? '2rem 1fr 1fr 4rem 3.5rem 4rem'
+                      : '2rem 1fr 4rem 3.5rem 4rem',
+                    gap: '0.5rem',
+                    padding: '0.5rem 0.625rem',
                     borderBottom: index < displayData.length - 1 ? '1px solid var(--border)' : 'none',
                     background: index < 3 ? 'rgba(251, 191, 36, 0.05)' : 'transparent',
                     alignItems: 'center',
