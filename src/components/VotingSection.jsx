@@ -1,25 +1,20 @@
 /**
- * VOTING SECTION
- * Main voting interface with verdict, confidence, reasoning, and hints
+ * VOTING SECTION - ULTRA MINIMAL
+ * Inline form with progressive disclosure
  */
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { VerdictSelector } from './VerdictSelector';
 import { ConfidenceSelector } from './ConfidenceSelector';
 import { HINT_TYPES } from '../data/constants';
 
-/**
- * Voting section component for claim evaluation
- * @param {Object} props - Component props
- */
 function VotingSectionComponent({
   verdict,
   onVerdictChange,
   confidence,
   onConfidenceChange,
-  confidencePreview,
   reasoning,
   onReasoningChange,
   usedHints,
@@ -29,167 +24,111 @@ function VotingSectionComponent({
   teamAvatar,
   disabled
 }) {
+  const [showReasoning, setShowReasoning] = useState(false);
+
   return (
-    <div className="animate-in" style={{ marginTop: '0.25rem' }}>
-      {/* Verdict Selection */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '0.5rem',
-          marginBottom: '0.25rem'
-        }}
-      >
-        <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.25rem' }}>
-          1. WHAT&apos;S YOUR VERDICT?
-        </h3>
+    <div style={{ marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      {/* Verdict - inline, no card */}
+      <div>
         <VerdictSelector value={verdict} onChange={onVerdictChange} />
       </div>
 
-      {/* Confidence Selection with Risk Preview */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '0.5rem',
-          marginBottom: '0.25rem'
-        }}
-      >
-        <h3 className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent-amber)', marginBottom: '0.25rem' }}>
-          2. HOW CONFIDENT ARE YOU?
-        </h3>
-        <ConfidenceSelector value={confidence} onChange={onConfidenceChange} aria-describedby="confidence-preview" />
-        {/* Risk Preview */}
-        <div
-          id="confidence-preview"
-          className="mono"
-          role="status"
-          aria-live="polite"
-          style={{
-            marginTop: '0.25rem',
-            padding: '0.625rem 0.75rem',
-            background: 'rgba(167, 139, 250, 0.15)',
-            border: '1px solid rgba(167, 139, 250, 0.3)',
-            borderRadius: '6px',
-            fontSize: '0.875rem',
-            textAlign: 'center',
-            color: 'var(--text-secondary)'
-          }}
-        >
-          If right: <span style={{ color: 'var(--correct)', fontWeight: 700, fontSize: '1rem' }}>+{confidencePreview.ifCorrect}</span>
-          {' | '}
-          If wrong: <span style={{ color: 'var(--incorrect)', fontWeight: 700, fontSize: '1rem' }}>{confidencePreview.ifWrong}</span>
-          <br />
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'inline-block' }}>+ speed bonus (up to 2.0x)</span>
-        </div>
+      {/* Confidence - inline, no card */}
+      <div>
+        <ConfidenceSelector value={confidence} onChange={onConfidenceChange} />
       </div>
 
-      {/* Reasoning (optional) */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '0.5rem',
-          marginBottom: '0.25rem'
-        }}
-      >
-        <label
+      {/* Reasoning - hidden by default */}
+      {!showReasoning ? (
+        <button
+          onClick={() => setShowReasoning(true)}
           className="mono"
-          style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}
-        >
-          3. WHY? (optional - helps you learn!)
-        </label>
-        <textarea
-          value={reasoning}
-          onChange={(e) => onReasoningChange(e.target.value)}
-          placeholder="What clues did you notice? What made you choose this answer?"
-          rows={2}
-          maxLength={500}
-          aria-label="Explain your reasoning"
           style={{
-            width: '100%',
-            padding: '0.75rem',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            borderRadius: '6px',
-            color: 'var(--text-primary)',
-            fontSize: '0.9375rem',
-            fontFamily: 'var(--font-serif)',
-            resize: 'none',
-            lineHeight: 1.5
+            padding: '0.25rem 0.5rem',
+            background: 'transparent',
+            border: '1px dashed var(--border)',
+            borderRadius: '4px',
+            color: 'var(--text-muted)',
+            fontSize: '0.6875rem',
+            cursor: 'pointer'
           }}
-        />
-      </div>
-
-      {/* Hint System */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '0.5rem',
-          marginBottom: '0.25rem'
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-          <h3
-            className="mono"
-            style={{ fontSize: '0.875rem', color: 'var(--accent-violet)', margin: 0 }}
+        >
+          + Add reasoning
+        </button>
+      ) : (
+        <div style={{ position: 'relative' }}>
+          <textarea
+            value={reasoning}
+            onChange={(e) => onReasoningChange(e.target.value)}
+            placeholder="Why? (optional)"
+            rows={2}
+            maxLength={500}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontSize: '0.875rem',
+              fontFamily: 'var(--font-serif)',
+              resize: 'none'
+            }}
+          />
+          <button
+            onClick={() => setShowReasoning(false)}
+            style={{
+              position: 'absolute',
+              top: '0.25rem',
+              right: '0.25rem',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              padding: '0.125rem 0.25rem'
+            }}
           >
-            💡 NEED HELP?
-          </h3>
-          {hintCostTotal > 0 && (
-            <span
-              className="mono"
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Hints - small icon buttons */}
+      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+        {HINT_TYPES.map((hint) => {
+          const isUsed = usedHints.includes(hint.id);
+          return (
+            <button
+              key={hint.id}
+              onClick={() => onHintRequest(hint.id)}
+              disabled={isUsed}
+              title={`${hint.name} (-${hint.cost})`}
               style={{
-                fontSize: '0.75rem',
-                color: 'var(--incorrect)',
-                padding: '0.25rem 0.5rem',
-                background: 'rgba(239, 68, 68, 0.15)',
+                padding: '0.25rem 0.375rem',
+                background: isUsed ? 'var(--accent-violet)' : 'var(--bg-elevated)',
+                color: isUsed ? 'white' : 'var(--text-secondary)',
+                border: '1px solid ' + (isUsed ? 'var(--accent-violet)' : 'var(--border)'),
                 borderRadius: '4px',
-                fontWeight: 600
+                fontSize: '0.75rem',
+                cursor: isUsed ? 'default' : 'pointer',
+                opacity: isUsed ? 0.6 : 1
               }}
             >
-              -{hintCostTotal} pts
-            </span>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {HINT_TYPES.map((hint) => {
-            const isUsed = usedHints.includes(hint.id);
-            return (
-              <button
-                key={hint.id}
-                onClick={() => onHintRequest(hint.id)}
-                disabled={isUsed}
-                className="mono"
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  minHeight: '44px',
-                  background: isUsed ? 'var(--accent-violet)' : 'var(--bg-elevated)',
-                  color: isUsed ? 'white' : 'var(--text-secondary)',
-                  border: '2px solid ' + (isUsed ? 'var(--accent-violet)' : 'var(--border)'),
-                  borderRadius: '6px',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  cursor: isUsed ? 'default' : 'pointer',
-                  opacity: isUsed ? 0.7 : 1,
-                  textDecoration: isUsed ? 'line-through' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {hint.icon} {hint.name} (-{hint.cost})
-              </button>
-            );
-          })}
-        </div>
+              {hint.icon}
+            </button>
+          );
+        })}
+        {hintCostTotal > 0 && (
+          <span className="mono" style={{ fontSize: '0.6875rem', color: 'var(--incorrect)', alignSelf: 'center' }}>
+            -{hintCostTotal}
+          </span>
+        )}
       </div>
 
+      {/* Submit */}
       <Button onClick={onSubmit} fullWidth disabled={!verdict || disabled}>
-        {teamAvatar?.emoji || '✓'} Submit Answer
+        {teamAvatar?.emoji || '✓'} Submit
       </Button>
     </div>
   );
@@ -200,10 +139,6 @@ VotingSectionComponent.propTypes = {
   onVerdictChange: PropTypes.func.isRequired,
   confidence: PropTypes.oneOf([1, 2, 3]).isRequired,
   onConfidenceChange: PropTypes.func.isRequired,
-  confidencePreview: PropTypes.shape({
-    ifCorrect: PropTypes.number.isRequired,
-    ifWrong: PropTypes.number.isRequired
-  }).isRequired,
   reasoning: PropTypes.string,
   onReasoningChange: PropTypes.func.isRequired,
   usedHints: PropTypes.arrayOf(PropTypes.string).isRequired,
@@ -224,6 +159,5 @@ VotingSectionComponent.defaultProps = {
   disabled: false
 };
 
-// Memoize to prevent re-renders during gameplay - critical for Chromebook performance
 export const VotingSection = memo(VotingSectionComponent);
 export default VotingSection;
