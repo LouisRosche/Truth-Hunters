@@ -470,42 +470,6 @@ export function PlayingScreen({
         />
       </div>
 
-      {/* Calibration Tracker - shows predicted vs current score */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          marginBottom: '0.125rem'
-        }}
-      >
-        <div
-          className="mono"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.25rem 0.5rem',
-            background: 'var(--bg-elevated)',
-            borderRadius: '4px',
-            fontSize: '0.75rem'
-          }}
-        >
-          <span style={{ color: 'var(--text-muted)' }}>
-            Predicted: <span style={{ color: 'var(--accent-violet)' }}>{predictedScore}</span>
-          </span>
-          <span style={{ color: 'var(--border)' }}>|</span>
-          <span style={{ color: 'var(--text-muted)' }}>
-            Current: <span style={{ color: currentScore >= 0 ? 'var(--correct)' : 'var(--incorrect)' }}>{currentScore >= 0 ? '+' : ''}{currentScore}</span>
-          </span>
-          <span style={{ color: 'var(--border)' }}>|</span>
-          <span style={{
-            color: Math.abs(currentScore - predictedScore) <= 2 ? 'var(--correct)' : 'var(--accent-amber)',
-            fontWeight: Math.abs(currentScore - predictedScore) <= 2 ? 600 : 400
-          }}>
-            {Math.abs(currentScore - predictedScore) <= 2 ? '✓ On track' : `${currentScore > predictedScore ? '+' : ''}${currentScore - predictedScore} off`}
-          </span>
-        </div>
-      </div>
 
       {/* Live Class Leaderboard - shows all students' scores in real-time */}
       {sessionId && (

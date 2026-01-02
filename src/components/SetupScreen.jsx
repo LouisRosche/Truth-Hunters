@@ -303,7 +303,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
         <h1
           className="mono"
           style={{
-            fontSize: '1.5rem',
+            fontSize: '1rem',
             fontWeight: 700,
             color: 'var(--accent-cyan)',
             marginBottom: '0.25rem',
@@ -312,147 +312,10 @@ export function SetupScreen({ onStart, isLoading = false }) {
         >
           TRUTH HUNTERS
         </h1>
-        <p style={{ fontSize: '0.9375rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-          Spot facts vs. fiction & learn when to trust yourself
-        </p>
       </div>
 
       {/* Returning Solo Player Welcome */}
       {isReturningPlayer && (
-        <div
-          className="animate-in"
-          style={{
-            background: 'linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%)',
-            border: '1px solid var(--accent-cyan)',
-            borderRadius: '12px',
-            padding: '0.5rem',
-            marginBottom: '0.5rem',
-            textAlign: 'center'
-          }}
-        >
-          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            Welcome back, <strong style={{ color: 'var(--accent-cyan)' }}>{sanitizeUserContent(quickStartSettings.playerName || 'Hunter', 50)}</strong>!
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button onClick={handleQuickSoloStart} size="sm" disabled={isLoading}>
-              {isLoading ? 'Preparing...' : 'Quick Solo Play'}
-            </Button>
-            <button
-              onClick={() => setShowSoloStats(true)}
-              className="mono"
-              style={{
-                padding: '0.5rem 1rem',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                color: 'var(--text-secondary)',
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.375rem'
-              }}
-            >
-              📊 My Stats
-            </button>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            {existingProfile.stats.totalGames} games played • {existingProfile.stats.totalCorrect} correct answers
-            {existingProfile.stats.currentDayStreak > 1 && (
-              <span style={{ color: 'var(--accent-amber)' }}> • 🔥 {existingProfile.stats.currentDayStreak} day streak</span>
-            )}
-          </div>
-          {/* Unseen claims indicator */}
-          {unseenStats && unseenStats.unseen > 0 && (
-            <div style={{
-              marginTop: '0.5rem',
-              padding: '0.375rem 0.75rem',
-              background: 'rgba(52, 211, 153, 0.1)',
-              borderRadius: '6px',
-              fontSize: '0.75rem',
-              color: 'var(--accent-emerald)'
-            }}>
-              🆕 {unseenStats.unseen} new claims waiting for you!
-            </div>
-          )}
-          {unseenStats && unseenStats.unseen === 0 && (
-            <div style={{
-              marginTop: '0.5rem',
-              padding: '0.375rem 0.75rem',
-              background: 'rgba(167, 139, 250, 0.1)',
-              borderRadius: '6px',
-              fontSize: '0.75rem',
-              color: 'var(--accent-violet)'
-            }}>
-              🌟 You&apos;ve seen all {unseenStats.total} claims! Ready for a fresh challenge?
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* How To Play - collapsed by default */}
-      <div
-        className="animate-in"
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          padding: '0.5rem',
-          marginBottom: '0.25rem'
-        }}
-      >
-        <button
-          onClick={() => setShowHowToPlay(!showHowToPlay)}
-          style={{
-            width: '100%',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: 0
-          }}
-        >
-          <h2 className="mono" style={{ fontSize: '0.8125rem', color: 'var(--accent-amber)' }}>
-            📋 HOW TO PLAY
-          </h2>
-          <span style={{ color: 'var(--text-muted)' }}>{showHowToPlay ? '▲' : '▼'}</span>
-        </button>
-
-        {showHowToPlay && (
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.625rem', marginTop: '0.75rem', padding: 0, margin: '0.75rem 0 0 0' }}>
-            {[
-              { step: '1', text: 'Read claims together — some are AI-generated!' },
-              { step: '2', text: 'Discuss as a team: Is it TRUE, FALSE, or MIXED?' },
-              { step: '3', text: 'Choose your confidence level (higher = more points but riskier!)' },
-              { step: '4', text: 'Submit your answer and see if you were right' },
-              { step: '5', text: 'Learn from the explanation and try again!' }
-            ].map((item) => (
-              <li
-                key={item.step}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.625rem',
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.875rem',
-                  lineHeight: 1.4
-                }}
-              >
-                <span className="mono" style={{
-                  color: 'var(--accent-cyan)',
-                  fontWeight: 600,
-                  minWidth: '1.25rem',
-                  textAlign: 'center'
-                }}>{item.step}.</span>
-                <span>{item.text}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
       {/* Team Name & Mascot */}
       <div
         className="animate-in"
