@@ -298,24 +298,8 @@ export function SetupScreen({ onStart, isLoading = false }) {
         flexDirection: 'column'
       }}>
       {/* Header */}
-      <div className="animate-in" style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</div>
-        <h1
-          className="mono"
-          style={{
-            fontSize: '1rem',
-            fontWeight: 700,
-            color: 'var(--accent-cyan)',
-            marginBottom: '0.25rem',
-            letterSpacing: '-0.025em'
-          }}
-        >
-          TRUTH HUNTERS
-        </h1>
-      </div>
-
-      {/* Returning Solo Player Welcome */}
-      {isReturningPlayer && (
+      {/* Header */}
+      <h1 className="mono" style={{ fontSize: "0.875rem", color: "var(--accent-cyan)", margin: "0 0 0.25rem 0", textAlign: "center" }}>TRUTH HUNTERS</h1>
       {/* Team Name & Mascot */}
       <div
         className="animate-in"
