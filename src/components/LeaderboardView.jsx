@@ -142,9 +142,9 @@ function LeaderboardViewComponent({ onBack }) {
               <div>Rank</div>
               <div>{leaderboardTab === 'teams' ? 'Team' : 'Player'}</div>
               {leaderboardTab === 'teams' && <div>Players</div>}
-              <div>Difficulty</div>
-              <div>Accuracy</div>
-              <div style={{ textAlign: 'right' }}>Score</div>
+              <div>{leaderboardTab === 'teams' ? 'Difficulty' : 'Games'}</div>
+              <div>{leaderboardTab === 'teams' ? 'Accuracy' : 'Avg'}</div>
+              <div style={{ textAlign: 'right' }}>{leaderboardTab === 'teams' ? 'Score' : 'Best'}</div>
             </div>
 
             {/* Scrollable List */}
@@ -167,10 +167,14 @@ function LeaderboardViewComponent({ onBack }) {
                     transition: 'background 0.2s ease'
                   }}
                   onMouseEnter={(e) => {
-                    if (index >= 3) e.currentTarget.style.background = 'var(--bg-elevated)';
+                    e.currentTarget.style.background = index < 3
+                      ? 'rgba(251, 191, 36, 0.12)'
+                      : 'var(--bg-elevated)';
                   }}
                   onMouseLeave={(e) => {
-                    if (index >= 3) e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.background = index < 3
+                      ? 'rgba(251, 191, 36, 0.05)'
+                      : 'transparent';
                   }}
                 >
                   {/* Rank */}

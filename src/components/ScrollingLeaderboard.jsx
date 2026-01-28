@@ -169,15 +169,6 @@ function ScrollingLeaderboardComponent({ onViewFull }) {
                 <span>{entry.accuracy || 0}%</span>
                 <span>•</span>
                 <span>{entry.rounds || 0}R</span>
-                {entry.difficulty && (
-                  <>
-                    <span>•</span>
-                    <span>{
-                      entry.difficulty === 'hard' ? '🔥' :
-                      entry.difficulty === 'medium' ? '⚡' : '✨'
-                    }</span>
-                  </>
-                )}
               </div>
             </div>
 
