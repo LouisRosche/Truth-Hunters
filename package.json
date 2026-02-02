@@ -17,7 +17,7 @@
     "cms": "vite --config vite.cms.config.js"
   },
   "dependencies": {
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "^3.2.0",
     "dompurify": "^3.3.1",
     "firebase": "^12.7.0",
     "i18next": "^24.0.0",
