@@ -216,6 +216,7 @@ function LeaderboardViewComponent({ onBack }) {
                     {item.difficulty === 'hard' ? '🔥 Hard'
                       : item.difficulty === 'medium' ? '⚡ Med'
                       : item.difficulty === 'easy' ? '✨ Easy'
+                      : item.difficulty === 'mixed' ? '🎲 Mix'
                       : leaderboardTab === 'players' ? `${item.gamesPlayed}G` : '—'}
                   </div>
 
