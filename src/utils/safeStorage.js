@@ -32,7 +32,8 @@ export function safeGetItem(key, defaultValue = null) {
  */
 export function safeSetItem(key, value) {
   try {
-    const serialized = JSON.stringify(value);
+    // Normalize undefined to null for consistent JSON serialization
+    const serialized = JSON.stringify(value === undefined ? null : value);
     localStorage.setItem(key, serialized);
     return true;
   } catch (error) {
