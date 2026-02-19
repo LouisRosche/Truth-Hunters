@@ -5,6 +5,7 @@
  */
 
 import { logger } from '../utils/logger';
+import { getClaimsCount } from '../data/claimsLoader';
 
 const STORAGE_KEY = 'truthHunters_playerProfile';
 const PROFILE_VERSION = 1;
@@ -362,8 +363,11 @@ export const PlayerProfile = {
     const hardestPatterns = errorPatterns.slice(0, 3);
     const easiestPatterns = [...errorPatterns].sort((a, b) => b.catchRate - a.catchRate).slice(0, 3);
 
-    // Calculate claims seen percentage (of 150 total)
-    const claimsSeenPercent = Math.round((profile.claimsSeen.length / 150) * 100);
+    // Calculate claims seen percentage (use actual DB count if loaded, otherwise estimate)
+    const totalClaimsInDB = getClaimsCount() || Math.max(profile.claimsSeen.length, 150);
+    const claimsSeenPercent = totalClaimsInDB > 0
+      ? Math.min(100, Math.round((profile.claimsSeen.length / totalClaimsInDB) * 100))
+      : 0;
 
     return {
       playerName: profile.playerName,
@@ -401,7 +405,7 @@ export const PlayerProfile = {
       // Progress
       claimsSeen: profile.claimsSeen.length,
       claimsSeenPercent,
-      totalClaims: 150,
+      totalClaims: totalClaimsInDB,
 
       // Achievements
       lifetimeAchievements: profile.lifetimeAchievements,

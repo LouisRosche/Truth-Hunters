@@ -3,6 +3,8 @@
  * Gamification elements to encourage engagement
  */
 
+import { getClaimsCount } from './claimsLoader';
+
 /**
  * Per-game achievements (earned during a single game session)
  */
@@ -287,10 +289,14 @@ export const LIFETIME_ACHIEVEMENTS = [
   {
     id: 'lifetime-explorer-all',
     name: 'Seen It All',
-    description: 'See all 150 claims in the game',
+    description: 'See every claim in the game',
     icon: '🌟',
     category: 'explorer',
-    condition: (stats) => stats.claimsSeen >= 150
+    condition: (stats) => {
+      const total = getClaimsCount();
+      // Only award if we know the actual count and player has seen them all
+      return total !== null && stats.claimsSeen >= total;
+    }
   },
 
   // Score achievements

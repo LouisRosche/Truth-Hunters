@@ -111,7 +111,9 @@ export function useGameIntegrity(isActive = false, onTabSwitch = null, onForfeit
     // Helper flags
     hasWarning: tabSwitches > 0 && tabSwitches <= ANTI_CHEAT.MAX_TAB_SWITCHES_PER_ROUND,
     isNearForfeit: tabSwitches >= ANTI_CHEAT.MAX_TAB_SWITCHES_PER_ROUND,
-    // Penalty calculation: use forfeit penalty if any switches occurred, otherwise 0
-    penalty: tabSwitches > 0 ? ANTI_CHEAT.FORFEIT_PENALTY : 0
+    // Penalty: incremental for allowed switches, full forfeit penalty beyond max
+    penalty: isForfeit
+      ? ANTI_CHEAT.FORFEIT_PENALTY
+      : tabSwitches * ANTI_CHEAT.TAB_SWITCH_PENALTY
   };
 }

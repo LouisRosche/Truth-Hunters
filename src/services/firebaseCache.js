@@ -28,11 +28,9 @@ class FirebaseCache {
    */
   _generateKey(fnName, args) {
     // Create a stable key from function name and arguments
-    const argsStr = args.map(arg => {
-      if (arg === null || arg === undefined) return 'null';
-      if (typeof arg === 'object') return JSON.stringify(arg);
-      return String(arg);
-    }).join('_');
+    // Use JSON.stringify for unambiguous serialization (avoids collisions
+    // from args containing underscores, "null" strings, etc.)
+    const argsStr = JSON.stringify(args);
     return `${fnName}:${argsStr}`;
   }
 
