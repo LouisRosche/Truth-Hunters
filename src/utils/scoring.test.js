@@ -101,9 +101,9 @@ describe('calculatePoints', () => {
 
 describe('calculateGameStats', () => {
   const mockClaims = [
-    { id: '1', answer: 'TRUE', source: 'ai-generated', errorPattern: 'Myth perpetuation' },
+    { id: '1', answer: 'TRUE', source: 'ai-generated', errorPattern: 'myth-perpetuation' },
     { id: '2', answer: 'FALSE', source: 'expert-sourced' },
-    { id: '3', answer: 'MIXED', source: 'ai-generated', errorPattern: 'Confident specificity' }
+    { id: '3', answer: 'MIXED', source: 'ai-generated', errorPattern: 'confident-specificity' }
   ];
 
   it('calculates correct count properly', () => {

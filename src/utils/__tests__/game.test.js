@@ -30,7 +30,9 @@ describe('game utilities', () => {
     { id: '7', difficulty: 'hard', subject: 'Biology', answer: 'TRUE', gradeLevel: 'high' },
     { id: '8', difficulty: 'hard', subject: 'Physics', answer: 'FALSE', gradeLevel: 'high' },
     { id: '9', difficulty: 'hard', subject: 'Chemistry', answer: 'MIXED', gradeLevel: 'high' },
-    { id: '10', difficulty: 'easy', subject: 'History', answer: 'TRUE', gradeLevel: 'elementary' }
+    { id: '10', difficulty: 'easy', subject: 'History', answer: 'TRUE', gradeLevel: 'elementary' },
+    { id: '11', difficulty: 'easy', subject: 'Biology', answer: 'FALSE', gradeLevel: 'middle' },
+    { id: '12', difficulty: 'easy', subject: 'Physics', answer: 'TRUE', gradeLevel: 'middle' }
   ];
 
   beforeEach(() => {
@@ -416,7 +418,7 @@ describe('game utilities', () => {
     });
 
     it('calculates percent seen correctly', async () => {
-      const seenIds = ['1', '2', '3', '4', '5']; // 5 out of 10 = 50%
+      const seenIds = ['1', '2', '3', '4', '5', '6']; // 6 out of 12 = 50%
       const stats = await getUnseenClaimStats(seenIds);
 
       expect(stats.percentSeen).toBe(50);

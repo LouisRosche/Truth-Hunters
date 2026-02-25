@@ -121,7 +121,7 @@
       ]
     },
     {
-      "collectionGroup": "liveSessions",
+      "collectionGroup": "activeSessions",
       "queryScope": "COLLECTION",
       "fields": [
         {

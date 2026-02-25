@@ -61,6 +61,7 @@ describe('FirebaseBackend', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     localStorage.clear();
   });
 

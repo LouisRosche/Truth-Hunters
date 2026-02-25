@@ -378,6 +378,7 @@ export function PlayingScreen({
     setCalibrationTip(null);
     setForfeitAcknowledged(true); // Reset forfeit warning for next round
     integrity.reset(); // Reset anti-cheat tracking
+    submittingRef.current = false; // Reset atomic lock for next round
   }, [claim, resultData, reasoning, onSubmit, integrity]);
 
   const handleHintRequest = useCallback((hintType) => {

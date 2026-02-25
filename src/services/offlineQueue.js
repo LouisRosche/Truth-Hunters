@@ -116,6 +116,7 @@ export const OfflineQueue = {
 
     let success = 0;
     let failed = 0;
+    const remainingItems = [];
 
     for (const item of queue) {
       try {
@@ -144,31 +145,31 @@ export const OfflineQueue = {
         }
 
         if (result) {
-          this.dequeue(item.id);
           success++;
           logger.log(`Synced queued ${item.type}`);
+          // Item synced successfully — don't add to remainingItems
         } else {
-          // Increment retry count
           item.retries++;
           if (item.retries >= 3) {
-            // Give up after 3 retries
-            this.dequeue(item.id);
             failed++;
             logger.warn(`Gave up on queued ${item.type} after 3 retries`);
+          } else {
+            remainingItems.push(item);
           }
         }
       } catch (e) {
         logger.warn(`Failed to sync queued ${item.type}:`, e);
         item.retries++;
         if (item.retries >= 3) {
-          this.dequeue(item.id);
           failed++;
+        } else {
+          remainingItems.push(item);
         }
       }
     }
 
-    // Save updated retry counts
-    this.saveQueue(this.getQueue());
+    // Save remaining items with their updated retry counts
+    this.saveQueue(remainingItems);
 
     return { success, failed };
   },

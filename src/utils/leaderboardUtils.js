@@ -24,7 +24,7 @@ export function aggregatePlayerScores(records) {
           displayName,
           totalScore: 0,
           gamesPlayed: 0,
-          bestScore: 0
+          bestScore: -Infinity
         };
       }
 

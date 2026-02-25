@@ -57,6 +57,15 @@ export function areClaimsLoaded() {
 }
 
 /**
+ * Get the total number of claims in the database (sync).
+ * Returns cached count if claims are loaded, otherwise returns null.
+ * @returns {number|null}
+ */
+export function getClaimsCount() {
+  return claimsCache ? claimsCache.length : null;
+}
+
+/**
  * Preload claims database (for optimization during setup phase)
  * Call this when user is on setup screen to load claims in background
  */

@@ -106,15 +106,14 @@ export const SPEED_BONUS = {
   ]
 };
 
-// Anti-Cheating Configuration - ZERO TOLERANCE
+// Anti-Cheating Configuration
+// Allows 1 accidental switch (common on shared Chromebooks) before forfeit
 export const ANTI_CHEAT = {
   ENABLED: true,
   TAB_VISIBILITY_TRACKING: true,
-  // Penalties (STRICT MODE: Any tab switch = forfeit)
-  TAB_SWITCH_PENALTY: 0,            // No incremental penalty (immediate forfeit instead)
-  MAX_TAB_SWITCHES_PER_ROUND: 0,    // ANY tab switch forfeits the round
-  FORFEIT_PENALTY: -10,              // Harsh penalty for forfeiting
-  // Warning messages
+  TAB_SWITCH_PENALTY: -2,            // Incremental penalty per switch
+  MAX_TAB_SWITCHES_PER_ROUND: 1,     // Allow 1 accidental switch; 2nd forfeits
+  FORFEIT_PENALTY: -10,              // Penalty for forfeiting (after exceeding max switches)
   WARN_ON_TAB_SWITCH: true,
   PAUSE_ON_TAB_SWITCH: true
 };

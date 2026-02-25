@@ -4,6 +4,7 @@
  */
 
 import { POINTS_MATRIX, DIFFICULTY_MULTIPLIERS, SPEED_BONUS } from '../data/constants';
+import { logger } from './logger';
 
 /**
  * Calculate speed bonus multiplier based on response time
@@ -67,7 +68,7 @@ export function calculatePoints(correct, confidence, difficulty = 'easy', option
     const finalPoints = total > 0 ? Math.round(total) : -Math.round(Math.abs(total));
     // CRITICAL: Validate to prevent NaN/Infinity propagation
     if (!isFinite(finalPoints)) {
-      console.error('Invalid finalPoints in simple calculation:', { finalPoints, total, basePoints, difficultyMultiplier });
+      logger.error('Invalid finalPoints in simple calculation:', { finalPoints, total, basePoints, difficultyMultiplier });
       return 0;
     }
     return finalPoints;
@@ -91,7 +92,7 @@ export function calculatePoints(correct, confidence, difficulty = 'easy', option
 
   // CRITICAL: Validate finalPoints to prevent NaN/Infinity propagation
   if (!isFinite(finalPoints)) {
-    console.error('Invalid finalPoints calculated:', { finalPoints, total, basePoints, difficultyMultiplier, speedBonus, options });
+    logger.error('Invalid finalPoints calculated:', { finalPoints, total, basePoints, difficultyMultiplier, speedBonus, options });
     return {
       points: 0,
       speedBonus: null,
@@ -155,6 +156,9 @@ export function calculateGameStats(results, claims, score, predictedScore) {
 
   results.forEach((result) => {
     const claim = claims.find(c => c.id === result.claimId);
+    if (!claim) {
+      logger.warn('Claim not found for result, stats may be incomplete:', { claimId: result.claimId });
+    }
 
     if (result.correct) {
       stats.totalCorrect++;
@@ -171,8 +175,8 @@ export function calculateGameStats(results, claims, score, predictedScore) {
       // Track AI catches
       if (claim?.source === 'ai-generated') stats.aiCaughtCorrect++;
 
-      // Track myths busted
-      if (claim?.errorPattern === 'Myth perpetuation') stats.mythsBusted++;
+      // Track myths busted (errorPattern uses kebab-case IDs from AI_ERROR_PATTERNS)
+      if (claim?.errorPattern === 'myth-perpetuation') stats.mythsBusted++;
     } else {
       stats.totalIncorrect++;
       currentStreak = 0;

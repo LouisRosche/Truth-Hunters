@@ -271,8 +271,8 @@ export function useGameState() {
  * Helper: Save game record to leaderboard and Firebase
  */
 async function saveGameRecord(gameState) {
-  const { team, difficulty, totalRounds } = gameState;
-  const stats = calculateGameStats(team.results, team.predictedScore);
+  const { team, difficulty, totalRounds, claims } = gameState;
+  const stats = calculateGameStats(team.results, claims, team.score, team.predictedScore);
 
   const record = {
     teamName: team.name,
@@ -292,7 +292,7 @@ async function saveGameRecord(gameState) {
   // Save to Firebase (async, may fail)
   FirebaseBackend.save(record).catch(() => {
     // If Firebase fails, queue for later
-    OfflineQueue.enqueue('saveGame', record);
+    OfflineQueue.enqueue('game', record);
   });
 
   // Update player profile if solo player

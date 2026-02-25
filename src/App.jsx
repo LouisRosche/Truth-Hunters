@@ -174,15 +174,6 @@ export function App() {
               retries--;
               if (retries === 0) {
                 logger.error('Failed to remove live session after 3 retries:', err);
-                // Log to analytics/error tracking if available
-                if (window.navigator.sendBeacon) {
-                  // Use sendBeacon for cleanup during page unload
-                  window.navigator.sendBeacon('/api/log-error', JSON.stringify({
-                    error: 'session-cleanup-failed',
-                    sessionId,
-                    timestamp: Date.now()
-                  }));
-                }
               } else {
                 // Wait briefly before retry
                 await new Promise(resolve => setTimeout(resolve, 200));
@@ -289,6 +280,25 @@ export function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [gameState.phase]);
 
+  // Pending game settings (waiting for prediction)
+  const [pendingGameSettings, setPendingGameSettings] = useState(null);
+
+  // Resume saved game
+  const resumeSavedGame = useCallback(() => {
+    const saved = GameStateManager.load();
+    if (saved) {
+      setGameState(saved.gameState);
+      setCurrentStreak(saved.currentStreak || 0);
+      setSavedGameSummary(null);
+    }
+  }, []);
+
+  // Discard saved game and start fresh
+  const discardSavedGame = useCallback(() => {
+    GameStateManager.clear();
+    setSavedGameSummary(null);
+  }, []);
+
   // CRITICAL: Add Escape key handler for modals (WCAG 2.1.2 No Keyboard Trap)
   useEffect(() => {
     const handleEscape = (e) => {
@@ -316,25 +326,6 @@ export function App() {
       GameStateManager.clear();
     }
   }, [gameState, currentStreak]);
-
-  // Pending game settings (waiting for prediction)
-  const [pendingGameSettings, setPendingGameSettings] = useState(null);
-
-  // Resume saved game
-  const resumeSavedGame = useCallback(() => {
-    const saved = GameStateManager.load();
-    if (saved) {
-      setGameState(saved.gameState);
-      setCurrentStreak(saved.currentStreak || 0);
-      setSavedGameSummary(null);
-    }
-  }, []);
-
-  // Discard saved game and start fresh
-  const discardSavedGame = useCallback(() => {
-    GameStateManager.clear();
-    setSavedGameSummary(null);
-  }, []);
 
   // Start game with new settings object - but show prediction modal first
   const startGame = useCallback(async (settings) => {
@@ -942,11 +933,12 @@ export function App() {
                   📊 Scoring
                 </h3>
                 <ul style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', margin: 0 }}>
-                  <li>High confidence correct: +3 points</li>
-                  <li>Medium confidence correct: +2 points</li>
+                  <li>High confidence correct: +5 points</li>
+                  <li>Medium confidence correct: +3 points</li>
                   <li>Low confidence correct: +1 point</li>
-                  <li>High confidence wrong: -2 points</li>
-                  <li>Medium/Low confidence wrong: -1 point</li>
+                  <li>High confidence wrong: -6 points</li>
+                  <li>Medium confidence wrong: -3 points</li>
+                  <li>Low confidence wrong: -1 point</li>
                   <li>Calibration bonus: +3 pts if prediction is within 2 of actual!</li>
                 </ul>
               </div>
