@@ -6,6 +6,15 @@ on:
   push:
     branches: [main]
 
+# Cancel superseded PR runs; queue pushes to main
+concurrency:
+  group: "visual-${{ github.ref }}"
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   visual-tests:
     name: Run Visual Regression Tests
@@ -13,13 +22,14 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # All actions SHA-pinned to prevent supply chain tag-mutation attacks
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -35,7 +45,7 @@ jobs:
             echo "exist=true" >> $GITHUB_OUTPUT
           else
             echo "exist=false" >> $GITHUB_OUTPUT
-            echo "⚠️ No baseline screenshots found. Run 'npx playwright test --update-snapshots' locally and commit the screenshots."
+            echo "::notice::No baseline screenshots found. Run 'npx playwright test --update-snapshots' locally and commit the screenshots."
           fi
 
       - name: Run Playwright visual tests
@@ -46,11 +56,11 @@ jobs:
 
       - name: Skip visual tests (no baselines)
         if: steps.baselines.outputs.exist == 'false'
-        run: echo "⏭️ Skipping visual regression tests - no baseline screenshots committed yet"
+        run: echo "Skipping visual regression tests - no baseline screenshots committed yet"
 
       - name: Upload test results
         if: always() && steps.baselines.outputs.exist == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-report
           path: playwright-report/
@@ -58,7 +68,7 @@ jobs:
 
       - name: Upload visual diff artifacts
         if: failure() && steps.baselines.outputs.exist == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: visual-diffs
           path: |
@@ -66,14 +76,17 @@ jobs:
             e2e/**/*-actual.png
           retention-days: 7
 
+      # Expression injection fix: use intermediate env var instead of direct ${{ }} interpolation in script body
       - name: Comment PR with visual changes
         if: github.event_name == 'pull_request' && failure() && steps.baselines.outputs.exist == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ **Visual regression tests failed!**\n\nVisual differences detected. Please review the uploaded artifacts to see the changes.\n\n[View test report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})'
+              body: `⚠️ **Visual regression tests failed!**\n\nVisual differences detected. Please review the uploaded artifacts to see the changes.\n\n[View test report](${process.env.RUN_URL})`
             })

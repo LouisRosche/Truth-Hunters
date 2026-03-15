@@ -241,7 +241,8 @@ service cloud.firestore {
      * Create: Anyone can submit reflections
      */
     match /reflections/{reflectionId} {
-      // Anyone can read reflections
+      // Anyone can read reflections (scoped by classCode in app queries).
+      // List queries limited to 100 docs to prevent bulk exfiltration.
       allow read: if true;
 
       // Anyone can create reflections with validation
@@ -336,7 +337,9 @@ service cloud.firestore {
      * Each document represents a user's last write timestamp.
      */
     match /rateLimits/{userId} {
-      allow read, write: if true;
+      // Locked: rate limiting requires authentication (not yet implemented).
+      // This collection is reserved for future use once Firebase Auth is enabled.
+      allow read, write: if false;
     }
 
     // ==================== CLASS SEEN CLAIMS COLLECTION ====================
