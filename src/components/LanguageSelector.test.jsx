@@ -158,7 +158,7 @@ describe('LanguageSelector', () => {
       render(<LanguageSelector />);
 
       const link = screen.getByRole('link', { name: /See our contribution guide/i });
-      expect(link).toHaveAttribute('href', 'https://github.com/LouisRosche/TruthDetector/blob/main/CONTRIBUTING.md');
+      expect(link).toHaveAttribute('href', 'https://github.com/LouisRosche/Truth-Hunters/blob/main/CONTRIBUTING.md');
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     });
