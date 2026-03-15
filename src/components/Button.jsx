@@ -80,7 +80,18 @@ export const Button = memo(function Button({
         transition: 'all 0.2s ease',
         letterSpacing: '0.025em',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        outline: 'none'
+      }}
+      onFocus={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.outline = '2px solid var(--accent-cyan)';
+          e.currentTarget.style.outlineOffset = '2px';
+        }
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.outline = 'none';
+        e.currentTarget.style.outlineOffset = '0';
       }}
       onMouseEnter={(e) => {
         if (!disabled) {

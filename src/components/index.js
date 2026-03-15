@@ -17,6 +17,11 @@ export { ClaimSubmissionForm } from './ClaimSubmissionForm';
 export { StudentClaimNotifications } from './StudentClaimNotifications';
 export { LiveClassLeaderboard } from './LiveClassLeaderboard';
 
+// Modals and overlays
+export { HelpModal } from './HelpModal';
+export { PauseOverlay } from './PauseOverlay';
+export { SaveGameRecoveryModal } from './SaveGameRecoveryModal';
+
 // S-tier UX components
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 export { LoadingSkeleton } from './LoadingSkeleton';

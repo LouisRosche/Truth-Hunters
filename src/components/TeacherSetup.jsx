@@ -196,7 +196,7 @@ export function TeacherSetup({ onBack }) {
       )}
 
       {/* Step 1: Setup Instructions */}
-      {!firebaseStatus === 'connected' && currentStep === 1 && (
+      {firebaseStatus !== 'connected' && currentStep === 1 && (
         <div
           style={{
             background: 'var(--bg-card)',
@@ -240,7 +240,7 @@ export function TeacherSetup({ onBack }) {
       )}
 
       {/* Step 2: Enable Firestore */}
-      {!firebaseStatus === 'connected' && currentStep === 2 && (
+      {firebaseStatus !== 'connected' && currentStep === 2 && (
         <div
           style={{
             background: 'var(--bg-card)',
