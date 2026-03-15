@@ -308,7 +308,7 @@ describe('DebriefScreen', () => {
       );
 
       expect(screen.getByText(/ACHIEVEMENTS UNLOCKED/i)).toBeInTheDocument();
-      expect(screen.getByText(/\(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/1 of \d+ earned/)).toBeInTheDocument();
       expect(screen.getByText('AI Detector')).toBeInTheDocument();
     });
 

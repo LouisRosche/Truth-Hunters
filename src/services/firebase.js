@@ -4,7 +4,7 @@
  */
 
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import {
   getFirestore,
   collection,
@@ -177,20 +177,10 @@ export const FirebaseBackend = {
       this.initialized = true;
       this.classCode = this.getClassCode();
 
-      // Sign in anonymously to enable Firestore security rules that require auth.
-      // Anonymous auth gives each client a stable UID without requiring user accounts.
-      // This enables per-user rate limiting and future auth-gated features.
-      try {
-        await signInAnonymously(this.auth);
-        onAuthStateChanged(this.auth, (user) => {
-          this.currentUser = user;
-        });
-        logger.log('Firebase anonymous auth initialized');
-      } catch (authErr) {
-        // Anonymous auth failure is non-fatal — app works without it,
-        // but rate limiting and auth-gated Firestore rules won't apply.
-        logger.warn('Anonymous auth unavailable (non-fatal):', authErr.message);
-      }
+      // Track auth state changes (sign-in is now handled by AuthContext)
+      onAuthStateChanged(this.auth, (user) => {
+        this.currentUser = user;
+      });
 
       logger.log('Firebase backend initialized successfully');
       return true;
@@ -206,6 +196,29 @@ export const FirebaseBackend = {
    */
   tryAutoInit() {
     return this.init();
+  },
+
+  /**
+   * Sign in with Google using popup
+   * @returns {Promise<import('firebase/auth').UserCredential>}
+   */
+  async signInWithGoogle() {
+    if (!this.auth) {
+      throw new Error('Firebase auth not initialized');
+    }
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(this.auth, provider);
+  },
+
+  /**
+   * Sign out the current user
+   * @returns {Promise<void>}
+   */
+  async signOutUser() {
+    if (!this.auth) {
+      throw new Error('Firebase auth not initialized');
+    }
+    return firebaseSignOut(this.auth);
   },
 
   /**

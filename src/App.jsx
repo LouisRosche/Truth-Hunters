@@ -29,10 +29,15 @@ import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
 import { useOfflineToasts } from './hooks/useOfflineToasts';
+import { useAuth } from './contexts/AuthContext';
+import { LoginScreen } from './components/LoginScreen';
 
 export function App() {
   // Connect offline queue to toast notifications
   useOfflineToasts();
+
+  // Auth gate
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [gameState, setGameState] = useState({
     phase: 'setup',
@@ -749,6 +754,67 @@ export function App() {
     setCurrentStreak(0);
   }, []);
 
+  // Auth loading state
+  if (authLoading) {
+    return (
+      <ErrorBoundary>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '100vh',
+            color: 'var(--text-muted)',
+            gap: '1rem'
+          }}
+        >
+          <div
+            className="mono"
+            style={{
+              width: '2rem',
+              height: '2rem',
+              border: '3px solid var(--border)',
+              borderTopColor: 'var(--accent-cyan)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite'
+            }}
+          />
+          <span className="mono" style={{ fontSize: '0.9rem' }}>Loading...</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  // Not authenticated - show login screen
+  if (!isAuthenticated) {
+    return (
+      <ErrorBoundary>
+        <a
+          href="#login-content"
+          className="sr-only"
+          style={{
+            position: 'absolute',
+            top: '-40px',
+            left: 0,
+            background: 'var(--accent-cyan)',
+            color: 'var(--bg-deep)',
+            padding: '0.5rem 1rem',
+            zIndex: 9999,
+            transition: 'top 0.2s ease'
+          }}
+          onFocus={(e) => { e.target.style.top = '0'; }}
+          onBlur={(e) => { e.target.style.top = '-40px'; }}
+        >
+          Skip to main content
+        </a>
+        <LoginScreen />
+      </ErrorBoundary>
+    );
+  }
+
+  // Authenticated - render main app
   return (
     <ErrorBoundary>
       {/* Skip to main content link for screen reader users */}
