@@ -4,6 +4,7 @@
  */
 
 import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import {
   getFirestore,
   collection,
@@ -48,6 +49,8 @@ const FIREBASE_CONFIG = {
 export const FirebaseBackend = {
   app: null,
   db: null,
+  auth: null,
+  currentUser: null,
   initialized: false,
   classCode: null,
 
@@ -170,8 +173,24 @@ export const FirebaseBackend = {
       }
 
       this.db = getFirestore(this.app);
+      this.auth = getAuth(this.app);
       this.initialized = true;
       this.classCode = this.getClassCode();
+
+      // Sign in anonymously to enable Firestore security rules that require auth.
+      // Anonymous auth gives each client a stable UID without requiring user accounts.
+      // This enables per-user rate limiting and future auth-gated features.
+      try {
+        await signInAnonymously(this.auth);
+        onAuthStateChanged(this.auth, (user) => {
+          this.currentUser = user;
+        });
+        logger.log('Firebase anonymous auth initialized');
+      } catch (authErr) {
+        // Anonymous auth failure is non-fatal — app works without it,
+        // but rate limiting and auth-gated Firestore rules won't apply.
+        logger.warn('Anonymous auth unavailable (non-fatal):', authErr.message);
+      }
 
       logger.log('Firebase backend initialized successfully');
       return true;

@@ -1,0 +1,25 @@
+# CODEOWNERS — auto-request reviewers for PRs touching these paths.
+# Last matching pattern takes precedence.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: owner reviews everything
+* @LouisRosche
+
+# Game logic & scoring (correctness-critical)
+src/utils/scoring.js @LouisRosche
+src/utils/game.js @LouisRosche
+src/data/claims.js @LouisRosche
+src/data/constants.js @LouisRosche
+
+# Security-sensitive files
+src/utils/encryption.js @LouisRosche
+src/utils/sanitize.js @LouisRosche
+src/utils/moderation.js @LouisRosche
+src/services/firebase.js @LouisRosche
+firestore.rules @LouisRosche
+
+# CI/CD and deployment config
+.github/** @LouisRosche
+vercel.json @LouisRosche
+netlify.toml @LouisRosche
+firebase.json @LouisRosche

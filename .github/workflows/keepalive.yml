@@ -1,0 +1,28 @@
+# Keepalive: prevent GitHub from disabling scheduled workflows after 60 days
+# of repository inactivity. Runs monthly to keep the repo "active."
+# https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow
+
+name: Keepalive
+
+on:
+  schedule:
+    # First of every month at 06:00 UTC (avoids top-of-hour congestion)
+    - cron: '0 6 1 * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    name: Keep workflows alive
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Report status
+        run: |
+          echo "::notice::Keepalive ping — $(date -u)"
+          echo "This workflow prevents GitHub from auto-disabling scheduled workflows"
+          echo "after 60 days of repository inactivity."

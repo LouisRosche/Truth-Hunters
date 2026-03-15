@@ -14,7 +14,14 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:update": "playwright test --update-snapshots",
     "lint": "eslint src --ext .js,.jsx",
-    "cms": "vite --config vite.cms.config.js"
+    "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "cms": "vite --config vite.cms.config.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "eslint --fix --max-warnings=0"
+    ]
   },
   "dependencies": {
     "@types/dompurify": "^3.0.5",
@@ -39,6 +46,8 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "jsdom": "^23.0.1",
     "vite": "^7.3.0",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.2.0",
     "vitest": "^4.0.15"
   },
   "keywords": [
