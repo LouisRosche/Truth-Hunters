@@ -9,6 +9,9 @@ import {
   Header,
   PredictionModal
 } from './components';
+import { HelpModal } from './components/HelpModal';
+import { PauseOverlay } from './components/PauseOverlay';
+import { SaveGameRecoveryModal } from './components/SaveGameRecoveryModal';
 import { logger } from './utils/logger';
 
 // Lazy load screen components for code-splitting
@@ -26,10 +29,15 @@ import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
 import { useOfflineToasts } from './hooks/useOfflineToasts';
+import { useAuth } from './contexts/AuthContext';
+import { LoginScreen } from './components/LoginScreen';
 
 export function App() {
   // Connect offline queue to toast notifications
   useOfflineToasts();
+
+  // Auth gate
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [gameState, setGameState] = useState({
     phase: 'setup',
@@ -746,6 +754,67 @@ export function App() {
     setCurrentStreak(0);
   }, []);
 
+  // Auth loading state
+  if (authLoading) {
+    return (
+      <ErrorBoundary>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '100vh',
+            color: 'var(--text-muted)',
+            gap: '1rem'
+          }}
+        >
+          <div
+            className="mono"
+            style={{
+              width: '2rem',
+              height: '2rem',
+              border: '3px solid var(--border)',
+              borderTopColor: 'var(--accent-cyan)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite'
+            }}
+          />
+          <span className="mono" style={{ fontSize: '0.9rem' }}>Loading...</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  // Not authenticated - show login screen
+  if (!isAuthenticated) {
+    return (
+      <ErrorBoundary>
+        <a
+          href="#login-content"
+          className="sr-only"
+          style={{
+            position: 'absolute',
+            top: '-40px',
+            left: 0,
+            background: 'var(--accent-cyan)',
+            color: 'var(--bg-deep)',
+            padding: '0.5rem 1rem',
+            zIndex: 9999,
+            transition: 'top 0.2s ease'
+          }}
+          onFocus={(e) => { e.target.style.top = '0'; }}
+          onBlur={(e) => { e.target.style.top = '-40px'; }}
+        >
+          Skip to main content
+        </a>
+        <LoginScreen />
+      </ErrorBoundary>
+    );
+  }
+
+  // Authenticated - render main app
   return (
     <ErrorBoundary>
       {/* Skip to main content link for screen reader users */}
@@ -860,306 +929,26 @@ export function App() {
 
       {/* Help Modal */}
       {showHelp && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="help-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowHelp(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setShowHelp(false);
-          }}
-        >
-          <div
-            className="animate-in"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-              maxWidth: '500px',
-              width: '100%',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2
-                id="help-title"
-                className="mono"
-                style={{ fontSize: '1.25rem', color: 'var(--accent-cyan)' }}
-              >
-                🔍 How to Play
-              </h2>
-              <button
-                onClick={() => setShowHelp(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
-                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>
-                  🎯 Goal
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                  Evaluate claims and determine if they are TRUE, FALSE, or MIXED (partially true). Score points for correct answers!
-                </p>
-              </div>
-
-              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
-                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-emerald)', marginBottom: '0.5rem' }}>
-                  📊 Scoring
-                </h3>
-                <ul style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', margin: 0 }}>
-                  <li>High confidence correct: +5 points</li>
-                  <li>Medium confidence correct: +3 points</li>
-                  <li>Low confidence correct: +1 point</li>
-                  <li>High confidence wrong: -6 points</li>
-                  <li>Medium confidence wrong: -3 points</li>
-                  <li>Low confidence wrong: -1 point</li>
-                  <li>Calibration bonus: +3 pts if prediction is within 2 of actual!</li>
-                </ul>
-              </div>
-
-              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
-                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-violet)', marginBottom: '0.5rem' }}>
-                  ⌨️ Keyboard Shortcuts
-                </h3>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.25rem 0.75rem' }}>
-                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>T/F/M</span>
-                  <span>Select TRUE/FALSE/MIXED</span>
-                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>1/2/3</span>
-                  <span>Set confidence level</span>
-                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>Enter</span>
-                  <span>Submit answer / Next round</span>
-                  <span className="mono" style={{ color: 'var(--accent-violet)' }}>?</span>
-                  <span>Toggle shortcut hints</span>
-                </div>
-              </div>
-
-              <div style={{ padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
-                <h3 className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-rose)', marginBottom: '0.5rem' }}>
-                  💡 Tips
-                </h3>
-                <ul style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', margin: 0 }}>
-                  <li>Use hints if stuck (costs points)</li>
-                  <li>Discuss with your team before answering</li>
-                  <li>Watch for AI-generated misinformation patterns</li>
-                  <li>Calibrate your confidence - it affects scoring!</li>
-                </ul>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowHelp(false)}
-              className="mono"
-              style={{
-                width: '100%',
-                marginTop: '1rem',
-                padding: '0.75rem',
-                background: 'var(--accent-cyan)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'var(--bg-deep)',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Got it!
-            </button>
-          </div>
-        </div>
+        <HelpModal onClose={() => setShowHelp(false)} />
       )}
 
       {/* Pause Overlay */}
       {isPaused && gameState.phase === 'playing' && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="pause-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-        >
-          <div
-            className="animate-in"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--accent-amber)',
-              borderRadius: '16px',
-              padding: '2rem',
-              textAlign: 'center',
-              maxWidth: '400px',
-              width: '100%'
-            }}
-          >
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏸️</div>
-            <h2
-              id="pause-title"
-              className="mono"
-              style={{ fontSize: '1.5rem', color: 'var(--accent-amber)', marginBottom: '0.5rem' }}
-            >
-              GAME PAUSED
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-              Round {gameState.currentRound} of {gameState.totalRounds} • {gameState.team.score} points
-            </p>
-            <button
-              onClick={togglePause}
-              className="mono"
-              style={{
-                width: '100%',
-                padding: '1rem',
-                background: 'var(--accent-cyan)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'var(--bg-deep)',
-                fontSize: '1rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              ▶️ Resume Game
-            </button>
-          </div>
-        </div>
+        <PauseOverlay
+          currentRound={gameState.currentRound}
+          totalRounds={gameState.totalRounds}
+          score={gameState.team.score}
+          onResume={togglePause}
+        />
       )}
 
       {/* Saved Game Recovery Modal */}
       {savedGameSummary && gameState.phase === 'setup' && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="recovery-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              maxWidth: '400px',
-              width: '100%',
-              textAlign: 'center'
-            }}
-          >
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💾</div>
-            <h2
-              id="recovery-title"
-              className="mono"
-              style={{
-                fontSize: '1.125rem',
-                marginBottom: '0.5rem',
-                color: 'var(--accent-cyan)'
-              }}
-            >
-              Game in Progress Found
-            </h2>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-              You have an unfinished game from {savedGameSummary.timeAgoText}.
-            </p>
-            <div
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '0.75rem',
-                marginBottom: '1rem',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Team</span>
-                <span className="mono" style={{ fontSize: '0.875rem' }}>{savedGameSummary.teamName}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Progress</span>
-                <span className="mono" style={{ fontSize: '0.875rem' }}>
-                  Round {savedGameSummary.currentRound} of {savedGameSummary.totalRounds}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Score</span>
-                <span className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent-cyan)' }}>
-                  {savedGameSummary.score} pts
-                </span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={discardSavedGame}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem'
-                }}
-              >
-                Start Fresh
-              </button>
-              <button
-                onClick={resumeSavedGame}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  background: 'var(--accent-cyan)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'var(--bg-deep)',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: 600
-                }}
-              >
-                Resume Game
-              </button>
-            </div>
-          </div>
-        </div>
+        <SaveGameRecoveryModal
+          summary={savedGameSummary}
+          onResume={resumeSavedGame}
+          onDiscard={discardSavedGame}
+        />
       )}
 
       <footer

@@ -90,8 +90,15 @@ class PerformanceMonitor {
     // Largest Contentful Paint (LCP) - requires PerformanceObserver
     // Time to Interactive and other metrics would need dedicated observers
 
-    // Navigation timing
-    if (performance.timing) {
+    // Navigation timing (prefer Navigation Timing Level 2 API over deprecated performance.timing)
+    const navEntries = performance.getEntriesByType?.('navigation');
+    if (navEntries && navEntries.length > 0) {
+      const nav = navEntries[0];
+      vitals.loadTime = Math.round(nav.loadEventEnd - nav.startTime);
+      vitals.domReady = Math.round(nav.domContentLoadedEventEnd - nav.startTime);
+      vitals.firstByte = Math.round(nav.responseStart - nav.startTime);
+    } else if (performance.timing) {
+      // Fallback for older browsers
       const timing = performance.timing;
       vitals.loadTime = timing.loadEventEnd - timing.navigationStart;
       vitals.domReady = timing.domContentLoadedEventEnd - timing.navigationStart;

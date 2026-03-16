@@ -282,100 +282,457 @@ Play Truth Hunters and test your fact-checking skills!`;
         ))}
       </div>
 
-      {/* Achievements Section - CELEBRATORY! */}
-      {earnedAchievements.length > 0 && (
-        <div
-          className="animate-celebrate"
-          style={{
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(167, 139, 250, 0.2) 100%)',
-            border: '3px solid var(--accent-amber)',
-            borderRadius: '16px',
-            padding: '1.5rem',
-            marginBottom: '1.5rem',
-            boxShadow: '0 8px 24px rgba(251, 191, 36, 0.3)'
-          }}
-        >
-          <button
-            onClick={() => setShowAchievements(!showAchievements)}
-            style={{
-              width: '100%',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: 0,
-              marginBottom: showAchievements ? '1.25rem' : 0
-            }}
-          >
-            <h3 className="mono" style={{ fontSize: '1.125rem', color: 'var(--accent-amber)', fontWeight: 700 }}>
-              🏆 ACHIEVEMENTS UNLOCKED ({earnedAchievements.length})
-            </h3>
-            <span style={{ color: 'var(--text-muted)', fontSize: '1.25rem' }}>{showAchievements ? '▲' : '▼'}</span>
-          </button>
+      {/* Achievements Section - REDESIGNED */}
+      {(() => {
+        // Rarity mapping for achievement visual tiers
+        const ACHIEVEMENT_RARITY = {
+          'first-truth': 'common',
+          'team-player': 'common',
+          'streak-3': 'rare',
+          'ai-detector': 'rare',
+          'humble-learner': 'rare',
+          'streak-5': 'epic',
+          'risk-taker': 'epic',
+          'myth-buster': 'epic',
+          'mixed-master': 'epic',
+          'calibrated': 'epic',
+          'perfect-round': 'legendary',
+          'comeback-kid': 'legendary'
+        };
 
-          {showAchievements && (
+        const RARITY_STYLES = {
+          common: {
+            border: '2px solid var(--border)',
+            boxShadow: 'none',
+            glowColor: 'transparent',
+            label: 'Common',
+            labelColor: 'var(--text-muted)'
+          },
+          rare: {
+            border: '2px solid rgba(34, 211, 238, 0.6)',
+            boxShadow: '0 0 12px rgba(34, 211, 238, 0.3), inset 0 0 12px rgba(34, 211, 238, 0.05)',
+            glowColor: 'rgba(34, 211, 238, 0.15)',
+            label: 'Rare',
+            labelColor: 'var(--accent-cyan)'
+          },
+          epic: {
+            border: '2px solid rgba(167, 139, 250, 0.7)',
+            boxShadow: '0 0 16px rgba(167, 139, 250, 0.35), inset 0 0 16px rgba(167, 139, 250, 0.05)',
+            glowColor: 'rgba(167, 139, 250, 0.15)',
+            label: 'Epic',
+            labelColor: 'var(--accent-violet)'
+          },
+          legendary: {
+            border: '2px solid rgba(251, 191, 36, 0.8)',
+            boxShadow: '0 0 20px rgba(251, 191, 36, 0.4), 0 0 40px rgba(251, 191, 36, 0.15), inset 0 0 20px rgba(251, 191, 36, 0.05)',
+            glowColor: 'rgba(251, 191, 36, 0.2)',
+            label: 'Legendary',
+            labelColor: 'var(--accent-amber)'
+          }
+        };
+
+        // Calculate near-miss achievements
+        const nearMissAchievements = ACHIEVEMENTS
+          .filter(a => !a.condition(gameStats))
+          .map(a => {
+            let progress = 0;
+            let current = 0;
+            let target = 0;
+            let progressLabel = '';
+
+            switch (a.id) {
+              case 'streak-3':
+                current = gameStats.maxStreak;
+                target = 3;
+                progress = current >= 1 ? current / target : 0;
+                progressLabel = `${current}/3 streak`;
+                break;
+              case 'streak-5':
+                current = gameStats.maxStreak;
+                target = 5;
+                progress = current >= 1 ? current / target : 0;
+                progressLabel = `${current}/5 streak`;
+                break;
+              case 'ai-detector':
+                current = gameStats.aiCaughtCorrect || 0;
+                target = 3;
+                progress = current >= 1 ? current / target : 0;
+                progressLabel = `${current}/3 AI caught`;
+                break;
+              case 'calibrated': {
+                const diff = Math.abs(gameStats.actualScore - gameStats.predictedScore);
+                if (diff <= 7) {
+                  progress = Math.max(0, 1 - ((diff - 2) / 5));
+                  progressLabel = `off by ${diff} (need ±2)`;
+                }
+                break;
+              }
+              case 'humble-learner':
+                current = gameStats.humbleCorrect || 0;
+                target = 3;
+                progress = current >= 1 ? current / target : 0;
+                progressLabel = `${current}/3 humble wins`;
+                break;
+              case 'risk-taker':
+                current = gameStats.boldCorrect || 0;
+                target = 3;
+                progress = current >= 1 ? current / target : 0;
+                progressLabel = `${current}/3 bold wins`;
+                break;
+              case 'myth-buster':
+                current = gameStats.mythsBusted || 0;
+                target = 3;
+                progress = current >= 1 ? current / target : 0;
+                progressLabel = `${current}/3 myths busted`;
+                break;
+              case 'mixed-master':
+                current = gameStats.mixedCorrect || 0;
+                target = 3;
+                progress = current >= 1 ? current / target : 0;
+                progressLabel = `${current}/3 mixed correct`;
+                break;
+              case 'perfect-round':
+                current = gameStats.totalCorrect || 0;
+                target = gameStats.totalCorrect + gameStats.totalIncorrect || 1;
+                progress = target > 0 ? current / target : 0;
+                if (gameStats.totalIncorrect > 0) {
+                  progressLabel = `${current}/${target} correct`;
+                }
+                break;
+              case 'first-truth':
+                current = gameStats.totalCorrect || 0;
+                target = 1;
+                progress = 0;
+                break;
+              case 'team-player':
+                progress = 0;
+                break;
+              case 'comeback-kid':
+                if (gameStats.lowestScore < 0 && !gameStats.comeback) {
+                  progress = 0.5;
+                  progressLabel = 'went negative but didn\'t recover';
+                }
+                break;
+              default:
+                break;
+            }
+
+            return { ...a, progress: Math.min(progress, 0.99), progressLabel };
+          })
+          .filter(a => a.progress > 0)
+          .sort((a, b) => b.progress - a.progress);
+
+        // Shimmer keyframes injected via style tag
+        const shimmerStyle = `
+          @keyframes achievementShimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+          }
+          @keyframes legendaryPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.4), 0 0 40px rgba(251, 191, 36, 0.15); }
+            50% { box-shadow: 0 0 28px rgba(251, 191, 36, 0.6), 0 0 56px rgba(251, 191, 36, 0.25); }
+          }
+          @keyframes trophyBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15) rotate(-5deg); }
+          }
+        `;
+
+        // Don't render section if nothing to show
+        if (earnedAchievements.length === 0 && nearMissAchievements.length === 0) {
+          return null;
+        }
+
+        return (
+          <>
+            <style>{shimmerStyle}</style>
             <div
+              className="animate-celebrate"
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                gap: '1rem'
+                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(167, 139, 250, 0.12) 50%, rgba(34, 211, 238, 0.12) 100%)',
+                border: '3px solid var(--accent-amber)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                marginBottom: '1.5rem',
+                boxShadow: '0 8px 24px rgba(251, 191, 36, 0.2)'
               }}
             >
-              {earnedAchievements.map((achievement, idx) => (
-                <div
-                  key={achievement.id}
-                  className="animate-celebrate"
-                  style={{
-                    padding: '1.25rem',
-                    background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)',
-                    borderRadius: '12px',
-                    textAlign: 'center',
-                    border: '2px solid var(--accent-amber)',
-                    boxShadow: '0 4px 12px rgba(251, 191, 36, 0.2)',
-                    transform: 'scale(1)',
-                    transition: 'all 0.3s ease',
-                    animationDelay: `${idx * 0.1}s`
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(251, 191, 36, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.2)';
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '3rem',
-                      marginBottom: '0.5rem',
-                      lineHeight: 1
-                    }}
-                  >
-                    {achievement.icon}
-                  </div>
-                  <div
-                    className="mono"
-                    style={{
-                      fontSize: '0.875rem',
-                      fontWeight: 700,
-                      color: 'var(--accent-amber)',
-                      marginBottom: '0.375rem'
-                    }}
-                  >
-                    {achievement.name}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    {achievement.description}
+              {/* Header with animated trophy and count */}
+              <button
+                onClick={() => setShowAchievements(!showAchievements)}
+                style={{
+                  width: '100%',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 0,
+                  marginBottom: showAchievements ? '1.25rem' : 0
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{
+                    fontSize: '2rem',
+                    animation: earnedAchievements.length > 0 ? 'trophyBounce 2s ease-in-out infinite' : 'none',
+                    display: 'inline-block'
+                  }}>
+                    🏆
+                  </span>
+                  <div style={{ textAlign: 'left' }}>
+                    <h3 className="mono" style={{ fontSize: '1.125rem', color: 'var(--accent-amber)', fontWeight: 700, margin: 0 }}>
+                      ACHIEVEMENTS UNLOCKED
+                    </h3>
+                    <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.125rem' }}>
+                      {earnedAchievements.length} of {ACHIEVEMENTS.length} earned
+                      {nearMissAchievements.length > 0 && ` · ${nearMissAchievements.length} almost there`}
+                    </div>
                   </div>
                 </div>
-              ))}
+                <span style={{ color: 'var(--text-muted)', fontSize: '1.25rem' }}>{showAchievements ? '▲' : '▼'}</span>
+              </button>
+
+              {showAchievements && (
+                <>
+                  {/* Earned Achievements Grid */}
+                  {earnedAchievements.length > 0 && (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '0.875rem'
+                      }}
+                    >
+                      {earnedAchievements.map((achievement, idx) => {
+                        const rarity = ACHIEVEMENT_RARITY[achievement.id] || 'common';
+                        const rarityStyle = RARITY_STYLES[rarity];
+                        const isLegendary = rarity === 'legendary';
+
+                        return (
+                          <div
+                            key={achievement.id}
+                            className="animate-bounce-in"
+                            style={{
+                              padding: '1.25rem 1rem',
+                              background: `linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)`,
+                              borderRadius: '14px',
+                              textAlign: 'center',
+                              border: rarityStyle.border,
+                              boxShadow: rarityStyle.boxShadow,
+                              transform: 'scale(1)',
+                              transition: 'all 0.3s ease',
+                              animationDelay: `${idx * 0.1}s`,
+                              position: 'relative',
+                              overflow: 'hidden',
+                              ...(isLegendary ? { animation: 'legendaryPulse 3s ease-in-out infinite' } : {})
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
+                            {/* Shimmer overlay */}
+                            <div style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              background: `linear-gradient(110deg, transparent 30%, ${rarityStyle.glowColor} 50%, transparent 70%)`,
+                              backgroundSize: '200% 100%',
+                              animation: 'achievementShimmer 3s ease-in-out infinite',
+                              pointerEvents: 'none',
+                              borderRadius: '14px'
+                            }} />
+
+                            {/* Rarity label */}
+                            {rarity !== 'common' && (
+                              <div className="mono" style={{
+                                position: 'absolute',
+                                top: '0.375rem',
+                                right: '0.5rem',
+                                fontSize: '0.5625rem',
+                                fontWeight: 700,
+                                color: rarityStyle.labelColor,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.08em',
+                                opacity: 0.8
+                              }}>
+                                {rarityStyle.label}
+                              </div>
+                            )}
+
+                            {/* Icon with circular background */}
+                            <div style={{
+                              width: '4rem',
+                              height: '4rem',
+                              borderRadius: '50%',
+                              background: rarityStyle.glowColor || 'var(--bg-elevated)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              margin: '0 auto 0.625rem',
+                              border: `1px solid ${rarityStyle.glowColor || 'var(--border)'}`,
+                              position: 'relative'
+                            }}>
+                              <span style={{ fontSize: '2.25rem', lineHeight: 1 }}>
+                                {achievement.icon}
+                              </span>
+                            </div>
+
+                            {/* Achievement name */}
+                            <div
+                              className="mono"
+                              style={{
+                                fontSize: '0.9375rem',
+                                fontWeight: 700,
+                                color: rarityStyle.labelColor || 'var(--text-primary)',
+                                marginBottom: '0.25rem',
+                                position: 'relative'
+                              }}
+                            >
+                              {achievement.name}
+                            </div>
+
+                            {/* Description */}
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-secondary)',
+                              lineHeight: 1.4,
+                              position: 'relative'
+                            }}>
+                              {achievement.description}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {earnedAchievements.length === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '1.5rem 1rem',
+                      color: 'var(--text-muted)',
+                      fontSize: '0.875rem'
+                    }}>
+                      No achievements earned yet — keep playing to unlock them!
+                    </div>
+                  )}
+
+                  {/* Near-Miss / Almost Earned Section */}
+                  {nearMissAchievements.length > 0 && (
+                    <div style={{ marginTop: '1.5rem' }}>
+                      <div className="mono" style={{
+                        fontSize: '0.8125rem',
+                        color: 'var(--text-muted)',
+                        fontWeight: 600,
+                        marginBottom: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <span style={{ fontSize: '1.125rem' }}>🔓</span>
+                        ALMOST EARNED — SO CLOSE!
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.625rem'
+                      }}>
+                        {nearMissAchievements.map((achievement) => (
+                          <div
+                            key={achievement.id}
+                            className="animate-in"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              background: 'var(--bg-card)',
+                              borderRadius: '10px',
+                              border: '1px solid var(--border)',
+                              opacity: 0.85
+                            }}
+                          >
+                            {/* Icon */}
+                            <div style={{
+                              width: '2.5rem',
+                              height: '2.5rem',
+                              borderRadius: '50%',
+                              background: 'var(--bg-elevated)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              filter: 'grayscale(0.5)',
+                              border: '1px solid var(--border)'
+                            }}>
+                              <span style={{ fontSize: '1.375rem', lineHeight: 1 }}>
+                                {achievement.icon}
+                              </span>
+                            </div>
+
+                            {/* Info + progress bar */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'baseline',
+                                marginBottom: '0.25rem'
+                              }}>
+                                <div className="mono" style={{
+                                  fontSize: '0.8125rem',
+                                  fontWeight: 600,
+                                  color: 'var(--text-secondary)'
+                                }}>
+                                  {achievement.name}
+                                </div>
+                                <div className="mono" style={{
+                                  fontSize: '0.6875rem',
+                                  color: 'var(--text-muted)',
+                                  flexShrink: 0,
+                                  marginLeft: '0.5rem'
+                                }}>
+                                  {achievement.progressLabel}
+                                </div>
+                              </div>
+
+                              {/* Progress bar */}
+                              <div style={{
+                                height: '6px',
+                                background: 'var(--bg-elevated)',
+                                borderRadius: '3px',
+                                overflow: 'hidden',
+                                border: '1px solid var(--border)'
+                              }}>
+                                <div style={{
+                                  height: '100%',
+                                  width: `${Math.round(achievement.progress * 100)}%`,
+                                  background: achievement.progress >= 0.75
+                                    ? 'linear-gradient(90deg, var(--accent-amber), var(--accent-amber))'
+                                    : achievement.progress >= 0.5
+                                    ? 'linear-gradient(90deg, var(--accent-cyan), var(--accent-cyan))'
+                                    : 'var(--text-muted)',
+                                  borderRadius: '3px',
+                                  transition: 'width 0.5s ease'
+                                }} />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </>
+        );
+      })()}
 
       {/* Round Results */}
       <div

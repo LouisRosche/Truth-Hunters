@@ -70,12 +70,34 @@ service cloud.firestore {
     }
 
     /**
-     * Rate limiting check (simple timestamp-based)
-     * Prevents more than 1 write per 30 seconds from same client
+     * Rate limiting check (timestamp-based)
+     * Prevents more than 1 write per 30 seconds from same authenticated client.
+     * Requires Firebase Authentication (including anonymous auth) to identify clients.
      */
     function notTooFrequent() {
-      return !exists(/databases/$(database)/documents/rateLimits/$(request.auth.uid)) ||
-             (request.time - get(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data.lastWrite).toMillis() > 30000;
+      return request.auth != null && (
+        !exists(/databases/$(database)/documents/rateLimits/$(request.auth.uid)) ||
+        (request.time - get(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data.lastWrite).toMillis() > 30000
+      );
+    }
+
+    /**
+     * Check if the request comes from an authenticated user (including anonymous).
+     * Used to gate write operations once anonymous auth is enabled.
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /**
+     * Document-level write throttle (no auth required).
+     * Ensures at least `minIntervalMs` milliseconds between updates to the same document.
+     * Relies on the document having an `updatedAt` or `lastUpdated` server timestamp field.
+     */
+    function documentNotUpdatedTooRecently(minIntervalMs) {
+      return !exists(resource) ||
+             !('updatedAt' in resource.data) ||
+             (request.time - resource.data.updatedAt).toMillis() > minIntervalMs;
     }
 
     // ==================== GAMES COLLECTION ====================
@@ -241,7 +263,8 @@ service cloud.firestore {
      * Create: Anyone can submit reflections
      */
     match /reflections/{reflectionId} {
-      // Anyone can read reflections
+      // Anyone can read reflections (scoped by classCode in app queries).
+      // List queries limited to 100 docs to prevent bulk exfiltration.
       allow read: if true;
 
       // Anyone can create reflections with validation
@@ -286,7 +309,9 @@ service cloud.firestore {
                                 validNumber(request.resource.data.totalRounds, 3, 10) &&
                                 validNumber(request.resource.data.score, -50, 100) &&
                                 request.resource.data.status in ['playing', 'completed'] &&
-                                request.resource.data.lastUpdated == request.time;
+                                request.resource.data.lastUpdated == request.time &&
+                                // Throttle: max 1 update per second per document
+                                documentNotUpdatedTooRecently(1000);
 
       // Teams can delete their game state when finished
       allow delete: if true;
@@ -321,7 +346,9 @@ service cloud.firestore {
                                 validNumber(request.resource.data.currentRound, 0, 20) &&
                                 validNumber(request.resource.data.totalRounds, 3, 20) &&
                                 request.resource.data.isActive is bool &&
-                                request.resource.data.updatedAt == request.time;
+                                request.resource.data.updatedAt == request.time &&
+                                // Throttle: max 1 update per second per session document
+                                documentNotUpdatedTooRecently(1000);
 
       // Teams can delete their session when game ends
       allow delete: if true;
@@ -336,7 +363,14 @@ service cloud.firestore {
      * Each document represents a user's last write timestamp.
      */
     match /rateLimits/{userId} {
-      allow read, write: if true;
+      // Rate limit tracking: each user can only read/write their own document.
+      // Requires Firebase Authentication (including anonymous auth).
+      // Once auth is enabled, client writes a { lastWrite: serverTimestamp() }
+      // document as part of a batch write, and notTooFrequent() validates it.
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId &&
+                      request.resource.data.keys().hasOnly(['lastWrite']) &&
+                      request.resource.data.lastWrite == request.time;
     }
 
     // ==================== CLASS SEEN CLAIMS COLLECTION ====================

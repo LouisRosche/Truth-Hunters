@@ -4,6 +4,7 @@
  */
 
 import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import {
   getFirestore,
   collection,
@@ -48,6 +49,8 @@ const FIREBASE_CONFIG = {
 export const FirebaseBackend = {
   app: null,
   db: null,
+  auth: null,
+  currentUser: null,
   initialized: false,
   classCode: null,
 
@@ -170,8 +173,14 @@ export const FirebaseBackend = {
       }
 
       this.db = getFirestore(this.app);
+      this.auth = getAuth(this.app);
       this.initialized = true;
       this.classCode = this.getClassCode();
+
+      // Track auth state changes (sign-in is now handled by AuthContext)
+      onAuthStateChanged(this.auth, (user) => {
+        this.currentUser = user;
+      });
 
       logger.log('Firebase backend initialized successfully');
       return true;
@@ -187,6 +196,29 @@ export const FirebaseBackend = {
    */
   tryAutoInit() {
     return this.init();
+  },
+
+  /**
+   * Sign in with Google using popup
+   * @returns {Promise<import('firebase/auth').UserCredential>}
+   */
+  async signInWithGoogle() {
+    if (!this.auth) {
+      throw new Error('Firebase auth not initialized');
+    }
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(this.auth, provider);
+  },
+
+  /**
+   * Sign out the current user
+   * @returns {Promise<void>}
+   */
+  async signOutUser() {
+    if (!this.auth) {
+      throw new Error('Firebase auth not initialized');
+    }
+    return firebaseSignOut(this.auth);
   },
 
   /**

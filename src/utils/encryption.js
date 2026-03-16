@@ -181,7 +181,9 @@ function getLegacyKey() {
     }
     return key;
   } catch {
-    return 'TruthHunters2025_DefaultKey';
+    // Deterministic fallback when sessionStorage unavailable (e.g., private browsing).
+    // Not cryptographically ideal, but avoids a fully predictable static string.
+    return 'xK9m_TH_' + String(navigator.userAgent.length * 7) + '_Fb3qZ';
   }
 }
 

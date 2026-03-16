@@ -169,9 +169,9 @@ class FirebaseCache {
 // Export singleton instance
 export const firebaseCache = new FirebaseCache();
 
-// Periodic cleanup every 5 minutes
+// Periodic cleanup every 5 minutes (store interval ID for cleanup)
 if (typeof window !== 'undefined') {
-  setInterval(() => {
+  firebaseCache._cleanupInterval = setInterval(() => {
     firebaseCache.cleanup();
   }, 5 * 60 * 1000);
 }

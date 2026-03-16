@@ -48,9 +48,10 @@ describe('SetupScreen', () => {
     expect(screen.getByText('TRUTH HUNTERS')).toBeInTheDocument();
   });
 
-  it('renders the subtitle', () => {
+  it('renders the educational tip section', () => {
     render(<SetupScreen onStart={mockOnStart} />);
-    expect(screen.getByText('Spot facts vs. fiction & learn when to trust yourself')).toBeInTheDocument();
+    // The setup screen shows a random educational tip at the bottom
+    expect(screen.getByText(/💡/)).toBeInTheDocument();
   });
 
   it('renders team name input', () => {
@@ -123,20 +124,14 @@ describe('SetupScreen', () => {
     expect(screen.getByRole('button', { name: /leaderboard/i })).toBeInTheDocument();
   });
 
-  it('renders how to play section', () => {
+  it('renders submit claim button', () => {
     render(<SetupScreen onStart={mockOnStart} />);
-    expect(screen.getByText(/HOW TO PLAY/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /submit claim/i })).toBeInTheDocument();
   });
 
-  it('expands how to play section on click', () => {
+  it('renders player section with who is playing label', () => {
     render(<SetupScreen onStart={mockOnStart} />);
-
-    // The HOW TO PLAY text is inside a button, find the button by role
-    const buttons = screen.getAllByRole('button');
-    const howToPlayButton = buttons.find(btn => btn.textContent.includes('HOW TO PLAY'));
-    fireEvent.click(howToPlayButton);
-
-    expect(screen.getByText(/Read claims together/i)).toBeInTheDocument();
+    expect(screen.getByText(/WHO'S PLAYING/i)).toBeInTheDocument();
   });
 
   it('renders sound toggle switch', () => {

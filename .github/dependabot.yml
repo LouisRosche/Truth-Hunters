@@ -59,8 +59,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # Automatically merge minor and patch updates for dev dependencies
-    # (requires GitHub Actions workflow - see .github/workflows/auto-merge.yml)
     commit-message:
       prefix: "chore"
       prefix-development: "chore(dev)"

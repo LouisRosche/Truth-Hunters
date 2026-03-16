@@ -10,12 +10,13 @@ import { ToastProvider, useToast } from '../Toast';
 
 describe('Toast', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
     vi.restoreAllMocks();
-    vi.clearAllTimers();
   });
 
   describe('ToastProvider', () => {

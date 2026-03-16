@@ -265,9 +265,11 @@ export const PlayerProfile = {
       }
     });
 
-    // Track claims seen
+    // Track claims seen (use Set for O(1) lookup instead of O(n) includes)
+    const seenSet = new Set(profile.claimsSeen);
     gameData.claims.forEach(claim => {
-      if (!profile.claimsSeen.includes(claim.id)) {
+      if (!seenSet.has(claim.id)) {
+        seenSet.add(claim.id);
         profile.claimsSeen.push(claim.id);
       }
     });

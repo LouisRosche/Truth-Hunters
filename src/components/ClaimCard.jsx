@@ -5,6 +5,7 @@
 
 import { memo } from 'react';
 import PropTypes from 'prop-types';
+import { sanitizeUserContent } from '../utils/sanitize';
 
 function ClaimCardComponent({ claim, showAnswer = false }) {
   return (
@@ -189,7 +190,7 @@ function ClaimCardComponent({ claim, showAnswer = false }) {
                 : 'var(--accent-amber)'}`
             }}
           >
-            {claim.explanation}
+            {sanitizeUserContent(claim.explanation || '', 2000)}
           </p>
         </div>
       )}
