@@ -6,12 +6,13 @@
 import { memo } from 'react';
 import PropTypes from 'prop-types';
 
+const LEVELS = [
+  { value: 1, label: 'Not sure', risk: 'Right +1 · Wrong -1', color: 'var(--confidence-1)', levelText: 'Safe' },
+  { value: 2, label: 'Pretty sure', risk: 'Right +3 · Wrong -3', color: 'var(--confidence-2)', levelText: 'Medium' },
+  { value: 3, label: 'Certain!', risk: 'Right +5 · Wrong -6', color: 'var(--confidence-3)', levelText: 'Risky' }
+];
+
 export const ConfidenceSelector = memo(function ConfidenceSelector({ value, onChange, disabled }) {
-  const levels = [
-    { value: 1, label: 'Not sure', risk: 'Right +1 · Wrong -1', color: 'var(--confidence-1)', levelText: 'Safe' },
-    { value: 2, label: 'Pretty sure', risk: 'Right +3 · Wrong -3', color: 'var(--confidence-2)', levelText: 'Medium' },
-    { value: 3, label: 'Certain!', risk: 'Right +5 · Wrong -6', color: 'var(--confidence-3)', levelText: 'Risky' }
-  ];
 
   const handleKeyDown = (e, levelValue) => {
     if (disabled) return;
@@ -33,7 +34,7 @@ export const ConfidenceSelector = memo(function ConfidenceSelector({ value, onCh
       className="confidence-grid"
       style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}
     >
-      {levels.map((level) => (
+      {LEVELS.map((level) => (
         <button
           key={level.value}
           type="button"

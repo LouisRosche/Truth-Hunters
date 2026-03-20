@@ -8,6 +8,36 @@ import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
+const SHORTCUTS = [
+  {
+    category: 'Gameplay',
+    items: [
+      { keys: ['1', '2', '3'], action: 'Select confidence level' },
+      { keys: ['T'], action: 'Select TRUE verdict' },
+      { keys: ['M'], action: 'Select MIXED verdict' },
+      { keys: ['F'], action: 'Select FALSE verdict' },
+      { keys: ['Enter'], action: 'Submit answer (when form complete)' },
+      { keys: ['Space'], action: 'Pause/Resume game' },
+    ]
+  },
+  {
+    category: 'Navigation',
+    items: [
+      { keys: ['?'], action: 'Show this help' },
+      { keys: ['Esc'], action: 'Close modals/dialogs' },
+      { keys: ['Tab'], action: 'Move to next element' },
+      { keys: ['Shift', 'Tab'], action: 'Move to previous element' },
+    ]
+  },
+  {
+    category: 'Sound & Display',
+    items: [
+      { keys: ['S'], action: 'Toggle sound effects' },
+      { keys: ['P'], action: 'Toggle presentation mode' },
+    ]
+  }
+];
+
 export function KeyboardShortcutsHelp({ onClose }) {
   const focusTrapRef = useFocusTrap(true);
 
@@ -19,39 +49,9 @@ export function KeyboardShortcutsHelp({ onClose }) {
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
   }, [onClose]);
-
-  const shortcuts = [
-    {
-      category: 'Gameplay',
-      items: [
-        { keys: ['1', '2', '3'], action: 'Select confidence level' },
-        { keys: ['T'], action: 'Select TRUE verdict' },
-        { keys: ['M'], action: 'Select MIXED verdict' },
-        { keys: ['F'], action: 'Select FALSE verdict' },
-        { keys: ['Enter'], action: 'Submit answer (when form complete)' },
-        { keys: ['Space'], action: 'Pause/Resume game' },
-      ]
-    },
-    {
-      category: 'Navigation',
-      items: [
-        { keys: ['?'], action: 'Show this help' },
-        { keys: ['Esc'], action: 'Close modals/dialogs' },
-        { keys: ['Tab'], action: 'Move to next element' },
-        { keys: ['Shift', 'Tab'], action: 'Move to previous element' },
-      ]
-    },
-    {
-      category: 'Sound & Display',
-      items: [
-        { keys: ['S'], action: 'Toggle sound effects' },
-        { keys: ['P'], action: 'Toggle presentation mode' },
-      ]
-    }
-  ];
 
   return (
     <div
@@ -111,7 +111,7 @@ export function KeyboardShortcutsHelp({ onClose }) {
         </div>
 
         {/* Shortcuts by category */}
-        {shortcuts.map((category, idx) => (
+        {SHORTCUTS.map((category, idx) => (
           <div key={idx} style={{ marginBottom: '1.5rem' }}>
             <h3
               className="mono"
