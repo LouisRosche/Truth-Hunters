@@ -28,57 +28,10 @@ import { FirebaseBackend } from './services/firebase';
 import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
-import { OfflineQueue } from './services/offlineQueue';
+import { resilientSave, removeSessionWithRetry, withTimeout } from './utils/firebaseResilience';
 import { useOfflineToasts } from './hooks/useOfflineToasts';
 import { useAuth } from './contexts/AuthContext';
 import { LoginScreen } from './components/LoginScreen';
-
-/**
- * Attempt a Firebase save, falling back to offline queue on failure.
- * @param {'game'|'achievement'} type - Queue item type
- * @param {Function} saveFn - Async function that performs the save
- * @param {Object} queueData - Data to enqueue if save fails
- */
-async function resilientSave(type, saveFn, queueData) {
-  try {
-    await saveFn();
-  } catch (e) {
-    logger.warn(`Firebase ${type} save failed, queuing for retry:`, e);
-    OfflineQueue.enqueue(type, queueData);
-  }
-}
-
-/**
- * Remove a Firebase session with retry logic.
- * @param {string} sid - Session ID to remove
- * @param {number} maxRetries - Maximum retry attempts
- */
-async function removeSessionWithRetry(sid, maxRetries = 3) {
-  let retries = maxRetries;
-  while (retries > 0) {
-    try {
-      await FirebaseBackend.removeActiveSession(sid);
-      return;
-    } catch (err) {
-      retries--;
-      if (retries === 0) {
-        logger.error(`Failed to remove session after ${maxRetries} retries:`, err);
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
-  }
-}
-
-/** Race a promise against a timeout. */
-function withTimeout(promise, ms, label) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
-    )
-  ]);
-}
 
 export function App() {
   // Connect offline queue to toast notifications
