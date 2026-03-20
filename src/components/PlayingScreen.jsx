@@ -555,6 +555,8 @@ export function PlayingScreen({
             <button
               onClick={() => setShowPreviousRounds(!showPreviousRounds)}
               title="Review previous rounds"
+              aria-label="Review previous rounds"
+              aria-expanded={showPreviousRounds}
               className="mono"
               style={{
                 padding: '0.25rem 0.375rem',
@@ -572,6 +574,8 @@ export function PlayingScreen({
           <button
             onClick={() => setShowKeyboardHint(prev => !prev)}
             title="Keyboard: T/F/M for verdict, 1-3 for confidence, Enter to submit"
+            aria-label="Toggle keyboard shortcuts"
+            aria-expanded={showKeyboardHint}
             className="mono"
             style={{
               padding: '0.25rem 0.375rem',

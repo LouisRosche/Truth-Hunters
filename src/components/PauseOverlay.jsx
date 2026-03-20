@@ -3,15 +3,27 @@
  * Displays game-paused dialog with current progress and resume button.
  */
 
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 function PauseOverlayComponent({ currentRound, totalRounds, score, onResume }) {
+  const focusTrapRef = useFocusTrap(true);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onResume();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onResume]);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="pause-title"
+      ref={focusTrapRef}
       style={{
         position: 'fixed',
         inset: 0,
