@@ -23,13 +23,17 @@ afterAll(() => {
   console.error = originalConsoleError;
 });
 
-// Component that throws on demand
+// Component that throws conditionally via external flag
+let shouldThrowFlag = false;
 function ThrowingChild({ shouldThrow = false }) {
-  if (shouldThrow) throw new Error('Test error message');
+  if (shouldThrow || shouldThrowFlag) throw new Error('Test error message');
   return <div>Child content</div>;
 }
 
 describe('ErrorBoundary', () => {
+  beforeEach(() => {
+    shouldThrowFlag = false;
+  });
   it('renders children when no error', () => {
     render(
       <ErrorBoundary>
@@ -76,21 +80,24 @@ describe('ErrorBoundary', () => {
     expect(screen.getByRole('button', { name: /refresh page/i })).toBeInTheDocument();
   });
 
-  it('resets error state when Try Again is clicked', async () => {
+  it('recovers after clicking Try Again when error is resolved', async () => {
     const user = userEvent.setup();
+    // Start with external flag causing throw
+    shouldThrowFlag = true;
     render(
       <ErrorBoundary>
-        <ThrowingChild shouldThrow />
+        <ThrowingChild />
       </ErrorBoundary>
     );
     expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
 
-    // Click Try Again - resets hasError state
+    // Resolve the error condition, then retry
+    shouldThrowFlag = false;
     await user.click(screen.getByRole('button', { name: /try again/i }));
 
-    // Component will try to re-render children, which still throws,
-    // so error boundary catches again - but the state was reset first
-    expect(screen.getByRole('alert')).toBeInTheDocument();
+    // ErrorBoundary resets state, child re-renders without throwing
+    expect(screen.getByText('Child content')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('calls onError callback when error occurs', () => {

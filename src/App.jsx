@@ -533,24 +533,27 @@ export function App() {
         subject: result.subject || gameState.currentClaim?.subject
       });
 
-      // Track streak achievements
-      if (result.correct && currentStreak >= 2) {
-        Analytics.track(AnalyticsEvents.STREAK_ACHIEVED, { streak: currentStreak + 1 });
-      }
-
-      // Update streak
+      // Update streak and track achievements using functional update
+      // to avoid stale closure over currentStreak
       if (result.correct) {
-        setCurrentStreak((prev) => prev + 1);
-        // Play streak sound if this will be 3+ in a row
-        if (currentStreak >= 2) {
-          if (streakSoundTimeoutRef.current) {
-            clearTimeout(streakSoundTimeoutRef.current);
+        setCurrentStreak((prev) => {
+          const newStreak = prev + 1;
+          // Track streak achievements (3+ in a row)
+          if (newStreak >= 3) {
+            Analytics.track(AnalyticsEvents.STREAK_ACHIEVED, { streak: newStreak });
           }
-          streakSoundTimeoutRef.current = setTimeout(() => {
-            SoundManager.play('streak');
-            streakSoundTimeoutRef.current = null;
-          }, 300);
-        }
+          // Play streak sound for 3+ in a row
+          if (newStreak >= 3) {
+            if (streakSoundTimeoutRef.current) {
+              clearTimeout(streakSoundTimeoutRef.current);
+            }
+            streakSoundTimeoutRef.current = setTimeout(() => {
+              SoundManager.play('streak');
+              streakSoundTimeoutRef.current = null;
+            }, 300);
+          }
+          return newStreak;
+        });
       } else {
         setCurrentStreak(0);
       }
@@ -730,7 +733,7 @@ export function App() {
         };
       });
     },
-    [currentStreak, gameState.currentClaim?.subject]
+    [gameState.currentClaim?.subject]
   );
 
 

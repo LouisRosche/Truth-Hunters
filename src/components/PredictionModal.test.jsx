@@ -78,15 +78,16 @@ describe('PredictionModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(15);
   });
 
-  it('bounds prediction to valid range', async () => {
+  it('bounds prediction to valid range and displays bounded value', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<PredictionModal {...defaultProps} onSubmit={onSubmit} />);
     const input = screen.getByRole('spinbutton', { name: /predicted final score/i });
     await user.clear(input);
     await user.type(input, '999');
+    // Verify the displayed value is clamped to max (50)
+    expect(input).toHaveValue(50);
     await user.click(screen.getByRole('button', { name: /lock in prediction/i }));
-    // Should be capped to max (50)
     expect(onSubmit).toHaveBeenCalledWith(50);
   });
 
