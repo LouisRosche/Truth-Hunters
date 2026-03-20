@@ -80,6 +80,12 @@ export default defineConfig({
         'vite.config.js',
         'vite.cms.config.js',
       ],
+      thresholds: {
+        statements: 55,
+        branches: 44,
+        functions: 55,
+        lines: 55,
+      },
     },
   },
 });

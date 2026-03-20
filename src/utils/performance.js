@@ -229,19 +229,8 @@ export function checkBundleSize() {
   logger.log(`📦 Total bundle size: ${(totalSize / 1024).toFixed(2)} KB`);
 }
 
-/**
- * Debounce function for performance
- * @param {Function} fn - Function to debounce
- * @param {number} delay - Delay in ms
- * @returns {Function} Debounced function
- */
-export function debounce(fn, delay) {
-  let timeoutId;
-  return function (...args) {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), delay);
-  };
-}
+// Re-export debounce from generic.js to avoid duplication
+export { debounce } from './generic';
 
 /**
  * Throttle function for performance
