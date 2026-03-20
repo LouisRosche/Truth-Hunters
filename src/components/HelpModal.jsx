@@ -3,15 +3,39 @@
  * Displays game instructions, scoring, keyboard shortcuts, and tips.
  */
 
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 function HelpModalComponent({ onClose }) {
+  const focusTrapRef = useFocusTrap(true);
+  const previousFocusRef = useRef(null);
+
+  // Store and restore focus on mount/unmount
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement;
+    return () => {
+      if (previousFocusRef.current && previousFocusRef.current.focus) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, []);
+
+  // Escape key handler
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="help-title"
+      ref={focusTrapRef}
       style={{
         position: 'fixed',
         inset: 0,
@@ -24,9 +48,6 @@ function HelpModalComponent({ onClose }) {
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
       }}
     >
       <div

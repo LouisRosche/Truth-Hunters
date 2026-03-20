@@ -28,7 +28,7 @@ module.exports = {
   // Configure React version for React-specific rules
   settings: {
     react: {
-      version: '18.2', // Match our React version to avoid warnings
+      version: 'detect', // Auto-detect React version
     },
   },
 
@@ -43,6 +43,6 @@ module.exports = {
 
     // Allow unused variables if prefixed with underscore (e.g., _unusedParam)
     // Warns instead of errors to allow iterative development
-    'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
   },
 };

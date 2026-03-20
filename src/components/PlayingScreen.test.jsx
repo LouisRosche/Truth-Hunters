@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { PlayingScreen } from './PlayingScreen';
 import { TEAM_AVATARS } from '../data/constants';
 import { SoundManager } from '../services/sound';
@@ -46,17 +46,38 @@ vi.mock('../utils/helpers', () => ({
   getHintContent: vi.fn(() => 'Hint content here')
 }));
 
-// Mock child components that aren't rendered in current PlayingScreen JSX
+// Render real child components with minimal markup for integration testing
 vi.mock('./ClaimCard', () => ({
-  ClaimCard: vi.fn(() => null)
+  ClaimCard: vi.fn(({ claim, showAnswer }) => (
+    <div data-testid="claim-card">
+      <span>{claim.text}</span>
+      {showAnswer && <span data-testid="answer-reveal">{claim.answer}</span>}
+    </div>
+  ))
 }));
 
 vi.mock('./VotingSection', () => ({
-  VotingSection: vi.fn(() => null)
+  VotingSection: vi.fn(({ verdict, onVerdictChange, onSubmit, disabled }) => (
+    <div data-testid="voting-section">
+      <button data-testid="vote-true" onClick={() => onVerdictChange('TRUE')}>TRUE</button>
+      <button data-testid="vote-false" onClick={() => onVerdictChange('FALSE')}>FALSE</button>
+      <button data-testid="submit-verdict" onClick={onSubmit} disabled={!verdict || disabled}>Submit</button>
+    </div>
+  ))
 }));
 
 vi.mock('./ResultPhase', () => ({
-  ResultPhase: vi.fn(() => null)
+  ResultPhase: vi.fn(({ resultData, isLastRound, onNext }) => (
+    resultData ? (
+      <div data-testid="result-phase">
+        <span data-testid="result-correct">{resultData.correct ? 'Correct!' : 'Wrong!'}</span>
+        <span data-testid="result-points">{resultData.points}</span>
+        <button data-testid="next-round" onClick={onNext}>
+          {isLastRound ? 'Results' : 'Next'}
+        </button>
+      </div>
+    ) : null
+  ))
 }));
 
 vi.mock('./LiveClassLeaderboard', () => ({
@@ -152,7 +173,6 @@ describe('PlayingScreen', () => {
   });
 
   it('shows tutorial overlay on first round with no prior session', async () => {
-    // Override the mock to simulate no tutorial seen
     const { safeGetItem } = await import('../utils/safeStorage');
     safeGetItem.mockReturnValueOnce(null);
 
@@ -197,5 +217,71 @@ describe('PlayingScreen', () => {
     render(<PlayingScreen {...defaultProps} />);
     const container = document.querySelector('.viewport-container');
     expect(container).toBeInTheDocument();
+  });
+
+  // New tests for the completed PlayingScreen voting flow
+
+  it('renders the ClaimCard component', () => {
+    render(<PlayingScreen {...defaultProps} />);
+    expect(screen.getByTestId('claim-card')).toBeInTheDocument();
+    expect(screen.getByText('Test claim text for evaluation')).toBeInTheDocument();
+  });
+
+  it('renders the VotingSection component', () => {
+    render(<PlayingScreen {...defaultProps} />);
+    expect(screen.getByTestId('voting-section')).toBeInTheDocument();
+  });
+
+  it('does not render ResultPhase initially', () => {
+    render(<PlayingScreen {...defaultProps} />);
+    expect(screen.queryByTestId('result-phase')).not.toBeInTheDocument();
+  });
+
+  it('shows keyboard shortcuts hint on first round', () => {
+    render(<PlayingScreen {...defaultProps} round={1} />);
+    expect(screen.getByRole('note')).toBeInTheDocument();
+    expect(screen.getByText(/confidence/i)).toBeInTheDocument();
+  });
+
+  it('toggles keyboard shortcuts visibility', () => {
+    render(<PlayingScreen {...defaultProps} round={2} />);
+    // Round 2 should not show keyboard hint by default
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+
+    // Press ? to toggle
+    fireEvent.keyDown(window, { key: '?' });
+    expect(screen.getByRole('note')).toBeInTheDocument();
+  });
+
+  it('shows previous rounds button when there are previous results', () => {
+    const previousResults = [
+      { claimId: 'c1', teamVerdict: 'TRUE', confidence: 2, correct: true, points: 3 }
+    ];
+    render(<PlayingScreen {...defaultProps} previousResults={previousResults} />);
+    expect(screen.getByTitle('Review previous rounds')).toBeInTheDocument();
+  });
+
+  it('does not show previous rounds button when no previous results', () => {
+    render(<PlayingScreen {...defaultProps} previousResults={[]} />);
+    expect(screen.queryByTitle('Review previous rounds')).not.toBeInTheDocument();
+  });
+
+  it('toggles previous rounds drawer when button clicked', () => {
+    const previousResults = [
+      { claimId: 'c1', teamVerdict: 'TRUE', confidence: 2, correct: true, points: 3 }
+    ];
+    render(<PlayingScreen {...defaultProps} previousResults={previousResults} />);
+
+    const toggleBtn = screen.getByTitle('Review previous rounds');
+    fireEvent.click(toggleBtn);
+
+    expect(screen.getByText('R1: TRUE')).toBeInTheDocument();
+    expect(screen.getByText('+3')).toBeInTheDocument();
+  });
+
+  it('shows ClaimCard without answer before submission', () => {
+    render(<PlayingScreen {...defaultProps} />);
+    expect(screen.getByTestId('claim-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('answer-reveal')).not.toBeInTheDocument();
   });
 });

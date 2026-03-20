@@ -3,7 +3,7 @@
  * Teacher-facing dashboard with class stats, reflections, claim moderation, and settings
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { FirebaseBackend } from '../services/firebase';
 import { LeaderboardManager } from '../services/leaderboard';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -39,26 +39,7 @@ export function TeacherDashboard({ onBack }) {
     return () => { isMountedRef.current = false; };
   }, []);
 
-  // Load data
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    const unsubClaims = FirebaseBackend.subscribeToPendingClaims((claims) => {
-      if (isMountedRef.current) setPendingClaims(claims);
-    });
-    const unsubAchievements = FirebaseBackend.subscribeToClassAchievements((achievements) => {
-      if (isMountedRef.current) setClassAchievements(achievements);
-    });
-    return () => {
-      if (unsubClaims) unsubClaims();
-      if (unsubAchievements) unsubAchievements();
-    };
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -94,7 +75,26 @@ export function TeacherDashboard({ onBack }) {
         setLoading(false);
       }
     }
-  };
+  }, [isOnline]);
+
+  // Load data
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    const unsubClaims = FirebaseBackend.subscribeToPendingClaims((claims) => {
+      if (isMountedRef.current) setPendingClaims(claims);
+    });
+    const unsubAchievements = FirebaseBackend.subscribeToClassAchievements((achievements) => {
+      if (isMountedRef.current) setClassAchievements(achievements);
+    });
+    return () => {
+      if (unsubClaims) unsubClaims();
+      if (unsubAchievements) unsubAchievements();
+    };
+  }, []);
 
   const handleSaveClassCode = () => {
     FirebaseBackend.setClassCode(editClassCodeValue);

@@ -10,17 +10,12 @@ A research-backed educational game for middle schoolers to develop epistemic ski
 
 **Current Status:** Active development with known issues requiring remediation
 
-### Critical Notices
+### Known Gaps
 
-**Legal Compliance:** Missing required legal documentation (Privacy Policy, Terms of Service). COPPA/GDPR compliance gaps exist. See [legal-compliance-audit-report.json](legal-compliance-audit-report.json) for details.
-
-**Security:** Authentication system requires implementation before production deployment. Teacher dashboard currently accessible via URL parameter. See [docs/security/README.md](docs/security/README.md).
-
-**Accessibility:** Partial WCAG 2.2 compliance. 47 accessibility issues documented in [accessibility-audit-report.json](accessibility-audit-report.json). Keyboard navigation implemented; screen reader support in progress.
-
-**Internationalization:** Infrastructure configured (react-i18next) but component integration pending. Currently English-only in practice.
-
-**Remediation Estimate:** 352-484 hours across legal, accessibility, security, and i18n domains. See [COMPREHENSIVE_AUDIT_SUMMARY.md](COMPREHENSIVE_AUDIT_SUMMARY.md) and [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md).
+- **Legal:** Missing Privacy Policy, Terms of Service, COPPA/GDPR compliance
+- **Security:** Authentication system needs implementation before production. See [docs/security/README.md](docs/security/README.md)
+- **Accessibility:** Partial WCAG 2.2 compliance. Keyboard navigation implemented; screen reader support in progress
+- **i18n:** Infrastructure configured (react-i18next) but component integration pending. English-only in practice
 
 **Safe for:** Development, testing, classroom pilots with informed consent and supervision
 **Not ready for:** Unsupervised production deployment, public release without legal review
@@ -251,9 +246,9 @@ Firebase provides **optional enhanced features** for classroom use:
 ### ⚠️ Pre-Deployment Requirements
 
 **Before production deployment, address:**
-- [ ] Legal compliance (Privacy Policy, Terms of Service, COPPA/GDPR) - See [legal-compliance-audit-report.json](legal-compliance-audit-report.json)
-- [ ] Firebase Authentication implementation - See [docs/security/README.md](docs/security/README.md)
-- [ ] Critical accessibility fixes - See [accessibility-audit-report.json](accessibility-audit-report.json)
+- [ ] Legal compliance (Privacy Policy, Terms of Service, COPPA/GDPR)
+- [ ] Firebase Authentication implementation — See [docs/security/README.md](docs/security/README.md)
+- [ ] Remaining accessibility fixes (WCAG 2.2 AA)
 - [ ] Security hardening (authentication, secure Firestore rules)
 
 **Current deployment suitable for:** Development, testing, supervised classroom pilots only

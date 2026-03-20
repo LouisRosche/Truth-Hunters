@@ -9,7 +9,7 @@ import { TeacherDashboard } from './TeacherDashboard';
 import { ToastProvider } from './Toast';
 
 // Mock dependencies
-const mockReflections = [
+const _mockReflections = [
   {
     id: 'r1',
     teamName: 'Team Alpha',
@@ -34,7 +34,7 @@ const mockReflections = [
   }
 ];
 
-const mockGames = [
+const _mockGames = [
   {
     teamName: 'Team Alpha',
     teamAvatar: '🔍',
@@ -61,7 +61,7 @@ const mockGames = [
   }
 ];
 
-const mockPendingClaims = [
+const _mockPendingClaims = [
   {
     id: 'claim1',
     claimText: 'The Earth is approximately 4.5 billion years old',
@@ -76,7 +76,7 @@ const mockPendingClaims = [
   }
 ];
 
-const mockClassSettings = {
+const _mockClassSettings = {
   allowedDifficulties: ['easy', 'medium'],
   allowedSubjects: ['Biology', 'History'],
   allowedGradeLevels: ['middle'],
@@ -91,7 +91,7 @@ const mockClassSettings = {
   requireModeration: true
 };
 
-const mockClassAchievements = [
+const _mockClassAchievements = [
   {
     id: 'ach1',
     achievementIcon: '🏆',
