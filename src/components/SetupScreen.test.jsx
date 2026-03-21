@@ -20,10 +20,7 @@ vi.mock('../services/sound', () => ({
 vi.mock('../services/firebase', () => ({
   FirebaseBackend: {
     initialized: false,
-    getClassCode: vi.fn(() => null),
-    setClassCode: vi.fn(),
-    getTopTeams: vi.fn(() => Promise.resolve([])),
-    getClassReflections: vi.fn(() => Promise.resolve([]))
+    getClassCode: vi.fn(() => null)
   }
 }));
 

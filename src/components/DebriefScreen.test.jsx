@@ -16,7 +16,7 @@ vi.mock('../services/sound', () => ({
 
 vi.mock('../services/firebase', () => ({
   FirebaseBackend: {
-    saveReflection: vi.fn(() => Promise.resolve(true))
+    initialized: false
   }
 }));
 

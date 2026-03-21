@@ -27,7 +27,7 @@ describe('FeatureFlags', () => {
       FeatureFlags.init();
       expect(FeatureFlags.initialized).toBe(true);
       expect(FeatureFlags.flags.enableFirebase).toBe(true);
-      expect(FeatureFlags.flags.enableMultiplayer).toBe(false);
+      expect(FeatureFlags.flags.enableSound).toBe(true);
     });
 
     it('does not re-initialize if already initialized', () => {
@@ -39,10 +39,10 @@ describe('FeatureFlags', () => {
 
     it('loads overrides from localStorage', () => {
       localStorage.setItem('truthHunters_featureFlags', JSON.stringify({
-        enableMultiplayer: true
+        enableSound: false
       }));
       FeatureFlags.init();
-      expect(FeatureFlags.flags.enableMultiplayer).toBe(true);
+      expect(FeatureFlags.flags.enableSound).toBe(false);
     });
 
     it('handles corrupted localStorage gracefully', () => {
@@ -59,7 +59,8 @@ describe('FeatureFlags', () => {
 
     it('returns false for disabled features', () => {
       FeatureFlags.init();
-      expect(FeatureFlags.isEnabled('enableMultiplayer')).toBe(false);
+      FeatureFlags.disable('enableSound');
+      expect(FeatureFlags.isEnabled('enableSound')).toBe(false);
     });
 
     it('returns false for unknown features', () => {
@@ -76,8 +77,10 @@ describe('FeatureFlags', () => {
   describe('enable/disable/toggle', () => {
     it('enables a feature', () => {
       FeatureFlags.init();
-      FeatureFlags.enable('enableMultiplayer');
-      expect(FeatureFlags.flags.enableMultiplayer).toBe(true);
+      FeatureFlags.disable('enableSound');
+      expect(FeatureFlags.flags.enableSound).toBe(false);
+      FeatureFlags.enable('enableSound');
+      expect(FeatureFlags.flags.enableSound).toBe(true);
     });
 
     it('disables a feature', () => {
@@ -88,23 +91,24 @@ describe('FeatureFlags', () => {
 
     it('toggles a feature', () => {
       FeatureFlags.init();
-      const result = FeatureFlags.toggle('enableMultiplayer');
-      expect(result).toBe(true);
-      expect(FeatureFlags.flags.enableMultiplayer).toBe(true);
-      const result2 = FeatureFlags.toggle('enableMultiplayer');
-      expect(result2).toBe(false);
+      // enableSound starts as true
+      const result = FeatureFlags.toggle('enableSound');
+      expect(result).toBe(false);
+      expect(FeatureFlags.flags.enableSound).toBe(false);
+      const result2 = FeatureFlags.toggle('enableSound');
+      expect(result2).toBe(true);
     });
 
     it('persists to localStorage when persist=true', () => {
       FeatureFlags.init();
-      FeatureFlags.enable('enableMultiplayer', true);
+      FeatureFlags.disable('enableSound', true);
       const stored = JSON.parse(localStorage.getItem('truthHunters_featureFlags'));
-      expect(stored.enableMultiplayer).toBe(true);
+      expect(stored.enableSound).toBe(false);
     });
 
     it('does not persist by default', () => {
       FeatureFlags.init();
-      FeatureFlags.enable('enableMultiplayer');
+      FeatureFlags.disable('enableSound');
       expect(localStorage.getItem('truthHunters_featureFlags')).toBeNull();
     });
   });
@@ -114,8 +118,8 @@ describe('FeatureFlags', () => {
       FeatureFlags.init();
       const listener = vi.fn();
       FeatureFlags.subscribe(listener);
-      FeatureFlags.enable('enableMultiplayer');
-      expect(listener).toHaveBeenCalledWith('enableMultiplayer', true);
+      FeatureFlags.disable('enableSound');
+      expect(listener).toHaveBeenCalledWith('enableSound', false);
     });
 
     it('returns unsubscribe function', () => {
@@ -123,7 +127,7 @@ describe('FeatureFlags', () => {
       const listener = vi.fn();
       const unsubscribe = FeatureFlags.subscribe(listener);
       unsubscribe();
-      FeatureFlags.enable('enableMultiplayer');
+      FeatureFlags.disable('enableSound');
       expect(listener).not.toHaveBeenCalled();
     });
 
@@ -131,7 +135,7 @@ describe('FeatureFlags', () => {
       FeatureFlags.init();
       const badListener = vi.fn(() => { throw new Error('listener error'); });
       FeatureFlags.subscribe(badListener);
-      expect(() => FeatureFlags.enable('enableMultiplayer')).not.toThrow();
+      expect(() => FeatureFlags.disable('enableSound')).not.toThrow();
     });
   });
 
@@ -139,11 +143,11 @@ describe('FeatureFlags', () => {
     it('sets multiple flags at once', () => {
       FeatureFlags.init();
       FeatureFlags.setMultiple({
-        enableMultiplayer: true,
-        enableAIHints: true
+        enableSound: false,
+        enableHints: false
       });
-      expect(FeatureFlags.flags.enableMultiplayer).toBe(true);
-      expect(FeatureFlags.flags.enableAIHints).toBe(true);
+      expect(FeatureFlags.flags.enableSound).toBe(false);
+      expect(FeatureFlags.flags.enableHints).toBe(false);
     });
   });
 
@@ -168,17 +172,17 @@ describe('FeatureFlags', () => {
   describe('reset', () => {
     it('restores default flags', () => {
       FeatureFlags.init();
-      FeatureFlags.enable('enableMultiplayer');
+      FeatureFlags.disable('enableSound');
+      expect(FeatureFlags.flags.enableSound).toBe(false);
       FeatureFlags.reset();
-      expect(FeatureFlags.flags.enableMultiplayer).toBe(false);
+      expect(FeatureFlags.flags.enableSound).toBe(true);
     });
 
     it('clears localStorage', () => {
       FeatureFlags.init();
-      FeatureFlags.enable('enableMultiplayer', true);
+      FeatureFlags.disable('enableSound', true);
       FeatureFlags.reset();
       expect(localStorage.getItem('truthHunters_featureFlags')).toBeNull();
     });
   });
 });
-

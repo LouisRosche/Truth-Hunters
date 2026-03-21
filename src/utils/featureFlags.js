@@ -30,15 +30,7 @@ const DEFAULT_FLAGS = {
   enablePresentationMode: true,
   enableDarkMode: true,
   enableAccessibility: true,
-  enableKeyboardShortcuts: true,
-
-  // Experimental features (disabled by default)
-  enableRealTimeUpdates: false,
-  enableAIHints: false,
-  enableMultiplayer: false,
-  enableVideoHints: false,
-  enableCustomThemes: false,
-
+  enableKeyboardShortcuts: true
 };
 
 /**
