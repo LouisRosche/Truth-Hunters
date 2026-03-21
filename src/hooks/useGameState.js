@@ -24,8 +24,6 @@ import { selectClaimsByDifficulty } from '../utils/helpers';
 import { calculateGameStats, calculatePoints } from '../utils/scoring';
 import { GameStateManager } from '../services/gameState';
 import { PlayerProfile } from '../services/playerProfile';
-import { FirebaseBackend } from '../services/firebase';
-import { OfflineQueue } from '../services/offlineQueue';
 import { SoundManager } from '../services/sound';
 
 /**
@@ -267,29 +265,11 @@ export function useGameState() {
 // calculatePoints is now imported from '../utils/scoring'
 
 /**
- * Helper: Save game record to leaderboard and Firebase
+ * Helper: Save game record to player profile
  */
-async function saveGameRecord(gameState) {
+function saveGameRecord(gameState) {
   const { team, difficulty, totalRounds, claims } = gameState;
   const stats = calculateGameStats(team.results, claims, team.score, team.predictedScore);
-
-  const record = {
-    teamName: team.name,
-    teamAvatar: team.avatar,
-    players: team.players,
-    score: team.score,
-    accuracy: stats.accuracy,
-    difficulty,
-    rounds: totalRounds,
-    achievements: stats.achievements.map(a => a.id),
-    timestamp: Date.now()
-  };
-
-  // Save to Firebase (async, may fail)
-  FirebaseBackend.save(record).catch(() => {
-    // If Firebase fails, queue for later
-    OfflineQueue.enqueue('game', record);
-  });
 
   // Update player profile if solo player
   if (team.players.length === 1) {

@@ -23,11 +23,9 @@ import { ACHIEVEMENTS, getNewLifetimeAchievements } from './data/achievements';
 import { selectClaimsByDifficulty } from './utils/helpers';
 import { calculateGameStats } from './utils/scoring';
 import { SoundManager } from './services/sound';
-import { FirebaseBackend } from './services/firebase';
 import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
-import { withTimeout } from './utils/firebaseResilience';
 import { useOfflineToasts } from './hooks/useOfflineToasts';
 import { useAuth } from './contexts/AuthContext';
 import { LoginScreen } from './components/LoginScreen';
@@ -257,46 +255,12 @@ export function App() {
       const playerProfile = PlayerProfile.get();
       const previouslySeenIds = playerProfile.claimsSeen || [];
 
-      // Fetch class settings and class-level seen claims for group play (5s timeout)
-      let classSettings = null;
-      try {
-        if (FirebaseBackend.initialized && FirebaseBackend.getClassCode()) {
-          const [settings, classSeenIds] = await withTimeout(
-            Promise.all([
-              FirebaseBackend.getClassSettings(),
-              FirebaseBackend.getClassSeenClaims()
-            ]),
-            5000,
-            'Class settings fetch'
-          );
-          classSettings = { ...settings, classSeenIds };
-        }
-      } catch (e) {
-        logger.warn('Could not fetch class settings:', e);
-      }
-
-      // Fetch approved student-contributed claims from Firebase (5s timeout)
-      let studentClaims = [];
-      try {
-        if (FirebaseBackend.initialized) {
-          studentClaims = await withTimeout(
-            FirebaseBackend.getApprovedClaims(),
-            5000,
-            'Student claims fetch'
-          );
-        }
-      } catch (e) {
-        logger.warn('Could not fetch student claims:', e);
-      }
-
-      // Select claims based on difficulty, subjects, grade level, including student contributions
-      const selectedClaims = selectClaimsByDifficulty(
+      // Select claims based on difficulty, subjects, and previously seen claims
+      const selectedClaims = await selectClaimsByDifficulty(
         difficulty,
         rounds,
         subjects,
-        previouslySeenIds,
-        studentClaims,
-        classSettings
+        previouslySeenIds
       );
 
       // Validate that we have enough claims to start the game

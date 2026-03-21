@@ -65,16 +65,14 @@ describe('OfflineQueue', () => {
       expect(queue[0].retries).toBe(0);
     });
 
-    it('should handle different item types', () => {
+    it('should handle multiple game items', () => {
       OfflineQueue.enqueue('game', { score: 10 });
-      OfflineQueue.enqueue('reflection', { text: 'test' });
-      OfflineQueue.enqueue('claim', { claimText: 'test claim' });
+      OfflineQueue.enqueue('game', { score: 20 });
 
       const queue = OfflineQueue.getQueue();
-      expect(queue).toHaveLength(3);
+      expect(queue).toHaveLength(2);
       expect(queue[0].type).toBe('game');
-      expect(queue[1].type).toBe('reflection');
-      expect(queue[2].type).toBe('claim');
+      expect(queue[1].type).toBe('game');
     });
   });
 
@@ -160,11 +158,9 @@ describe('OfflineQueue', () => {
 
     it('should filter by type', () => {
       OfflineQueue.enqueue('game', { score: 10 });
-      OfflineQueue.enqueue('reflection', { text: 'test' });
 
       expect(OfflineQueue.hasPending('game')).toBe(true);
-      expect(OfflineQueue.hasPending('reflection')).toBe(true);
-      expect(OfflineQueue.hasPending('claim')).toBe(false);
+      expect(OfflineQueue.hasPending('other')).toBe(false);
     });
   });
 
@@ -172,11 +168,9 @@ describe('OfflineQueue', () => {
     it('should return counts by type', () => {
       OfflineQueue.enqueue('game', { score: 10 });
       OfflineQueue.enqueue('game', { score: 20 });
-      OfflineQueue.enqueue('reflection', { text: 'test' });
 
       const counts = OfflineQueue.getCounts();
       expect(counts.game).toBe(2);
-      expect(counts.reflection).toBe(1);
     });
   });
 
@@ -186,22 +180,17 @@ describe('OfflineQueue', () => {
     beforeEach(() => {
       mockBackend = {
         initialized: true,
-        save: vi.fn().mockResolvedValue(true),
-        saveReflection: vi.fn().mockResolvedValue(true),
-        submitClaim: vi.fn().mockResolvedValue({ success: true }),
-        shareAchievement: vi.fn().mockResolvedValue({ success: true })
+        save: vi.fn().mockResolvedValue(true)
       };
     });
 
     it('should process queue items successfully', async () => {
       OfflineQueue.enqueue('game', { teamName: 'Test', score: 10 });
-      OfflineQueue.enqueue('reflection', { text: 'test reflection' });
 
       const result = await OfflineQueue.sync(mockBackend);
 
       expect(mockBackend.save).toHaveBeenCalledTimes(1);
-      expect(mockBackend.saveReflection).toHaveBeenCalledTimes(1);
-      expect(result.success).toBe(2);
+      expect(result.success).toBe(1);
     });
 
     it('should remove successfully processed items', async () => {
@@ -231,21 +220,14 @@ describe('OfflineQueue', () => {
       await expect(OfflineQueue.sync(mockBackend)).resolves.not.toThrow();
     });
 
-    it('should process different item types correctly', async () => {
+    it('should process multiple game items correctly', async () => {
       OfflineQueue.enqueue('game', { score: 10 });
-      OfflineQueue.enqueue('reflection', { text: 'reflection' });
-      OfflineQueue.enqueue('claim', { claimText: 'test claim' });
-      OfflineQueue.enqueue('achievement', {
-        achievement: { id: 'test-achievement' },
-        playerInfo: { playerName: 'Alice' }
-      });
+      OfflineQueue.enqueue('game', { score: 20 });
 
-      await OfflineQueue.sync(mockBackend);
+      const result = await OfflineQueue.sync(mockBackend);
 
-      expect(mockBackend.save).toHaveBeenCalledTimes(1);
-      expect(mockBackend.saveReflection).toHaveBeenCalledTimes(1);
-      expect(mockBackend.submitClaim).toHaveBeenCalledTimes(1);
-      expect(mockBackend.shareAchievement).toHaveBeenCalledTimes(1);
+      expect(mockBackend.save).toHaveBeenCalledTimes(2);
+      expect(result.success).toBe(2);
     });
   });
 

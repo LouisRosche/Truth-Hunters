@@ -24,20 +24,6 @@ vi.mock('../../services/playerProfile', () => ({
   }
 }));
 
-vi.mock('../../services/firebase', () => ({
-  FirebaseBackend: {
-    save: vi.fn(() => Promise.resolve()),
-    init: vi.fn()
-  }
-}));
-
-vi.mock('../../services/offlineQueue', () => ({
-  OfflineQueue: {
-    enqueue: vi.fn(),
-    sync: vi.fn()
-  }
-}));
-
 vi.mock('../../services/sound', () => ({
   SoundManager: {
     play: vi.fn(),
