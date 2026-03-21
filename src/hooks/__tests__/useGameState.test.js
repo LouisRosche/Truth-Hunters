@@ -24,13 +24,6 @@ vi.mock('../../services/playerProfile', () => ({
   }
 }));
 
-vi.mock('../../services/leaderboard', () => ({
-  LeaderboardManager: {
-    save: vi.fn(),
-    getAll: vi.fn(() => [])
-  }
-}));
-
 vi.mock('../../services/firebase', () => ({
   FirebaseBackend: {
     save: vi.fn(() => Promise.resolve()),

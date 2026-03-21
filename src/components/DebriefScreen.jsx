@@ -12,15 +12,12 @@ import { REFLECTION_PROMPTS } from '../data/constants';
 import { calculateGameStats } from '../utils/scoring';
 import { getRandomItem } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
-import { FirebaseBackend } from '../services/firebase';
-import { Analytics, AnalyticsEvents } from '../services/analytics';
 
 export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty, teamAvatar: _teamAvatar }) {
   const [showPatterns, setShowPatterns] = useState(false);
   const [showAchievements, setShowAchievements] = useState(true);
   const [selectedReflection, setSelectedReflection] = useState(null);
   const [reflectionResponse, setReflectionResponse] = useState('');
-  const [reflectionSaved, setReflectionSaved] = useState(false);
   const [shareStatus, setShareStatus] = useState(null); // 'copied' | 'error' | null
   const isMountedRef = useRef(true);
   const shareTimeoutRef = useRef(null);
@@ -66,35 +63,6 @@ export function DebriefScreen({ team, claims, onRestart, difficulty: _difficulty
     const prompt = getRandomItem(REFLECTION_PROMPTS);
     return prompt || { question: 'What did you learn today?', followUp: 'Discuss with your team.' };
   }, []);
-
-  // Save reflection to Firebase for teacher insights
-  const handleSaveReflection = useCallback(async () => {
-    if (reflectionSaved || !isMountedRef.current) return;
-
-    const correctCount = team.results.filter((r) => r.correct).length;
-    const accuracy = team.results.length > 0
-      ? Math.round((correctCount / team.results.length) * 100)
-      : 0;
-
-    const reflectionData = {
-      teamName: team.name,
-      calibrationSelfAssessment: selectedReflection,
-      reflectionResponse: reflectionResponse,
-      reflectionPrompt: reflectionPrompt?.question || '',
-      gameScore: finalScore,
-      accuracy: accuracy,
-      predictedScore: team.predictedScore,
-      actualScore: team.score
-    };
-
-    const saved = await FirebaseBackend.saveReflection(reflectionData);
-    if (saved && isMountedRef.current) {
-      setReflectionSaved(true);
-      SoundManager.play('tick');
-      // Track reflection submission in analytics
-      Analytics.track(AnalyticsEvents.REFLECTION_SUBMITTED);
-    }
-  }, [team, selectedReflection, reflectionResponse, reflectionPrompt, finalScore, reflectionSaved]);
 
   // Share results handler
   const handleShare = useCallback(async () => {
@@ -1035,44 +1003,6 @@ Play Truth Hunters and test your fact-checking skills!`;
               resize: 'none'
             }}
           />
-          {(selectedReflection || reflectionResponse.trim()) && !reflectionSaved && (
-            <button
-              onClick={handleSaveReflection}
-              style={{
-                marginTop: '0.75rem',
-                padding: '0.5rem 1rem',
-                background: 'var(--accent-emerald)',
-                color: 'var(--bg-deep)',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              💾 Save Reflection
-            </button>
-          )}
-          {reflectionSaved && (
-            <div
-              style={{
-                marginTop: '0.75rem',
-                padding: '0.5rem 0.75rem',
-                background: 'rgba(52, 211, 153, 0.15)',
-                borderRadius: '6px',
-                fontSize: '0.8125rem',
-                color: 'var(--accent-emerald)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              ✓ Reflection saved for your teacher
-            </div>
-          )}
         </div>
 
         <div

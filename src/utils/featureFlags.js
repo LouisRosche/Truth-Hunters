@@ -24,18 +24,7 @@ const DEFAULT_FLAGS = {
   enableAchievements: true,
   enableHints: true,
   enablePredictionModal: true,
-  enableLeaderboard: true,
   enableOfflineQueue: true,
-
-  // Student features
-  enableStudentClaims: true,
-  enableReflections: true,
-  enableAchievementSharing: true,
-
-  // Teacher features
-  enableTeacherDashboard: true,
-  enableClassSettings: true,
-  enableClaimModeration: true,
 
   // UI features
   enablePresentationMode: true,
@@ -50,10 +39,6 @@ const DEFAULT_FLAGS = {
   enableVideoHints: false,
   enableCustomThemes: false,
 
-  // Debug features (only in development)
-  enableDebugPanel: false,
-  enablePerformanceMonitoring: false,
-  enableVerboseLogging: false
 };
 
 /**
@@ -77,13 +62,6 @@ export const FeatureFlags = {
     // Load from localStorage (runtime overrides)
     this._loadFromStorage();
 
-    // Enable debug features in development
-    if (import.meta.env.MODE === 'development') {
-      this.flags.enableDebugPanel = true;
-      this.flags.enablePerformanceMonitoring = true;
-      this.flags.enableVerboseLogging = true;
-    }
-
     this.initialized = true;
     logger.log('[FeatureFlags] Initialized:', this.flags);
   },
@@ -98,7 +76,6 @@ export const FeatureFlags = {
       VITE_ENABLE_ERROR_TRACKING: 'enableErrorTracking',
       VITE_ENABLE_ENCRYPTION: 'enableEncryption',
       VITE_ENABLE_SOUND: 'enableSound',
-      VITE_ENABLE_LEADERBOARD: 'enableLeaderboard',
       VITE_ENABLE_REAL_TIME: 'enableRealTimeUpdates',
       VITE_ENABLE_AI_HINTS: 'enableAIHints'
     };

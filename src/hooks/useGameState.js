@@ -24,7 +24,6 @@ import { selectClaimsByDifficulty } from '../utils/helpers';
 import { calculateGameStats, calculatePoints } from '../utils/scoring';
 import { GameStateManager } from '../services/gameState';
 import { PlayerProfile } from '../services/playerProfile';
-import { LeaderboardManager } from '../services/leaderboard';
 import { FirebaseBackend } from '../services/firebase';
 import { OfflineQueue } from '../services/offlineQueue';
 import { SoundManager } from '../services/sound';
@@ -285,9 +284,6 @@ async function saveGameRecord(gameState) {
     achievements: stats.achievements.map(a => a.id),
     timestamp: Date.now()
   };
-
-  // Save to local leaderboard
-  LeaderboardManager.save(record);
 
   // Save to Firebase (async, may fail)
   FirebaseBackend.save(record).catch(() => {

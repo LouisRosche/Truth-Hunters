@@ -23,12 +23,11 @@ import { ACHIEVEMENTS, getNewLifetimeAchievements } from './data/achievements';
 import { selectClaimsByDifficulty } from './utils/helpers';
 import { calculateGameStats } from './utils/scoring';
 import { SoundManager } from './services/sound';
-import { LeaderboardManager } from './services/leaderboard';
 import { FirebaseBackend } from './services/firebase';
 import { GameStateManager } from './services/gameState';
 import { PlayerProfile } from './services/playerProfile';
 import { Analytics, AnalyticsEvents } from './services/analytics';
-import { resilientSave, removeSessionWithRetry, withTimeout } from './utils/firebaseResilience';
+import { withTimeout } from './utils/firebaseResilience';
 import { useOfflineToasts } from './hooks/useOfflineToasts';
 import { useAuth } from './contexts/AuthContext';
 import { LoginScreen } from './components/LoginScreen';
@@ -64,9 +63,8 @@ export function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
-  // Live leaderboard session tracking
+  // Session tracking
   const [sessionId, setSessionId] = useState(null);
-  const [showLiveLeaderboard, setShowLiveLeaderboard] = useState(true);
 
   // Sound state - synced with SoundManager
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -78,11 +76,6 @@ export function App() {
     }
   });
 
-  // Analytics opt-in state
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => {
-    return Analytics.isEnabled();
-  });
-
   // Check for saved game on mount
   useEffect(() => {
     const summary = GameStateManager.getSummary();
@@ -91,104 +84,8 @@ export function App() {
     }
   }, []);
 
-  // Debounced Firebase session update (reduce frequency of updates)
-  const sessionUpdateTimeoutRef = useRef(null);
-
   // Atomic lock to prevent rapid clicking of Start Game button
   const preparingGameRef = useRef(false);
-
-  // Update live session during gameplay for class-wide leaderboard
-  useEffect(() => {
-    if (!sessionId || !FirebaseBackend.initialized || !FirebaseBackend.getClassCode()) {
-      return;
-    }
-
-    // Update session during gameplay (debounced to reduce Firebase writes)
-    if (gameState.phase === 'playing') {
-      // Clear any pending update
-      if (sessionUpdateTimeoutRef.current) {
-        clearTimeout(sessionUpdateTimeoutRef.current);
-      }
-
-      // Debounce updates to once every 2 seconds to reduce Firebase load
-      sessionUpdateTimeoutRef.current = setTimeout(() => {
-        const correctCount = gameState.team.results.filter(r => r.correct).length;
-        const totalRounds = gameState.team.results.length;
-        const accuracy = totalRounds > 0 ? Math.round((correctCount / totalRounds) * 100) : 0;
-
-        FirebaseBackend.updateActiveSession(sessionId, {
-          teamName: gameState.team.name,
-          teamAvatar: gameState.team.avatar?.emoji || '🔍',
-          players: gameState.team.players || [],
-          currentScore: gameState.team.score,
-          currentRound: gameState.currentRound,
-          totalRounds: gameState.totalRounds,
-          accuracy
-        }).catch(e => logger.warn('Failed to update live session:', e));
-      }, 2000); // 2 second debounce
-    }
-
-    // Remove session when game ends (debrief phase)
-    if (gameState.phase === 'debrief' && sessionId) {
-      // Clear any pending debounced update
-      if (sessionUpdateTimeoutRef.current) {
-        clearTimeout(sessionUpdateTimeoutRef.current);
-      }
-
-      removeSessionWithRetry(sessionId).catch(e => {
-        logger.error('Session removal failed completely:', e);
-      });
-      setSessionId(null);
-    }
-
-    // Cleanup function to clear timeout on unmount
-    return () => {
-      if (sessionUpdateTimeoutRef.current) {
-        clearTimeout(sessionUpdateTimeoutRef.current);
-      }
-    };
-    // FIXED: Use stable primitive values instead of object/array references to prevent infinite loops
-    // Only update when meaningful state changes occur (round, score, phase)
-    // We intentionally use primitive values (length, emoji string) to avoid excessive Firebase writes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    sessionId,
-    gameState.phase,
-    gameState.currentRound,
-    gameState.team.score,
-    gameState.team.name,
-    gameState.team.avatar?.emoji, // Use primitive emoji string instead of object reference
-    gameState.totalRounds,
-    gameState.team.results.length // Use length instead of array reference
-  ]);
-
-  // Clean up session on unmount or page hide
-  useEffect(() => {
-    // Use visibilitychange instead of beforeunload — browsers reliably fire it
-    // and allow short async work, unlike beforeunload which ignores promises.
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && sessionId && FirebaseBackend.initialized) {
-        // Best-effort: sendBeacon is reliable during page hide/close
-        // Fall back to fire-and-forget fetch for environments without sendBeacon
-        try {
-          FirebaseBackend.removeActiveSession(sessionId).catch(() => {});
-        } catch {
-          // Silently fail — page is closing
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // On unmount (e.g., auth change), clean up with retries
-      if (sessionId && FirebaseBackend.initialized) {
-        removeSessionWithRetry(sessionId).catch(e => {
-          logger.error('Session cleanup on unmount failed:', e);
-        });
-      }
-    };
-  }, [sessionId]);
 
   // Presentation mode for group viewing (larger text for 4 scholars sharing 1 screen)
   const [presentationMode, setPresentationMode] = useState(() => {
@@ -223,15 +120,6 @@ export function App() {
       } catch {
         // Ignore localStorage errors
       }
-      return newValue;
-    });
-  }, []);
-
-  // Toggle analytics and persist preference
-  const toggleAnalytics = useCallback(() => {
-    setAnalyticsEnabled((prev) => {
-      const newValue = !prev;
-      Analytics.setEnabled(newValue);
       return newValue;
     });
   }, []);
@@ -460,24 +348,9 @@ export function App() {
       return;
     }
 
-    // Generate a unique session ID for live leaderboard tracking
+    // Generate a unique session ID for game tracking
     const newSessionId = `game_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     setSessionId(newSessionId);
-
-    // Update active session in Firebase for live class leaderboard
-    if (FirebaseBackend.initialized && FirebaseBackend.getClassCode()) {
-      const sessionData = {
-        teamName: pendingGameSettings.teamName,
-        teamAvatar: pendingGameSettings.avatar?.emoji || '🔍',
-        players: pendingGameSettings.players || [],
-        currentScore: 0,
-        currentRound: 1,
-        totalRounds: pendingGameSettings.rounds,
-        accuracy: 0
-      };
-      FirebaseBackend.updateActiveSession(newSessionId, sessionData)
-        .catch(e => logger.warn('Failed to start live session:', e));
-    }
 
     setShowPrediction(false);
     setGameState({
@@ -594,25 +467,6 @@ export function App() {
           const gameStats = calculateGameStats(newResults, prev.claims, newScore, prev.team.predictedScore);
           const earnedAchievementIds = ACHIEVEMENTS.filter((a) => a.condition(gameStats)).map((a) => a.id);
 
-          // Save to leaderboard (local + Firebase if configured)
-          const gameRecord = {
-            teamName: prev.team.name,
-            teamAvatar: prev.team.avatar?.emoji || '🔍',
-            players: prev.team.players || [],
-            score: finalScore,
-            accuracy: accuracy,
-            difficulty: prev.difficulty,
-            rounds: prev.totalRounds,
-            achievements: earnedAchievementIds
-          };
-
-          LeaderboardManager.save(gameRecord);
-
-          // Also save to Firebase for class-wide leaderboard (with offline queue fallback)
-          if (FirebaseBackend.initialized) {
-            resilientSave('game', () => FirebaseBackend.save(gameRecord), gameRecord);
-          }
-
           // Record to player profile for solo stats tracking
           const maxStreak = Math.max(
             ...newResults.map((_, i) => {
@@ -657,43 +511,6 @@ export function App() {
           newLifetimeAchievements.forEach(a => {
             PlayerProfile.awardAchievement(a.id);
           });
-
-          // Share achievements with the class (if class code is set)
-          if (FirebaseBackend.initialized && FirebaseBackend.getClassCode()) {
-            const playerInfo = {
-              playerName: updatedProfile.playerName || prev.team.name,
-              avatar: prev.team.avatar,
-              gameScore: finalScore
-            };
-
-            // Share game achievements (with offline queue fallback)
-            earnedAchievementIds.forEach(achievementId => {
-              const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
-              if (achievement) {
-                resilientSave(
-                  'achievement',
-                  () => FirebaseBackend.shareAchievement(achievement, playerInfo),
-                  { achievement, playerInfo }
-                );
-              }
-            });
-
-            // Share newly earned lifetime achievements (with offline queue fallback)
-            newLifetimeAchievements.forEach(achievement => {
-              const lifetimeAch = { ...achievement, description: `${achievement.description} (Lifetime)` };
-              resilientSave(
-                'achievement',
-                () => FirebaseBackend.shareAchievement(lifetimeAch, playerInfo),
-                { achievement: lifetimeAch, playerInfo }
-              );
-            });
-
-            // Record claims as seen by this class (prevents other groups from getting same claims)
-            const claimIds = prev.claims.map(c => c.id);
-            FirebaseBackend.recordClassSeenClaims(claimIds).catch(e => {
-              logger.warn('Failed to record class seen claims:', e);
-            });
-          }
 
           // Track game completion in analytics
           Analytics.track(AnalyticsEvents.GAME_COMPLETED, {
@@ -848,8 +665,6 @@ export function App() {
         onExitGame={restartGame}
         soundEnabled={soundEnabled}
         onToggleSound={toggleSound}
-        analyticsEnabled={analyticsEnabled}
-        onToggleAnalytics={toggleAnalytics}
         isPaused={isPaused}
         onTogglePause={togglePause}
         onShowHelp={() => setShowHelp(true)}
@@ -896,8 +711,6 @@ export function App() {
                 currentScore={gameState.team.score}
                 predictedScore={gameState.team.predictedScore}
                 sessionId={sessionId}
-                showLiveLeaderboard={showLiveLeaderboard}
-                onToggleLiveLeaderboard={() => setShowLiveLeaderboard(prev => !prev)}
               />
             </ErrorBoundary>
           )}

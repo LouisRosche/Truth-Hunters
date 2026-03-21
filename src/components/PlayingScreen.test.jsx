@@ -81,10 +81,6 @@ vi.mock('./ResultPhase', () => ({
   ))
 }));
 
-vi.mock('./LiveClassLeaderboard', () => ({
-  LiveClassLeaderboard: vi.fn(() => null)
-}));
-
 vi.mock('./TutorialOverlay', () => ({
   TutorialOverlay: vi.fn(({ onClose }) => (
     <div data-testid="tutorial-overlay">
