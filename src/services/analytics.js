@@ -25,7 +25,7 @@ export const AnalyticsEvents = {
 
 /**
  * Analytics Manager
- * Tracks game events locally for teacher insights
+ * Tracks game events locally for performance insights
  */
 export const Analytics = {
   /**

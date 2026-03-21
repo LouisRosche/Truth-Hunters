@@ -6,7 +6,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   selectClaimsByDifficulty,
-  formatPlayerName,
   getHintContent,
   getUnseenClaimStats
 } from '../game';
@@ -14,8 +13,7 @@ import * as claimsLoader from '../../data/claimsLoader';
 
 // Mock the claims loader
 vi.mock('../../data/claimsLoader', () => ({
-  loadClaimsDatabase: vi.fn(),
-  loadFilteredClaims: vi.fn()
+  loadClaimsDatabase: vi.fn()
 }));
 
 describe('game utilities', () => {
@@ -38,7 +36,6 @@ describe('game utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     claimsLoader.loadClaimsDatabase.mockResolvedValue([...mockClaims]);
-    claimsLoader.loadFilteredClaims.mockResolvedValue([...mockClaims.filter(c => c.gradeLevel === 'middle')]);
   });
 
   describe('selectClaimsByDifficulty', () => {
@@ -163,70 +160,6 @@ describe('game utilities', () => {
         expect(claims).toHaveLength(2);
       });
 
-      it('combines individual and class seen IDs', async () => {
-        const individualSeenIds = ['1', '2'];
-        const classSettings = {
-          gradeLevel: 'middle',
-          classSeenIds: ['3', '4']
-        };
-
-        const claims = await selectClaimsByDifficulty('easy', 3, [], individualSeenIds, [], classSettings);
-
-        // Should avoid IDs 1, 2, 3, 4 if possible
-        const avoidedIds = ['1', '2', '3', '4'];
-        const unseenClaims = claims.filter(c => !avoidedIds.includes(c.id));
-        expect(unseenClaims.length).toBeGreaterThan(0);
-      });
-    });
-
-    describe('additional claims', () => {
-      it('includes student-contributed claims in pool', async () => {
-        const additionalClaims = [
-          { id: 'student-1', difficulty: 'easy', subject: 'Biology', source: 'student-contributed' }
-        ];
-
-        const claims = await selectClaimsByDifficulty('easy', 1, [], [], additionalClaims);
-        expect(claims).toHaveLength(1);
-      });
-
-      it('mixes additional claims with base pool', async () => {
-        const additionalClaims = [
-          { id: 'student-1', difficulty: 'medium', subject: 'Biology', source: 'student-contributed' },
-          { id: 'student-2', difficulty: 'medium', subject: 'Physics', source: 'student-contributed' }
-        ];
-
-        const claims = await selectClaimsByDifficulty('medium', 3, [], [], additionalClaims);
-        expect(claims).toHaveLength(3);
-      });
-    });
-
-    describe('grade level filtering', () => {
-      it('uses loadFilteredClaims when gradeLevel is specified', async () => {
-        const classSettings = { gradeLevel: 'middle' };
-        await selectClaimsByDifficulty('easy', 2, [], [], [], classSettings);
-
-        expect(claimsLoader.loadFilteredClaims).toHaveBeenCalledWith({
-          gradeLevel: 'middle',
-          subject: null
-        });
-      });
-
-      it('uses loadFilteredClaims with single subject', async () => {
-        const classSettings = { gradeLevel: 'high' };
-        await selectClaimsByDifficulty('hard', 2, ['Physics'], [], [], classSettings);
-
-        expect(claimsLoader.loadFilteredClaims).toHaveBeenCalledWith({
-          gradeLevel: 'high',
-          subject: 'Physics'
-        });
-      });
-
-      it('uses loadClaimsDatabase when no gradeLevel', async () => {
-        await selectClaimsByDifficulty('easy', 2);
-
-        expect(claimsLoader.loadClaimsDatabase).toHaveBeenCalled();
-        expect(claimsLoader.loadFilteredClaims).not.toHaveBeenCalled();
-      });
     });
 
     describe('fallback behavior', () => {
@@ -255,74 +188,6 @@ describe('game utilities', () => {
         expect(ids).toEqual(uniqueIds);
       });
 
-      it('enforces uniqueness even with additional claims', async () => {
-        const additionalClaims = [
-          { id: '1', difficulty: 'easy', subject: 'Biology' } // Duplicate ID
-        ];
-
-        const claims = await selectClaimsByDifficulty('easy', 3, [], [], additionalClaims);
-        const ids = claims.map(c => c.id);
-        const uniqueIds = [...new Set(ids)];
-        expect(ids).toEqual(uniqueIds);
-      });
-    });
-  });
-
-  describe('formatPlayerName', () => {
-    it('formats name with first and last initial', () => {
-      expect(formatPlayerName('John', 'D')).toBe('John D.');
-    });
-
-    it('formats name with only first name', () => {
-      expect(formatPlayerName('John', '')).toBe('John');
-    });
-
-    it('returns Anonymous for empty first name', () => {
-      expect(formatPlayerName('', 'D')).toBe('Anonymous');
-    });
-
-    it('returns Anonymous for null first name', () => {
-      expect(formatPlayerName(null, 'D')).toBe('Anonymous');
-    });
-
-    it('returns Anonymous for undefined first name', () => {
-      expect(formatPlayerName(undefined, 'D')).toBe('Anonymous');
-    });
-
-    it('capitalizes last initial', () => {
-      expect(formatPlayerName('John', 'd')).toBe('John D.');
-    });
-
-    it('takes only first character of last name', () => {
-      expect(formatPlayerName('John', 'Doe')).toBe('John D.');
-    });
-
-    it('trims whitespace from names', () => {
-      expect(formatPlayerName('  John  ', '  D  ')).toBe('John D.');
-    });
-
-    it('handles null last initial', () => {
-      expect(formatPlayerName('John', null)).toBe('John');
-    });
-
-    it('handles undefined last initial', () => {
-      expect(formatPlayerName('John', undefined)).toBe('John');
-    });
-
-    it('handles special characters in first name', () => {
-      expect(formatPlayerName("O'Brien", 'S')).toBe("O'Brien S.");
-    });
-
-    it('handles hyphenated first names', () => {
-      expect(formatPlayerName('Mary-Jane', 'W')).toBe('Mary-Jane W.');
-    });
-
-    it('handles single character first name', () => {
-      expect(formatPlayerName('J', 'D')).toBe('J D.');
-    });
-
-    it('handles emojis in names', () => {
-      expect(formatPlayerName('Alex 🎮', 'T')).toBe('Alex 🎮 T.');
     });
   });
 
@@ -448,16 +313,6 @@ describe('game utilities', () => {
       const stats = await getUnseenClaimStats(seenIds, ['Biology']);
 
       expect(stats.total).toBe(biologyClaims.length);
-    });
-
-    it('includes additional claims in count', async () => {
-      const additionalClaims = [
-        { id: 'student-1', subject: 'Biology' },
-        { id: 'student-2', subject: 'Physics' }
-      ];
-
-      const stats = await getUnseenClaimStats([], [], additionalClaims);
-      expect(stats.total).toBe(mockClaims.length + 2);
     });
 
     it('handles empty claims database', async () => {

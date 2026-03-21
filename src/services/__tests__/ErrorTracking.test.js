@@ -187,9 +187,8 @@ describe('ErrorTracking', () => {
 
   describe('setUser', () => {
     it('sets user context', () => {
-      ErrorTracking.setUser({ playerName: 'TestPlayer', classCode: 'ABC' });
+      ErrorTracking.setUser({ playerName: 'TestPlayer' });
       expect(ErrorTracking.userContext.playerName).toBe('TestPlayer');
-      expect(ErrorTracking.userContext.classCode).toBe('ABC');
     });
 
     it('defaults to Anonymous for missing player name', () => {
