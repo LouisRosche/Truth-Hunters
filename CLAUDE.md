@@ -51,7 +51,7 @@ Vitest 4 + @testing-library/react 16 + userEvent v14.
 - Static data (like `LEVELS` arrays) hoisted to module scope to avoid re-creation
 
 ### Current Coverage
-~62% statements overall. 63 test files, ~1,240 tests. Coverage thresholds enforced in `vite.config.js` (62/50/66/63). Key remaining gaps: App.jsx (0%), firebase.js (5%).
+~67% statements overall. 64 test files, ~1,266 tests. Coverage thresholds enforced in `vite.config.js` (66/56/70/68). Key remaining gaps: App.jsx (0%), firebase.js (5%).
 
 ### Quality Gates
 - **Pre-commit**: lint-staged runs ESLint with `--max-warnings=0`
