@@ -26,7 +26,8 @@ React 19 + Vite 7 SPA. Firebase 12 optional backend (Firestore, Auth). No router
 ### Key Patterns
 - **Code-splitting**: `React.lazy()` for screen components.
 - **Functional state updates**: `setGameState(prev => ...)` to avoid stale closures. The streak bug (fixed) was caused by reading `currentStreak` directly in a `useCallback`.
-- **Fire-and-forget Firebase**: Most saves use `.catch(logger.warn)`. `OfflineQueue` service exists for retry/queueing but is not yet wired into App.jsx.
+- **Resilient Firebase saves**: `resilientSave()` in `src/utils/firebaseResilience.js` tries Firebase first, falls back to `OfflineQueue` on failure. `removeSessionWithRetry()` handles session cleanup with retry logic. `withTimeout()` guards Firebase fetches against hanging.
+- **Session cleanup**: Uses `visibilitychange` event (not `beforeunload`) for reliable cleanup.
 - **Anti-cheat**: Tab switch detection, forfeit penalties (in `useGameIntegrity` hook).
 - **Feature flags**: `src/utils/featureFlags.js` with localStorage persistence.
 
@@ -50,13 +51,16 @@ Vitest 4 + @testing-library/react 16 + userEvent v14.
 - Static data (like `LEVELS` arrays) hoisted to module scope to avoid re-creation
 
 ### Current Coverage
-~55% statements overall. 53 test files, ~1,089 tests. Key gaps: App.jsx (0%), firebase.js (5%), several components untested.
+~62% statements overall. 63 test files, ~1,240 tests. Coverage thresholds enforced in `vite.config.js` (62/50/66/63). Key remaining gaps: App.jsx (0%), firebase.js (5%).
+
+### Quality Gates
+- **Pre-commit**: lint-staged runs ESLint with `--max-warnings=0`
+- **Pre-push**: Husky runs full `vitest run`
+- **CI**: Lint → test with coverage thresholds → build → deploy (GitHub Pages)
 
 ## Known Issues
-- Firebase saves in App.jsx are fire-and-forget (offlineQueue exists but unused)
-- `beforeunload` cleanup handler is async (browser won't await it)
-- `preparingGameRef` lock lacks timeout on Firebase fetches
-- `debounce()` duplicated in `generic.js` and `performance.js`
+- App.jsx at 0% test coverage (979 lines — integration-level testing needed)
+- firebase.js at 5% coverage (mostly untestable without emulator)
 
 ## Accessibility
 WCAG 2.2 targeted. Focus traps on modals, `radiogroup` pattern for verdict/confidence selectors, keyboard navigation with arrow keys, `aria-live` regions for timer urgency. Presentation mode for 4-students-per-Chromebook use case.
