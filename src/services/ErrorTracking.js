@@ -391,7 +391,6 @@ export const ErrorTracking = {
     try {
       this.userContext = {
         playerName: userData.playerName || 'Anonymous',
-        classCode: userData.classCode || null,
         sessionId: this._getSessionId()
       };
     } catch (e) {

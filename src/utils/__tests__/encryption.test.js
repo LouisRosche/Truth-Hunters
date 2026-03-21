@@ -22,7 +22,7 @@ const localStorageMock = createStorageMock();
 vi.stubGlobal('sessionStorage', sessionStorageMock);
 vi.stubGlobal('localStorage', localStorageMock);
 
-const { SecureStorage, migrateAllToEncrypted } = await import('../encryption.js');
+const { SecureStorage } = await import('../encryption.js');
 
 describe('SecureStorage', () => {
   beforeEach(() => {
@@ -195,27 +195,3 @@ describe('SecureStorage', () => {
   });
 });
 
-describe('migrateAllToEncrypted()', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
-
-  it('should migrate all specified keys', async () => {
-    // Add unencrypted data
-    localStorage.setItem('truthHunters_playerProfile', JSON.stringify({ name: 'Alice' }));
-    localStorage.setItem('truthHunters_leaderboard', JSON.stringify([{ score: 100 }]));
-
-    const migrated = await migrateAllToEncrypted();
-    expect(migrated).toBe(2);
-
-    // Verify data is now encrypted but accessible
-    const profile = await SecureStorage.getItem('truthHunters_playerProfile');
-    expect(profile).toEqual({ name: 'Alice' });
-  });
-
-  it('should return 0 if no data to migrate', async () => {
-    const migrated = await migrateAllToEncrypted();
-    expect(migrated).toBe(0);
-  });
-});

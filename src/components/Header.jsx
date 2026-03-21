@@ -7,7 +7,7 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
-export function Header({ score, round, totalRounds, phase, presentationMode, onTogglePresentationMode, onExitGame, soundEnabled, onToggleSound, analyticsEnabled, onToggleAnalytics, onTogglePause, isPaused, onShowHelp }) {
+export function Header({ score, round, totalRounds, phase, presentationMode, onTogglePresentationMode, onExitGame, soundEnabled, onToggleSound, onTogglePause, isPaused, onShowHelp }) {
   const isOnline = useOnlineStatus();
   const [showExitModal, setShowExitModal] = useState(false);
 
@@ -148,33 +148,6 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
             }}
           >
             <span aria-hidden="true" style={{ fontSize: '1rem' }}>❓</span>
-          </button>
-        )}
-
-        {/* Analytics Toggle */}
-        {onToggleAnalytics && (
-          <button
-            onClick={onToggleAnalytics}
-            aria-pressed={analyticsEnabled}
-            aria-label={analyticsEnabled ? 'Disable analytics' : 'Enable analytics'}
-            title={analyticsEnabled ? 'Disable analytics (local tracking for insights)' : 'Enable analytics (local tracking for insights)'}
-            className="mono"
-            style={{
-              padding: '0.5rem 0.75rem',
-              background: analyticsEnabled ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
-              border: `1px solid ${analyticsEnabled ? 'var(--accent-violet)' : 'var(--border)'}`,
-              borderRadius: '6px',
-              fontSize: '0.75rem',
-              color: analyticsEnabled ? 'var(--accent-violet)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              transition: 'all 0.2s ease',
-              minHeight: '44px'
-            }}
-          >
-            <span aria-hidden="true" style={{ fontSize: '1rem' }}>{analyticsEnabled ? '📊' : '🚫'}</span>
           </button>
         )}
 
@@ -431,8 +404,6 @@ Header.propTypes = {
   onExitGame: PropTypes.func,
   soundEnabled: PropTypes.bool,
   onToggleSound: PropTypes.func,
-  analyticsEnabled: PropTypes.bool,
-  onToggleAnalytics: PropTypes.func,
   onTogglePause: PropTypes.func,
   isPaused: PropTypes.bool,
   onShowHelp: PropTypes.func
@@ -445,8 +416,6 @@ Header.defaultProps = {
   onExitGame: null,
   soundEnabled: true,
   onToggleSound: null,
-  analyticsEnabled: false,
-  onToggleAnalytics: null,
   onTogglePause: null,
   isPaused: false,
   onShowHelp: null

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { shuffleArray, formatPlayerName, getRandomItem, getHintContent } from './helpers';
+import { shuffleArray, getRandomItem, getHintContent } from './helpers';
 
 describe('shuffleArray', () => {
   it('returns array of same length', () => {
@@ -31,37 +31,6 @@ describe('shuffleArray', () => {
 
   it('handles single element', () => {
     expect(shuffleArray([42])).toEqual([42]);
-  });
-});
-
-describe('formatPlayerName', () => {
-  it('formats name with initial', () => {
-    expect(formatPlayerName('John', 'D')).toBe('John D.');
-  });
-
-  it('handles lowercase initial', () => {
-    expect(formatPlayerName('Jane', 'd')).toBe('Jane D.');
-  });
-
-  it('handles missing initial', () => {
-    expect(formatPlayerName('Alex', '')).toBe('Alex');
-  });
-
-  it('handles missing first name', () => {
-    expect(formatPlayerName('', 'X')).toBe('Anonymous');
-  });
-
-  it('handles both empty', () => {
-    expect(formatPlayerName('', '')).toBe('Anonymous');
-  });
-
-  it('handles null/undefined', () => {
-    expect(formatPlayerName(null, null)).toBe('Anonymous');
-    expect(formatPlayerName(undefined, undefined)).toBe('Anonymous');
-  });
-
-  it('trims whitespace', () => {
-    expect(formatPlayerName('  Sarah  ', '  T  ')).toBe('Sarah T.');
   });
 });
 

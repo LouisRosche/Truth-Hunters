@@ -20,19 +20,7 @@ vi.mock('../services/sound', () => ({
 vi.mock('../services/firebase', () => ({
   FirebaseBackend: {
     initialized: false,
-    getClassCode: vi.fn(() => null),
-    setClassCode: vi.fn(),
-    getTopTeams: vi.fn(() => Promise.resolve([])),
-    getClassReflections: vi.fn(() => Promise.resolve([]))
-  }
-}));
-
-// Mock LeaderboardManager
-vi.mock('../services/leaderboard', () => ({
-  LeaderboardManager: {
-    getAll: vi.fn(() => []),
-    getTopTeams: vi.fn(() => []),
-    getTopPlayers: vi.fn(() => [])
+    getClassCode: vi.fn(() => null)
   }
 }));
 
@@ -117,16 +105,6 @@ describe('SetupScreen', () => {
 
     const startButton = screen.getByRole('button', { name: /start mission/i });
     expect(startButton).not.toBeDisabled();
-  });
-
-  it('renders leaderboard button', () => {
-    render(<SetupScreen onStart={mockOnStart} />);
-    expect(screen.getByRole('button', { name: /leaderboard/i })).toBeInTheDocument();
-  });
-
-  it('renders submit claim button', () => {
-    render(<SetupScreen onStart={mockOnStart} />);
-    expect(screen.getByRole('button', { name: /submit claim/i })).toBeInTheDocument();
   });
 
   it('renders player section with who is playing label', () => {

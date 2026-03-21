@@ -58,7 +58,7 @@ export const OfflineQueue = {
 
   /**
    * Add item to queue
-   * @param {string} type - Type of operation ('game' | 'reflection' | 'claim' | 'achievement')
+   * @param {string} type - Type of operation ('game')
    * @param {Object} data - Data to save
    */
   enqueue(type, data) {
@@ -126,19 +126,6 @@ export const OfflineQueue = {
           case 'game':
             result = await FirebaseBackend.save(item.data);
             break;
-          case 'reflection':
-            result = await FirebaseBackend.saveReflection(item.data);
-            break;
-          case 'claim': {
-            const claimResult = await FirebaseBackend.submitClaim(item.data);
-            result = claimResult.success;
-            break;
-          }
-          case 'achievement': {
-            const achResult = await FirebaseBackend.shareAchievement(item.data.achievement, item.data.playerInfo);
-            result = achResult.success;
-            break;
-          }
           default:
             logger.warn(`Unknown queue item type: ${item.type}`);
             result = false;

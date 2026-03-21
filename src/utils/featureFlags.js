@@ -24,36 +24,13 @@ const DEFAULT_FLAGS = {
   enableAchievements: true,
   enableHints: true,
   enablePredictionModal: true,
-  enableLeaderboard: true,
   enableOfflineQueue: true,
-
-  // Student features
-  enableStudentClaims: true,
-  enableReflections: true,
-  enableAchievementSharing: true,
-
-  // Teacher features
-  enableTeacherDashboard: true,
-  enableClassSettings: true,
-  enableClaimModeration: true,
 
   // UI features
   enablePresentationMode: true,
   enableDarkMode: true,
   enableAccessibility: true,
-  enableKeyboardShortcuts: true,
-
-  // Experimental features (disabled by default)
-  enableRealTimeUpdates: false,
-  enableAIHints: false,
-  enableMultiplayer: false,
-  enableVideoHints: false,
-  enableCustomThemes: false,
-
-  // Debug features (only in development)
-  enableDebugPanel: false,
-  enablePerformanceMonitoring: false,
-  enableVerboseLogging: false
+  enableKeyboardShortcuts: true
 };
 
 /**
@@ -77,13 +54,6 @@ export const FeatureFlags = {
     // Load from localStorage (runtime overrides)
     this._loadFromStorage();
 
-    // Enable debug features in development
-    if (import.meta.env.MODE === 'development') {
-      this.flags.enableDebugPanel = true;
-      this.flags.enablePerformanceMonitoring = true;
-      this.flags.enableVerboseLogging = true;
-    }
-
     this.initialized = true;
     logger.log('[FeatureFlags] Initialized:', this.flags);
   },
@@ -98,7 +68,6 @@ export const FeatureFlags = {
       VITE_ENABLE_ERROR_TRACKING: 'enableErrorTracking',
       VITE_ENABLE_ENCRYPTION: 'enableEncryption',
       VITE_ENABLE_SOUND: 'enableSound',
-      VITE_ENABLE_LEADERBOARD: 'enableLeaderboard',
       VITE_ENABLE_REAL_TIME: 'enableRealTimeUpdates',
       VITE_ENABLE_AI_HINTS: 'enableAIHints'
     };
@@ -273,63 +242,5 @@ export const FeatureFlags = {
   }
 };
 
-/**
- * Convenience functions
- */
-export const isFeatureEnabled = (featureName) => FeatureFlags.isEnabled(featureName);
-export const enableFeature = (featureName, persist) => FeatureFlags.enable(featureName, persist);
-export const disableFeature = (featureName, persist) => FeatureFlags.disable(featureName, persist);
-export const toggleFeature = (featureName, persist) => FeatureFlags.toggle(featureName, persist);
-
-// Note: useFeatureFlag hook removed to avoid React dependency in utils
-// If needed, create a separate hooks/useFeatureFlag.js file with:
-// import { useState, useEffect } from 'react';
-// import { FeatureFlags } from '../utils/featureFlags';
-
-/**
- * Debug helper - print all flags to console
- */
-export function debugFlags() {
-  const all = FeatureFlags.getAll();
-  const stats = FeatureFlags.getStats();
-
-  logger.log('🚩 Feature Flags');
-  logger.log('Statistics:', stats);
-  logger.log('Features:', Object.entries(all).map(([name, enabled]) => ({
-    Feature: name,
-    Enabled: enabled ? '✅' : '❌'
-  })));
-}
-
 // Auto-initialize
 FeatureFlags.init();
-
-// Expose to window for debugging (development only)
-if (import.meta.env.MODE === 'development' && typeof window !== 'undefined') {
-  window.FeatureFlags = FeatureFlags;
-  window.debugFlags = debugFlags;
-  logger.log('💡 Debug helpers available: window.FeatureFlags, window.debugFlags()');
-}
-
-/**
- * Example usage:
- *
- * // Check if feature is enabled
- * if (isFeatureEnabled('enableSound')) {
- *   SoundManager.play('correct');
- * }
- *
- * // Toggle feature
- * toggleFeature('enableDarkMode', true); // persist to localStorage
- *
- * // Subscribe to changes
- * const unsubscribe = FeatureFlags.subscribe((name, value) => {
- *   console.log(`Feature ${name} is now ${value}`);
- * });
- *
- * // Debug in console
- * debugFlags();
- *
- * // Disable feature temporarily (emergency hotfix)
- * window.FeatureFlags.disable('enableRealTimeUpdates');
- */

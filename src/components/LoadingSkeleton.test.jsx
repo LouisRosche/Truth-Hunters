@@ -18,12 +18,6 @@ describe('LoadingSkeleton', () => {
     expect(container.querySelectorAll('.skeleton')).toHaveLength(4);
   });
 
-  it('renders leaderboard skeleton with 5 rows', () => {
-    const { container } = render(<LoadingSkeleton type="leaderboard" />);
-    // 5 rows × 3 skeletons each = 15
-    expect(container.querySelectorAll('.skeleton')).toHaveLength(15);
-  });
-
   it('renders stats skeleton with 4 stat cards', () => {
     const { container } = render(<LoadingSkeleton type="stats" />);
     // 4 cards × 2 skeletons each = 8

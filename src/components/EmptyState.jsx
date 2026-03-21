@@ -15,20 +15,6 @@ export function EmptyState({ type, onAction }) {
       actionText: 'Start New Game',
       helpText: 'Tip: Choose "Easy" difficulty if you\'re new to fact-checking'
     },
-    noLeaderboard: {
-      emoji: '🏆',
-      title: 'Leaderboard is empty',
-      message: 'Be the first team to appear on the leaderboard!',
-      actionText: 'Play a Game',
-      helpText: 'Complete a game to earn your spot on the board'
-    },
-    noReflections: {
-      emoji: '💭',
-      title: 'No reflections yet',
-      message: 'Students haven\'t shared their thoughts yet.',
-      actionText: null,
-      helpText: 'Reflections appear here after students complete games'
-    },
     noAchievements: {
       emoji: '🌟',
       title: 'No achievements yet',
@@ -152,8 +138,6 @@ export function EmptyState({ type, onAction }) {
 EmptyState.propTypes = {
   type: PropTypes.oneOf([
     'noGames',
-    'noLeaderboard',
-    'noReflections',
     'noAchievements',
     'offline',
     'noClaims',

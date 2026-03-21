@@ -180,27 +180,9 @@ class PerformanceMonitor {
 export const perfMonitor = new PerformanceMonitor();
 
 /**
- * React hook for measuring component render time
- * @param {string} componentName - Name of component
- */
-export function useRenderMetrics(componentName) {
-  if (!perfMonitor.enabled) return;
-
-  const renderStart = performance.now();
-
-  // Log on unmount
-  return () => {
-    const renderTime = performance.now() - renderStart;
-    if (renderTime > 16.67) { // More than one frame (60fps)
-      logger.warn(`⚠️ Slow render: ${componentName} took ${renderTime.toFixed(2)}ms`);
-    }
-  };
-}
-
-/**
  * Measure bundle size and log warnings
  */
-export function checkBundleSize() {
+function checkBundleSize() {
   if (typeof window === 'undefined' || !perfMonitor.enabled) return;
 
   // Use Resource Timing API to get script sizes
@@ -231,23 +213,6 @@ export function checkBundleSize() {
 
 // Re-export debounce from generic.js to avoid duplication
 export { debounce } from './generic';
-
-/**
- * Throttle function for performance
- * @param {Function} fn - Function to throttle
- * @param {number} limit - Time limit in ms
- * @returns {Function} Throttled function
- */
-export function throttle(fn, limit) {
-  let inThrottle;
-  return function (...args) {
-    if (!inThrottle) {
-      fn.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
-}
 
 // Auto-check performance on load (dev only)
 if (perfMonitor.enabled && typeof window !== 'undefined') {

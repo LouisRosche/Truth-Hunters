@@ -7,7 +7,6 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
 import { ClaimCard } from './ClaimCard';
-import { LiveClassLeaderboard } from './LiveClassLeaderboard';
 import { TutorialOverlay } from './TutorialOverlay';
 import { VotingSection } from './VotingSection';
 import { ResultPhase } from './ResultPhase';
@@ -50,9 +49,7 @@ export function PlayingScreen({
   claims: _claims = [],
   currentScore: _currentScore = 0,
   predictedScore: _predictedScore = 0,
-  sessionId = null,
-  showLiveLeaderboard = true,
-  onToggleLiveLeaderboard = () => {}
+  sessionId = null
 }) {
   const [confidence, setConfidence] = useState(2);
   const [verdict, setVerdict] = useState(null);
@@ -451,15 +448,6 @@ export function PlayingScreen({
 
 
 
-      {/* Live Class Leaderboard - shows all students' scores in real-time */}
-      {sessionId && (
-        <LiveClassLeaderboard
-          currentSessionId={sessionId}
-          isMinimized={!showLiveLeaderboard}
-          onToggle={onToggleLiveLeaderboard}
-        />
-      )}
-
       {/* Tab Switch Warning - PERSISTENT (requires acknowledgment) */}
       {tabSwitchWarning !== null && ANTI_CHEAT.ENABLED && !forfeitAcknowledged && (
         <div
@@ -815,9 +803,7 @@ PlayingScreen.propTypes = {
   ),
   currentScore: PropTypes.number,
   predictedScore: PropTypes.number,
-  sessionId: PropTypes.string,
-  showLiveLeaderboard: PropTypes.bool,
-  onToggleLiveLeaderboard: PropTypes.func
+  sessionId: PropTypes.string
 };
 
 PlayingScreen.defaultProps = {
@@ -828,7 +814,5 @@ PlayingScreen.defaultProps = {
   claims: [],
   currentScore: 0,
   predictedScore: 0,
-  sessionId: null,
-  showLiveLeaderboard: true,
-  onToggleLiveLeaderboard: () => {}
+  sessionId: null
 };

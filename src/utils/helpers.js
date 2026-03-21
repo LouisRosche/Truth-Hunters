@@ -3,12 +3,12 @@
  * Re-exports from focused utility modules for backwards compatibility
  *
  * For new code, prefer importing directly from:
- * - './generic' for reusable utilities (shuffleArray, getRandomItem, debounce, preventDoubleClick)
- * - './game' for game-specific functions (selectClaimsByDifficulty, formatPlayerName, getHintContent)
+ * - './generic' for reusable utilities (shuffleArray, getRandomItem, debounce)
+ * - './game' for game-specific functions (selectClaimsByDifficulty, getHintContent)
  */
 
 // Generic utilities
-export { shuffleArray, getRandomItem, debounce, preventDoubleClick, formatTimeAgo, getRankDisplay, getRankColor } from './generic';
+export { shuffleArray, getRandomItem, debounce } from './generic';
 
 // Game-specific utilities
-export { selectClaimsByDifficulty, formatPlayerName, getHintContent, getUnseenClaimStats } from './game';
+export { selectClaimsByDifficulty, getHintContent, getUnseenClaimStats } from './game';

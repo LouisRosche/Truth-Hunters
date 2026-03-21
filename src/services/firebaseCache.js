@@ -106,17 +106,8 @@ class FirebaseCache {
    * This ensures data consistency after mutations
    */
   invalidateOnWrite() {
-    // Invalidate leaderboard and stats queries
-    this.invalidate('getTopTeams');
-    this.invalidate('getTopPlayers');
-    this.invalidate('getClassSettings');
-    this.invalidate('getClassSeenClaims');
-    this.invalidate('getPendingClaims');
-    this.invalidate('getAllSubmittedClaims');
-    this.invalidate('getApprovedClaims');
-    this.invalidate('getClassReflections');
-    this.invalidate('getClassAchievements');
-    logger.log('Invalidated read caches after write operation');
+    // Invalidate all read caches after a write
+    this.invalidate();
   }
 
   /**

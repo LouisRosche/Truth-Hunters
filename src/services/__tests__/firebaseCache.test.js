@@ -53,12 +53,12 @@ describe('firebaseCache', () => {
   });
 
   describe('invalidateOnWrite', () => {
-    it('clears read caches', () => {
-      firebaseCache.set('getTopTeams', [], 'data', 60000);
-      firebaseCache.set('getClassSettings', [], 'settings', 60000);
+    it('clears all caches', () => {
+      firebaseCache.set('fnA', [], 'data', 60000);
+      firebaseCache.set('fnB', [], 'settings', 60000);
       firebaseCache.invalidateOnWrite();
-      expect(firebaseCache.get('getTopTeams')).toBeNull();
-      expect(firebaseCache.get('getClassSettings')).toBeNull();
+      expect(firebaseCache.get('fnA')).toBeNull();
+      expect(firebaseCache.get('fnB')).toBeNull();
     });
   });
 

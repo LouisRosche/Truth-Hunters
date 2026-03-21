@@ -11,11 +11,7 @@ export { VerdictSelector } from './VerdictSelector';
 export { PredictionModal } from './PredictionModal';
 // Note: SetupScreen, PlayingScreen, DebriefScreen are lazy-loaded in App.jsx
 // Do not export them here to enable proper code splitting
-export { ScrollingLeaderboard } from './ScrollingLeaderboard';
 export { SoloStatsView } from './SoloStatsView';
-export { ClaimSubmissionForm } from './ClaimSubmissionForm';
-export { StudentClaimNotifications } from './StudentClaimNotifications';
-export { LiveClassLeaderboard } from './LiveClassLeaderboard';
 
 // Modals and overlays
 export { HelpModal } from './HelpModal';

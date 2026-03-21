@@ -65,43 +65,6 @@ export function LoadingSkeleton({ type = 'claim' }) {
     );
   }
 
-  if (type === 'leaderboard') {
-    return (
-      <>
-        <style>{shimmer}</style>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <div className="skeleton" style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%'
-              }} />
-              <div className="skeleton" style={{
-                flex: 1,
-                height: '16px',
-                borderRadius: '4px'
-              }} />
-              <div className="skeleton" style={{
-                width: '40px',
-                height: '16px',
-                borderRadius: '4px'
-              }} />
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  }
-
   if (type === 'stats') {
     return (
       <>
@@ -152,5 +115,5 @@ export function LoadingSkeleton({ type = 'claim' }) {
 }
 
 LoadingSkeleton.propTypes = {
-  type: PropTypes.oneOf(['claim', 'leaderboard', 'stats', 'generic'])
+  type: PropTypes.oneOf(['claim', 'stats', 'generic'])
 };
