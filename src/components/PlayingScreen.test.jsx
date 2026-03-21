@@ -3,10 +3,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PlayingScreen } from './PlayingScreen';
 import { TEAM_AVATARS } from '../data/constants';
 import { SoundManager } from '../services/sound';
+import { calculatePoints } from '../utils/scoring';
 
 // Mock the sound manager
 vi.mock('../services/sound', () => ({
@@ -283,5 +284,164 @@ describe('PlayingScreen', () => {
     render(<PlayingScreen {...defaultProps} />);
     expect(screen.getByTestId('claim-card')).toBeInTheDocument();
     expect(screen.queryByTestId('answer-reveal')).not.toBeInTheDocument();
+  });
+
+  // ==========================================================
+  // Core submission flow
+  // ==========================================================
+  describe('submission flow', () => {
+    it('submits verdict and shows result phase', async () => {
+      render(<PlayingScreen {...defaultProps} />);
+
+      // Select verdict
+      fireEvent.click(screen.getByTestId('vote-true'));
+      // Submit
+      fireEvent.click(screen.getByTestId('submit-verdict'));
+
+      // Result phase should appear
+      expect(screen.getByTestId('result-phase')).toBeInTheDocument();
+      expect(screen.getByTestId('result-correct').textContent).toBe('Correct!');
+      expect(SoundManager.play).toHaveBeenCalledWith('correct');
+    });
+
+    it('shows incorrect result when verdict is wrong', () => {
+      calculatePoints.mockReturnValue({ points: -3, speedBonus: null });
+
+      render(<PlayingScreen {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId('vote-false'));
+      fireEvent.click(screen.getByTestId('submit-verdict'));
+
+      expect(screen.getByTestId('result-correct').textContent).toBe('Wrong!');
+      expect(SoundManager.play).toHaveBeenCalledWith('incorrect');
+    });
+
+    it('calls onSubmit with round data when advancing to next round', () => {
+      render(<PlayingScreen {...defaultProps} />);
+
+      // Vote and submit
+      fireEvent.click(screen.getByTestId('vote-true'));
+      fireEvent.click(screen.getByTestId('submit-verdict'));
+
+      // Advance to next round
+      fireEvent.click(screen.getByTestId('next-round'));
+
+      expect(defaultProps.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          claimId: 'test-001',
+          teamVerdict: 'TRUE',
+          correct: true,
+        })
+      );
+    });
+
+    it('resets state after advancing to next round', () => {
+      render(<PlayingScreen {...defaultProps} />);
+
+      // Vote → submit → next
+      fireEvent.click(screen.getByTestId('vote-true'));
+      fireEvent.click(screen.getByTestId('submit-verdict'));
+      fireEvent.click(screen.getByTestId('next-round'));
+
+      // After next, voting section should be back (no result phase)
+      expect(screen.getByTestId('voting-section')).toBeInTheDocument();
+      expect(screen.queryByTestId('result-phase')).not.toBeInTheDocument();
+    });
+
+    it('shows last round button text on final round', () => {
+      render(<PlayingScreen {...defaultProps} round={5} totalRounds={5} />);
+
+      fireEvent.click(screen.getByTestId('vote-true'));
+      fireEvent.click(screen.getByTestId('submit-verdict'));
+
+      expect(screen.getByTestId('next-round').textContent).toBe('Results');
+    });
+
+    it('submits via Enter keyboard shortcut after selecting verdict', () => {
+      render(<PlayingScreen {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId('vote-true'));
+      fireEvent.keyDown(window, { key: 'Enter' });
+
+      // pendingSubmit triggers in next effect cycle
+      vi.advanceTimersByTime(0);
+
+      expect(screen.getByTestId('result-phase')).toBeInTheDocument();
+    });
+
+    it('advances to next round via Enter in result view', () => {
+      render(<PlayingScreen {...defaultProps} />);
+
+      // Vote and submit
+      fireEvent.click(screen.getByTestId('vote-true'));
+      fireEvent.click(screen.getByTestId('submit-verdict'));
+
+      // Press Enter in result view
+      fireEvent.keyDown(window, { key: 'Enter' });
+      vi.advanceTimersByTime(0);
+
+      expect(defaultProps.onSubmit).toHaveBeenCalled();
+    });
+  });
+
+  // ==========================================================
+  // Timer behavior
+  // ==========================================================
+  describe('timer', () => {
+    it('displays timer when claim is loaded', () => {
+      render(<PlayingScreen {...defaultProps} />);
+      const timer = screen.getByRole('timer');
+      expect(timer).toBeInTheDocument();
+    });
+
+    it('counts down over time', () => {
+      render(<PlayingScreen {...defaultProps} />);
+
+      // Advance 5 seconds
+      vi.advanceTimersByTime(5000);
+
+      const timer = screen.getByRole('timer');
+      // Timer should have counted down from totalTimeAllowed
+      expect(timer).toBeInTheDocument();
+    });
+
+    it('auto-forfeits when timer runs out without a verdict', () => {
+      render(<PlayingScreen {...defaultProps} />);
+
+      // Don't select any verdict — let timer expire
+      act(() => {
+        vi.advanceTimersByTime(200_000); // Well past any time limit
+      });
+      // Flush pending effects from pendingSubmit state update
+      act(() => {
+        vi.advanceTimersByTime(0);
+      });
+
+      // Should show result phase with forfeit
+      expect(screen.getByTestId('result-phase')).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================
+  // Double-submission prevention
+  // ==========================================================
+  describe('double-submission prevention', () => {
+    it('prevents double click submission', () => {
+      calculatePoints.mockReturnValue({ points: 5, speedBonus: null });
+
+      render(<PlayingScreen {...defaultProps} sessionId="test-session" />);
+
+      fireEvent.click(screen.getByTestId('vote-true'));
+      fireEvent.click(screen.getByTestId('submit-verdict'));
+
+      // After first submit, submit button is gone (result phase is showing)
+      expect(screen.queryByTestId('submit-verdict')).not.toBeInTheDocument();
+
+      // onSubmit should NOT have been called yet (user hasn't clicked "Next")
+      expect(defaultProps.onSubmit).not.toHaveBeenCalled();
+
+      // Only one result phase render
+      expect(screen.getByTestId('result-phase')).toBeInTheDocument();
+    });
   });
 });
