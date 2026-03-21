@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useGameState } from '../useGameState';
 
 // Mock dependencies
@@ -393,7 +393,7 @@ describe('useGameState', () => {
     });
 
     it('deducts points for hints used', async () => {
-      const { calculatePoints } = await import('../../utils/scoring');
+      await import('../../utils/scoring');
       const { result } = renderHook(() => useGameState());
 
       await act(async () => {

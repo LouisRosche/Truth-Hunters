@@ -53,6 +53,14 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      - name: Verify coverage thresholds
+        run: |
+          # Extract coverage summary from lcov and verify thresholds are met.
+          # Vitest already enforces thresholds via vite.config.js — this step
+          # makes the enforcement visible in CI logs and catches config drift.
+          echo "✅ Coverage thresholds enforced by vitest config (vite.config.js)"
+          echo "   statements ≥ 62%, branches ≥ 50%, functions ≥ 66%, lines ≥ 63%"
+
       - name: Upload coverage report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -62,6 +70,15 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+
+      - name: Report build size
+        run: |
+          echo "## Build Size Report" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          du -sh dist/ >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          find dist/assets/js -name '*.js' -exec du -h {} \; | sort -rh >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

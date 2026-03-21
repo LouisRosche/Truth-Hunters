@@ -11,7 +11,7 @@ import { LiveClassLeaderboard } from './LiveClassLeaderboard';
 import { TutorialOverlay } from './TutorialOverlay';
 import { VotingSection } from './VotingSection';
 import { ResultPhase } from './ResultPhase';
-import { DIFFICULTY_CONFIG, DIFFICULTY_BG_COLORS, DIFFICULTY_MULTIPLIERS, HINT_TYPES, ENCOURAGEMENTS, ANTI_CHEAT } from '../data/constants';
+import { DIFFICULTY_CONFIG, DIFFICULTY_MULTIPLIERS, HINT_TYPES, ENCOURAGEMENTS, ANTI_CHEAT } from '../data/constants';
 import { calculatePoints } from '../utils/scoring';
 import { getRandomItem, getHintContent } from '../utils/helpers';
 import { SoundManager } from '../services/sound';
@@ -47,9 +47,9 @@ export function PlayingScreen({
   onUseHint,
   teamAvatar,
   previousResults = [],
-  claims = [],
-  currentScore = 0,
-  predictedScore = 0,
+  claims: _claims = [],
+  currentScore: _currentScore = 0,
+  predictedScore: _predictedScore = 0,
   sessionId = null,
   showLiveLeaderboard = true,
   onToggleLiveLeaderboard = () => {}
@@ -555,6 +555,8 @@ export function PlayingScreen({
             <button
               onClick={() => setShowPreviousRounds(!showPreviousRounds)}
               title="Review previous rounds"
+              aria-label="Review previous rounds"
+              aria-expanded={showPreviousRounds}
               className="mono"
               style={{
                 padding: '0.25rem 0.375rem',
@@ -572,6 +574,8 @@ export function PlayingScreen({
           <button
             onClick={() => setShowKeyboardHint(prev => !prev)}
             title="Keyboard: T/F/M for verdict, 1-3 for confidence, Enter to submit"
+            aria-label="Toggle keyboard shortcuts"
+            aria-expanded={showKeyboardHint}
             className="mono"
             style={{
               padding: '0.25rem 0.375rem',
@@ -610,6 +614,165 @@ export function PlayingScreen({
         )}
       </div>
 
+      {/* Keyboard Shortcuts Hint */}
+      {showKeyboardHint && !showResult && (
+        <div
+          className="mono animate-in"
+          role="note"
+          aria-label="Keyboard shortcuts"
+          style={{
+            padding: '0.25rem 0.5rem',
+            fontSize: '0.625rem',
+            color: 'var(--text-muted)',
+            background: 'var(--bg-elevated)',
+            borderRadius: '4px',
+            textAlign: 'center',
+            marginBottom: '0.25rem'
+          }}
+        >
+          <kbd>T</kbd>rue · <kbd>F</kbd>alse · <kbd>M</kbd>ixed · <kbd>1-3</kbd> confidence · <kbd>Enter</kbd> submit
+        </div>
+      )}
+
+      {/* Previous Rounds Drawer */}
+      {showPreviousRounds && previousResults.length > 0 && (
+        <div
+          className="animate-in"
+          style={{
+            marginBottom: '0.5rem',
+            padding: '0.5rem',
+            background: 'var(--bg-elevated)',
+            borderRadius: '6px',
+            maxHeight: '120px',
+            overflowY: 'auto',
+            fontSize: '0.75rem'
+          }}
+        >
+          {previousResults.map((r, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '0.25rem 0',
+                borderBottom: i < previousResults.length - 1 ? '1px solid var(--border)' : 'none',
+                color: r.correct ? 'var(--correct)' : 'var(--incorrect)'
+              }}
+            >
+              <span className="mono">R{i + 1}: {r.teamVerdict || '—'}</span>
+              <span className="mono">{r.points >= 0 ? '+' : ''}{r.points}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Main Content Area - scrollable */}
+      <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+        {/* Claim Card */}
+        <ClaimCard claim={claim} showAnswer={showResult} />
+
+        {/* Active Hint Display */}
+        {activeHint && (
+          <div
+            className="animate-in"
+            style={{
+              marginTop: '0.5rem',
+              padding: '0.625rem',
+              background: 'rgba(167, 139, 250, 0.1)',
+              border: '1px solid var(--accent-violet)',
+              borderRadius: '6px',
+              fontSize: '0.8125rem'
+            }}
+          >
+            <div className="mono" style={{ fontSize: '0.6875rem', color: 'var(--accent-violet)', marginBottom: '0.25rem', fontWeight: 600 }}>
+              {activeHint.icon} {activeHint.name}
+            </div>
+            <div style={{ color: 'var(--text-primary)' }}>
+              {activeHint.content}
+            </div>
+          </div>
+        )}
+
+        {/* Voting or Result Phase */}
+        {!showResult ? (
+          <VotingSection
+            verdict={verdict}
+            onVerdictChange={setVerdict}
+            confidence={confidence}
+            onConfidenceChange={setConfidence}
+            reasoning={reasoning}
+            onReasoningChange={setReasoning}
+            usedHints={usedHints}
+            hintCostTotal={hintCostTotal}
+            onHintRequest={handleHintRequest}
+            onSubmit={handleSubmitVerdict}
+            teamAvatar={teamAvatar}
+            disabled={isSubmitting}
+          />
+        ) : (
+          <div>
+            {/* Encouragement message */}
+            {encouragement && (
+              <div
+                className="animate-in"
+                role="status"
+                aria-live="polite"
+                style={{
+                  marginTop: '0.5rem',
+                  padding: '0.5rem',
+                  textAlign: 'center',
+                  fontSize: '0.875rem',
+                  color: resultData?.correct ? 'var(--correct)' : 'var(--text-secondary)',
+                  fontWeight: 500
+                }}
+              >
+                {encouragement}
+              </div>
+            )}
+
+            {/* Calibration tip */}
+            {calibrationTip && (
+              <div
+                className="animate-in"
+                style={{
+                  marginTop: '0.25rem',
+                  padding: '0.5rem',
+                  background: 'var(--bg-elevated)',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  textAlign: 'center'
+                }}
+              >
+                {calibrationTip}
+              </div>
+            )}
+
+            {/* Confidence preview showing what happened */}
+            {resultData && (
+              <div
+                className="mono"
+                style={{
+                  marginTop: '0.25rem',
+                  padding: '0.25rem 0.5rem',
+                  textAlign: 'center',
+                  fontSize: '0.6875rem',
+                  color: 'var(--text-muted)'
+                }}
+              >
+                Confidence {resultData.confidence}/3 · {resultData.correct ? `Would have lost ${Math.abs(confidencePreview.ifWrong)}` : `Would have gained +${confidencePreview.ifCorrect}`} if {resultData.correct ? 'wrong' : 'right'}
+                {resultData.speedBonus ? ` · Speed bonus: +${resultData.speedBonus}` : ''}
+              </div>
+            )}
+
+            <ResultPhase
+              resultData={resultData}
+              isLastRound={isLastRound}
+              onNext={handleNextRound}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

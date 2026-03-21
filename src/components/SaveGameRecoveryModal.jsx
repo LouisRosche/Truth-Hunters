@@ -3,15 +3,27 @@
  * Prompts user to resume or discard an interrupted game session.
  */
 
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 function SaveGameRecoveryModalComponent({ summary, onResume, onDiscard }) {
+  const focusTrapRef = useFocusTrap(true);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onDiscard();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onDiscard]);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="recovery-title"
+      ref={focusTrapRef}
       style={{
         position: 'fixed',
         inset: 0,

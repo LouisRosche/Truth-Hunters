@@ -10,8 +10,7 @@ This directory contains comprehensive security implementation plans and document
 
 **New to security implementation?** Start with:
 1. [Security Overview](#current-security-status) (below)
-2. [Security Summary](./SECURITY_SUMMARY.md) - Features and current status
-3. [Environment Variables](./ENVIRONMENT_VARIABLES.md) - Configuration setup
+2. [Environment Variables](./ENVIRONMENT_VARIABLES.md) - Configuration setup
 
 **Ready to implement?** See:
 - [Implementation Roadmap](#implementation-roadmap) - Step-by-step remediation plan
@@ -54,7 +53,6 @@ Truth Hunters currently has **three critical security vulnerabilities**:
 
 | Document | Purpose | Audience | Time to Read |
 |----------|---------|----------|--------------|
-| [Security Summary](./SECURITY_SUMMARY.md) | Security features and implementation status | All | 20-30 min |
 | [Environment Variables](./ENVIRONMENT_VARIABLES.md) | Configuration and secrets management | DevOps/Developers | 10-15 min |
 | [This Document](./README.md) | Complete security architecture and roadmap | Developers | 30-45 min |
 
@@ -141,8 +139,7 @@ Truth Hunters currently has **three critical security vulnerabilities**:
 ```bash
 # Read these in order:
 1. docs/security/README.md (this file)
-2. docs/security/IMPLEMENTATION_CHECKLIST.md
-3. docs/security/SECURITY_IMPLEMENTATION_PLAN.md
+2. docs/security/ENVIRONMENT_VARIABLES.md
 ```
 
 **2. Set Up Environment** (15 minutes)
@@ -161,19 +158,16 @@ nano .env
 # Enable Authentication > Anonymous
 ```
 
-**4. Start Implementation** (follow checklist)
+**4. Start Implementation**
 ```bash
-# Open checklist
-open docs/security/IMPLEMENTATION_CHECKLIST.md
-
-# Start with Phase 1: Authentication
-# Check off items as you complete them
+# Start with Phase 1: Authentication (see roadmap above)
+# Follow the implementation overview in this document
 ```
 
 ### For Project Managers
 
 **1. Review Scope** (15 minutes)
-- Read: [Security Summary](./SECURITY_SUMMARY.md) - Current security features and status
+- Read: [This document](#current-security-status) - Current security status
 - Understand: 3 critical issues, 4-week timeline, ~24 hours effort
 
 **2. Allocate Resources** (varies)

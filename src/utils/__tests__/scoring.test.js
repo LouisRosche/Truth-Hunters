@@ -849,4 +849,32 @@ describe('calculateGameStats', () => {
       expect(stats.lowestPoint).toBe(0);
     });
   });
+
+  describe('input validation', () => {
+    it('handles null results gracefully', () => {
+      const stats = calculateGameStats(null, [], 0, 0);
+      expect(stats.totalCorrect).toBe(0);
+      expect(stats.perfectGame).toBe(false);
+    });
+
+    it('handles undefined claims gracefully', () => {
+      const stats = calculateGameStats([], undefined, 0, 0);
+      expect(stats.totalCorrect).toBe(0);
+    });
+
+    it('handles NaN score', () => {
+      const stats = calculateGameStats([], [], NaN, 5);
+      expect(stats.calibrationBonus).toBe(false);
+    });
+
+    it('handles Infinity predictedScore', () => {
+      const stats = calculateGameStats([], [], 5, Infinity);
+      expect(stats.calibrationBonus).toBe(false);
+    });
+
+    it('handles string results input', () => {
+      const stats = calculateGameStats('not an array', [], 0, 0);
+      expect(stats.totalCorrect).toBe(0);
+    });
+  });
 });

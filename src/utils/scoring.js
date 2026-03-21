@@ -134,6 +134,18 @@ export function calculatePoints(correct, confidence, difficulty = 'easy', option
  * @returns {Object} Game statistics
  */
 export function calculateGameStats(results, claims, score, predictedScore) {
+  // Defensive: ensure required arrays are valid
+  if (!Array.isArray(results)) {
+    logger.warn('calculateGameStats: results is not an array, using empty');
+    results = [];
+  }
+  if (!Array.isArray(claims)) {
+    logger.warn('calculateGameStats: claims is not an array, using empty');
+    claims = [];
+  }
+  if (typeof score !== 'number' || !isFinite(score)) score = 0;
+  if (typeof predictedScore !== 'number' || !isFinite(predictedScore)) predictedScore = 0;
+
   const stats = {
     totalCorrect: 0,
     totalIncorrect: 0,

@@ -88,7 +88,7 @@ Before starting, you'll need:
 
 **Current Firestore rules:** Allow public reads and validated writes. Suitable for classroom testing with teacher supervision. Not suitable for unsupervised production use.
 
-See [SECURITY_AUDIT_SUMMARY.md](../SECURITY_AUDIT_SUMMARY.md) for complete security documentation.
+See [docs/security/README.md](security/README.md) for complete security documentation.
 
 ---
 

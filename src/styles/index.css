@@ -514,10 +514,7 @@ body {
     overflow: hidden;
   }
 
-  /* Prevent horizontal scroll */
-  * {
-    overflow-x: hidden;
-  }
+  /* Prevent horizontal scroll on body/html only */
 
   /* Compact spacing */
   .confidence-grid {
@@ -668,7 +665,6 @@ a:focus-visible {
 .scroll-container {
   flex: 1;
   overflow: hidden;
-  overflow-x: hidden;
   min-height: 0;
   display: flex;
   flex-direction: column;

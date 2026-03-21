@@ -278,7 +278,7 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
             alignItems: 'center',
             gap: '0.375rem',
             transition: 'all 0.2s ease',
-            minHeight: '36px'
+            minHeight: '44px'
           }}
         >
           <span aria-hidden="true" style={{ fontSize: '1rem' }}>{presentationMode ? '📺' : '👓'}</span>
@@ -341,6 +341,9 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowExitModal(false);
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setShowExitModal(false);
+          }}
         >
           <div
             className="animate-in"
@@ -367,8 +370,8 @@ export function Header({ score, round, totalRounds, phase, presentationMode, onT
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
               You&apos;re on round {round} of {totalRounds} with {score} points.
             </p>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-              Your progress will not be saved to the leaderboard if you exit now.
+            <p style={{ color: 'var(--incorrect)', fontSize: '0.875rem', marginBottom: '1.5rem', fontWeight: 500 }}>
+              Your current score and progress will be permanently lost. This cannot be undone.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

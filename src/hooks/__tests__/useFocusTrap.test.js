@@ -76,7 +76,7 @@ describe('useFocusTrap', () => {
         cancelable: true
       });
 
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      vi.spyOn(event, 'preventDefault');
       document.dispatchEvent(event);
 
       // Should prevent default and cycle to first element
@@ -114,9 +114,8 @@ describe('useFocusTrap', () => {
       const { result } = renderHook(() => useFocusTrap(true));
       result.current.current = container;
 
-      let eventFired = false;
       container.addEventListener('focustrap:escape', () => {
-        eventFired = true;
+        // event listener for escape key
       });
 
       const event = new KeyboardEvent('keydown', {
@@ -132,9 +131,8 @@ describe('useFocusTrap', () => {
       const { result } = renderHook(() => useFocusTrap(true));
       result.current.current = container;
 
-      let parentEventFired = false;
       document.body.addEventListener('focustrap:escape', () => {
-        parentEventFired = true;
+        // event listener for escape key bubbling
       });
 
       const event = new KeyboardEvent('keydown', {
@@ -419,7 +417,7 @@ describe('useFocusTrap', () => {
         bubbles: true
       });
 
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      vi.spyOn(event, 'preventDefault');
       document.dispatchEvent(event);
 
       // Should not prevent default for non-Tab keys

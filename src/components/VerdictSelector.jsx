@@ -6,25 +6,25 @@
 import { useState, memo } from 'react';
 import PropTypes from 'prop-types';
 
+const VERDICTS = [
+  { value: 'TRUE', emoji: '✓', color: 'var(--correct)', description: 'The claim is completely true', shortHelp: 'Everything in this claim is accurate' },
+  { value: 'MIXED', emoji: '?', color: 'var(--accent-amber)', description: 'The claim contains both true and false elements', shortHelp: 'Some parts are true, but other parts are false or misleading', hasExplainer: true },
+  { value: 'FALSE', emoji: '✗', color: 'var(--incorrect)', description: 'The claim is false or misleading', shortHelp: 'This claim is incorrect or misleading' }
+];
+
 export const VerdictSelector = memo(function VerdictSelector({ value, onChange, disabled }) {
   const [showMixedHelp, setShowMixedHelp] = useState(false);
-
-  const verdicts = [
-    { value: 'TRUE', emoji: '✓', color: 'var(--correct)', description: 'The claim is completely true', shortHelp: 'Everything in this claim is accurate' },
-    { value: 'MIXED', emoji: '?', color: 'var(--accent-amber)', description: 'The claim contains both true and false elements', shortHelp: 'Some parts are true, but other parts are false or misleading', hasExplainer: true },
-    { value: 'FALSE', emoji: '✗', color: 'var(--incorrect)', description: 'The claim is false or misleading', shortHelp: 'This claim is incorrect or misleading' }
-  ];
 
   const handleKeyDown = (e, currentIndex) => {
     if (disabled) return;
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
-      const next = (currentIndex + 1) % verdicts.length;
-      onChange(verdicts[next].value);
+      const next = (currentIndex + 1) % VERDICTS.length;
+      onChange(VERDICTS[next].value);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
-      const prev = (currentIndex - 1 + verdicts.length) % verdicts.length;
-      onChange(verdicts[prev].value);
+      const prev = (currentIndex - 1 + VERDICTS.length) % VERDICTS.length;
+      onChange(VERDICTS[prev].value);
     }
   };
 
@@ -36,7 +36,7 @@ export const VerdictSelector = memo(function VerdictSelector({ value, onChange, 
         className="verdict-grid"
         style={{ display: 'flex', gap: '0.75rem' }}
       >
-        {verdicts.map((v, i) => (
+        {VERDICTS.map((v, i) => (
           <button
             key={v.value}
             type="button"

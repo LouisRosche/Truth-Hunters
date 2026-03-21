@@ -16,7 +16,7 @@ import { getSubjects } from '../data/subjects';
 import { SoundManager } from '../services/sound';
 import { PlayerProfile } from '../services/playerProfile';
 import { validateName, isContentAppropriate, sanitizeInput } from '../utils/moderation';
-import { sanitizeUserContent } from '../utils/sanitize';
+// sanitizeUserContent available via sanitize.js if needed for rich content
 import { getRandomItem, getUnseenClaimStats } from '../utils/helpers';
 import { preloadClaims } from '../data/claimsLoader';
 
@@ -30,7 +30,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
   const quickStartSettings = useMemo(() => PlayerProfile.getQuickStartSettings(), []);
 
   // Calculate unseen claims for returning players (async - use state instead of useMemo)
-  const [unseenStats, setUnseenStats] = useState(null);
+  const [_unseenStats, setUnseenStats] = useState(null);
 
   useEffect(() => {
     if (!isReturningPlayer) {
@@ -56,7 +56,7 @@ export function SetupScreen({ onStart, isLoading = false }) {
   const [soundEnabled, setSoundEnabled] = useState(
     isReturningPlayer ? quickStartSettings.soundEnabled : true
   );
-  const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [_showHowToPlay, _setShowHowToPlay] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showSoloStats, setShowSoloStats] = useState(false);
   const [showClaimSubmission, setShowClaimSubmission] = useState(false);

@@ -214,10 +214,10 @@ export function TeacherSetup({ onBack }) {
               <li style={{ marginBottom: '0.75rem' }}>
                 Go to <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)', textDecoration: 'underline' }}>Firebase Console</a> and sign in with Google
               </li>
-              <li style={{ marginBottom: '0.75rem' }}>Click "Add project" or "Create a project"</li>
-              <li style={{ marginBottom: '0.75rem' }}>Name it (e.g., "truth-hunters-2025")</li>
+              <li style={{ marginBottom: '0.75rem' }}>Click &ldquo;Add project&rdquo; or &ldquo;Create a project&rdquo;</li>
+              <li style={{ marginBottom: '0.75rem' }}>Name it (e.g., &ldquo;truth-hunters-2025&rdquo;)</li>
               <li style={{ marginBottom: '0.75rem' }}>Disable Google Analytics (optional, not needed)</li>
-              <li>Click "Create project" and wait ~30 seconds</li>
+              <li>Click &ldquo;Create project&rdquo; and wait ~30 seconds</li>
             </ol>
           </div>
           <button
@@ -255,11 +255,11 @@ export function TeacherSetup({ onBack }) {
           </h3>
           <div style={{ fontSize: '0.875rem', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
             <ol style={{ paddingLeft: '1.5rem', margin: 0 }}>
-              <li style={{ marginBottom: '0.75rem' }}>In your Firebase project, click "Firestore Database" in left sidebar</li>
-              <li style={{ marginBottom: '0.75rem' }}>Click "Create database"</li>
-              <li style={{ marginBottom: '0.75rem' }}>Choose "Start in test mode" (we'll secure it later)</li>
+              <li style={{ marginBottom: '0.75rem' }}>In your Firebase project, click &ldquo;Firestore Database&rdquo; in left sidebar</li>
+              <li style={{ marginBottom: '0.75rem' }}>Click &ldquo;Create database&rdquo;</li>
+              <li style={{ marginBottom: '0.75rem' }}>Choose &ldquo;Start in test mode&rdquo; (we&apos;ll secure it later)</li>
               <li style={{ marginBottom: '0.75rem' }}>Select any region (closest to you is best)</li>
-              <li>Click "Enable"</li>
+              <li>Click &ldquo;Enable&rdquo;</li>
             </ol>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
@@ -343,11 +343,11 @@ export function TeacherSetup({ onBack }) {
             >
               <strong style={{ color: 'var(--accent-violet)' }}>How to get your config:</strong>
               <ol style={{ paddingLeft: '1.5rem', margin: '0.5rem 0 0 0' }}>
-                <li>In Firebase Console, click the gear icon (⚙️) next to "Project Overview"</li>
-                <li>Click "Project settings"</li>
-                <li>Scroll down to "Your apps" section</li>
+                <li>In Firebase Console, click the gear icon (⚙️) next to &ldquo;Project Overview&rdquo;</li>
+                <li>Click &ldquo;Project settings&rdquo;</li>
+                <li>Scroll down to &ldquo;Your apps&rdquo; section</li>
                 <li>Click the web icon (&lt;/&gt;) to add a web app</li>
-                <li>Give it a name (e.g., "Truth Hunters Web")</li>
+                <li>Give it a name (e.g., &ldquo;Truth Hunters Web&rdquo;)</li>
                 <li>Copy the <code>firebaseConfig</code> object (looks like JSON with apiKey, authDomain, etc.)</li>
                 <li>Paste it below</li>
               </ol>
@@ -520,7 +520,7 @@ export function TeacherSetup({ onBack }) {
             fontStyle: 'italic'
           }}
         >
-          Don't have time now? Students can play in Local Mode without Firebase.
+          Don&apos;t have time now? Students can play in Local Mode without Firebase.
           <br />
           You can set this up later to enable cloud features.
         </div>
