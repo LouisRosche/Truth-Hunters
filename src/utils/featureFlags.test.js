@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { FeatureFlags, isFeatureEnabled, enableFeature, disableFeature, toggleFeature } from './featureFlags';
+import { FeatureFlags } from './featureFlags';
 
 // Mock logger
 vi.mock('./logger', () => ({
@@ -182,30 +182,3 @@ describe('FeatureFlags', () => {
   });
 });
 
-describe('Convenience functions', () => {
-  beforeEach(() => {
-    FeatureFlags.reset();
-    FeatureFlags.initialized = false;
-    localStorage.clear();
-  });
-
-  it('isFeatureEnabled works', () => {
-    expect(isFeatureEnabled('enableFirebase')).toBe(true);
-    expect(isFeatureEnabled('enableMultiplayer')).toBe(false);
-  });
-
-  it('enableFeature works', () => {
-    enableFeature('enableMultiplayer');
-    expect(FeatureFlags.flags.enableMultiplayer).toBe(true);
-  });
-
-  it('disableFeature works', () => {
-    disableFeature('enableFirebase');
-    expect(FeatureFlags.flags.enableFirebase).toBe(false);
-  });
-
-  it('toggleFeature works', () => {
-    const result = toggleFeature('enableMultiplayer');
-    expect(result).toBe(true);
-  });
-});

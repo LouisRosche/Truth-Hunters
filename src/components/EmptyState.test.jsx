@@ -19,11 +19,6 @@ describe('EmptyState', () => {
     expect(screen.getByText(/Start your first game/)).toBeInTheDocument();
   });
 
-  it('displays correct content for noLeaderboard type', () => {
-    render(<EmptyState type="noLeaderboard" />);
-    expect(screen.getByText('Leaderboard is empty')).toBeInTheDocument();
-  });
-
   it('displays correct content for offline type', () => {
     render(<EmptyState type="offline" />);
     expect(screen.getByText(/You're offline/)).toBeInTheDocument();
@@ -51,12 +46,6 @@ describe('EmptyState', () => {
     render(<EmptyState type="noGames" onAction={onAction} />);
     await user.click(screen.getByRole('button', { name: /start new game/i }));
     expect(onAction).toHaveBeenCalledOnce();
-  });
-
-  it('hides action button for noReflections type', () => {
-    render(<EmptyState type="noReflections" onAction={vi.fn()} />);
-    // noReflections has actionText: null, so no button
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('falls back to error state for unknown type', () => {

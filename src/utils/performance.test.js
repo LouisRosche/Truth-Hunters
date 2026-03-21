@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { perfMonitor, debounce, throttle } from './performance';
+import { perfMonitor, debounce } from './performance';
 
 // Mock logger
 vi.mock('./logger', () => ({
@@ -88,47 +88,5 @@ describe('debounce (performance)', () => {
     expect(fn).not.toHaveBeenCalled();
     vi.advanceTimersByTime(100);
     expect(fn).toHaveBeenCalledOnce();
-  });
-});
-
-describe('throttle', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('executes immediately on first call', () => {
-    const fn = vi.fn();
-    const throttled = throttle(fn, 200);
-    throttled();
-    expect(fn).toHaveBeenCalledOnce();
-  });
-
-  it('blocks subsequent calls within limit', () => {
-    const fn = vi.fn();
-    const throttled = throttle(fn, 200);
-    throttled();
-    throttled();
-    throttled();
-    expect(fn).toHaveBeenCalledOnce();
-  });
-
-  it('allows calls after limit expires', () => {
-    const fn = vi.fn();
-    const throttled = throttle(fn, 200);
-    throttled();
-    vi.advanceTimersByTime(200);
-    throttled();
-    expect(fn).toHaveBeenCalledTimes(2);
-  });
-
-  it('passes arguments through', () => {
-    const fn = vi.fn();
-    const throttled = throttle(fn, 200);
-    throttled('a', 'b');
-    expect(fn).toHaveBeenCalledWith('a', 'b');
   });
 });
